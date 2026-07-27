@@ -1,0 +1,19 @@
+# 인증키·환경변수 — 어떤 경우에도 커밋하지 않는다
+.env
+.env.*
+env.local
+env.*.local
+*.pem
+
+# 의존성·빌드 산출물
+node_modules/
+.next/
+out/
+build/
+coverage/
+
+# 임시·백업
+tmp/
+*.zip
+.DS_Store
+Thumbs.db

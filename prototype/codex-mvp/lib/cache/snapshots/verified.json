@@ -1,0 +1,113 @@
+{
+  "id": "capture-5176038024100850061",
+  "label": "대관령면 85-61전 검증 스냅샷",
+  "match": {
+    "lat": 37.675,
+    "lng": 128.718,
+    "toleranceDeg": 0.002
+  },
+  "provenance": {
+    "collectedAt": "2026-07-26 13:44",
+    "collectedBy": "capture-route",
+    "reproduce": "/api/cache/capture?lat=37.675&lng=128.718&parcelId=5176038024100850061&horizonDays=3",
+    "verificationDocs": [
+      "docs/20260724_추가_공공데이터_실호출_감사.md"
+    ]
+  },
+  "parcel": {
+    "address": "대관령면 85-61전",
+    "parcelId": "5176038024100850061",
+    "farmMapId": "427603802400754",
+    "interpretation": "밭",
+    "candidateCount": 356,
+    "observedAt": "2022-12-30"
+  },
+  "soil": {
+    "ph": 6.9,
+    "organicMatter": 5,
+    "electricalConductivity": 0.063,
+    "electricalConductivityUnit": "dS/m",
+    "electricalConductivityUnitStatus": "official-cross-reference",
+    "drainage": "moderate",
+    "year": "2025",
+    "sampledAt": "2025-05-02",
+    "sampleType": "검정유형 코드 2",
+    "boundaryAvailable": false,
+    "physicalProfile": {
+      "drainageCode": "03",
+      "effectiveDepthCode": "03",
+      "erosionCode": "01",
+      "topsoilTextureCode": "04",
+      "mainLandUseCode": "01",
+      "useRecommendationCode": "01",
+      "uplandGradeCode": "02",
+      "uplandLimitingFactorCode": "03",
+      "orchardGradeCode": "02",
+      "orchardLimitingFactorCode": "03"
+    },
+    "observedAt": "2025-05-02"
+  },
+  "recentClimate": {
+    "station": {
+      "code": "210913E001",
+      "name": "강릉 안반덕이",
+      "distanceKm": 6.45,
+      "elevationM": 1099,
+      "address": "강원도 강릉시 왕산면 대기4리 안반덕이",
+      "observedSince": "2012-07-12"
+    },
+    "period": {
+      "begin": "2026-07-19",
+      "end": "2026-07-25"
+    },
+    "itemCount": 7,
+    "totalRainMm": 51,
+    "wetDays": 5,
+    "minTempC": 16.6,
+    "maxTempC": 27.1,
+    "averageHumidityPct": 93.2,
+    "representativeness": "nearby",
+    "observedAt": "2026-07-19–2026-07-25"
+  },
+  "weather": {
+    "issuedAt": "2026-07-26 11:00 KST",
+    "days": [
+      {
+        "date": "2026-07-26",
+        "label": "오늘",
+        "minTemp": 21,
+        "maxTemp": 27,
+        "rainProbability": 60,
+        "precipitation": 17,
+        "precipitationType": "소나기",
+        "humidity": 100,
+        "maxWindSpeed": 1,
+        "sky": "구름 많음"
+      },
+      {
+        "date": "2026-07-27",
+        "label": "내일",
+        "minTemp": 20,
+        "maxTemp": 27,
+        "rainProbability": 20,
+        "precipitation": 0,
+        "precipitationType": "없음",
+        "humidity": 100,
+        "maxWindSpeed": 0.7,
+        "sky": "구름 많음"
+      },
+      {
+        "date": "2026-07-28",
+        "label": "모레",
+        "minTemp": 20,
+        "maxTemp": 28,
+        "rainProbability": 30,
+        "precipitation": 0,
+        "precipitationType": "없음",
+        "humidity": 95,
+        "maxWindSpeed": 3,
+        "sky": "구름 많음"
+      }
+    ]
+  }
+}
