@@ -3722,3 +3722,28 @@ span.step-number { font-size: 16px; }
   font-style: normal;
   font-weight: 500;
 }
+
+/* ─── 논으로 판독된 필지 안내 ───────────────────────────────── */
+
+/* 판정을 막는 오류가 아니라 함께 확인할 조건이므로 경고색이 아닌 흙색 계열로 둔다 */
+.paddy-notice {
+  margin-bottom: 18px;
+  padding: 14px 17px;
+  background: var(--paper-white);
+  border: 1px solid var(--line-dark);
+  border-left: 3px solid var(--soil-soft);
+}
+
+.paddy-notice strong {
+  display: block;
+  margin-bottom: 5px;
+  font-family: var(--serif-kr);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.paddy-notice p {
+  color: var(--soil-soft);
+  font-size: 15px;
+  line-height: 1.65;
+}

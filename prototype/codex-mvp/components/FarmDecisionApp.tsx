@@ -574,6 +574,21 @@ function AnalysisView({
         ))}
       </div>
 
+      {/*
+        판정 근거인 `밭 적성등급`은 밭 기준이다. 팜맵이 논으로 판독한 필지에 그 등급을 그대로
+        쓰면 근거가 약해지므로, 판정을 막지 않고 무엇을 더 확인해야 하는지 한 줄로 알린다.
+        논에 밭작물을 심는 전환은 실제로 있으므로 선택 자체를 차단하지는 않는다.
+      */}
+      {isPaddyParcel(result.parcel.interpretation) && (
+        <div className="paddy-notice" role="status">
+          <strong>논으로 판독된 필지입니다</strong>
+          <p>
+            판정 근거인 밭 적성등급은 밭을 기준으로 매겨진 값입니다. 논에 밭작물을 심으시려면 물빠짐과
+            배수로를 현장에서 먼저 확인하시고, 지역 농업기술센터에 논 타작물 재배 조건을 함께 문의하세요.
+          </p>
+        </div>
+      )}
+
       {result.warning && <div className="data-warning" role="status">{result.warning}</div>}
       {result.cacheNotice && (
         <div className="cache-notice" role="status">
@@ -1186,6 +1201,15 @@ function Emphasized({
       })}
     </>
   );
+}
+
+/**
+ * 팜맵 논밭 판독이 논인지 본다.
+ * 지목 표기는 `답`, 판독 문자열은 `논`으로 오는 경우가 섞여 있어 둘 다 받는다.
+ * `간척지(논)`처럼 괄호가 붙은 표기도 포함된다.
+ */
+function isPaddyParcel(interpretation: string) {
+  return /논|답/.test(interpretation);
 }
 
 function sourceStatusLabel(status: SourceStatus) {

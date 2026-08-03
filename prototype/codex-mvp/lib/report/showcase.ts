@@ -158,16 +158,13 @@ export function buildShowcaseReport(
       note: "이 필지는 토양검정 화학성(pH)과 토양특성(밭 적성등급) 모두 조회되지 않아 리포트를 만들지 않았습니다.",
     };
   }
-  if (ph === null) {
-    return {
-      report: null,
-      note: "이 필지는 토양검정 이력이 없어 pH를 조회하지 못했습니다. pH와 밭 적성등급이 함께 나오는 필지에서만 이 리포트를 보여줍니다. 없는 값을 문장으로 채우지 않습니다.",
-    };
-  }
+  // pH는 검정 이력이 있는 필지에서만 나온다. 반경 1km 258필지 중 18건(7.0%)이었다.
+  // 등급이 있으면 판정은 이미 나오므로 리포트도 만든다. 산도 문단만 조회되지 않았다고 적는다.
+  // 없는 값을 채우지 않는 원칙은 그대로다 — 없다고 말하고, 있는 값만 쓴다.
   if (grade === null) {
     return {
       report: null,
-      note: "이 필지는 밭 적성등급을 조회하지 못했습니다. pH와 밭 적성등급이 함께 나오는 필지에서만 이 리포트를 보여줍니다.",
+      note: "이 필지는 밭 적성등급을 조회하지 못했습니다. 등급이 판정의 주 근거이므로 없는 상태로는 리포트를 만들지 않습니다.",
     };
   }
 
@@ -182,7 +179,10 @@ export function buildShowcaseReport(
   const tempFactor = factorValue(result, "기온");
   const phRange = rangeText(profile.ph);
   const phState = phFactor?.state ?? "unknown";
-  const phDirection = ph > profile.ph[1] ? "높습니다" : ph < profile.ph[0] ? "낮습니다" : "안에 있습니다";
+  const hasPh = ph !== null;
+  const phDirection = !hasPh
+    ? ""
+    : ph > profile.ph[1] ? "높습니다" : ph < profile.ph[0] ? "낮습니다" : "안에 있습니다";
 
   const curatedKey = `${result.parcel.parcelId}:${result.selection.cropId}`;
   const curated = curatedOpening[curatedKey];
@@ -194,11 +194,13 @@ export function buildShowcaseReport(
   // ── 흙 이야기 ────────────────────────────────────────────
   const soilLines = [voice.soilNeed];
   soilLines.push(
-    phState === "good"
-      ? `이 땅의 pH는 ${ph}입니다. ${result.cropName} 공식 권장 범위 ${phRange} ${phDirection}. 산도를 맞추려고 따로 무언가를 넣을 필요는 없어 보입니다.`
-      : phState === "watch"
-        ? `이 땅의 pH는 ${ph}로, 권장 범위 ${phRange}를 조금 벗어나 ${phDirection}. 크게 어긋난 정도는 아니지만 심기 전에 한 번 재보시는 편이 좋습니다.`
-        : `이 땅의 pH는 ${ph}로, 권장 범위 ${phRange}보다 ${phDirection}. 이 차이가 이번 판정에서 가장 크게 반영된 항목입니다.`,
+    !hasPh
+      ? `그런데 이 필지는 토양검정을 받은 기록이 없어 pH를 조회하지 못했습니다. ${result.cropName} 공식 권장 범위는 ${phRange}인데, 이 땅의 값이 그 안에 있는지는 지금 자료로 알 수 없습니다. 없는 값을 짐작해 채우지 않았습니다. 아래 판정은 밭 적성등급과 토양도에 적힌 조건으로 냈습니다.`
+      : phState === "good"
+        ? `이 땅의 pH는 ${ph}입니다. ${result.cropName} 공식 권장 범위 ${phRange} ${phDirection}. 산도를 맞추려고 따로 무언가를 넣을 필요는 없어 보입니다.`
+        : phState === "watch"
+          ? `이 땅의 pH는 ${ph}로, 권장 범위 ${phRange}를 조금 벗어나 ${phDirection}. 크게 어긋난 정도는 아니지만 심기 전에 한 번 재보시는 편이 좋습니다.`
+          : `이 땅의 pH는 ${ph}로, 권장 범위 ${phRange}보다 ${phDirection}. 이 차이가 이번 판정에서 가장 크게 반영된 항목입니다.`,
   );
   soilLines.push(`밭 적성등급은 ${gradeFactor?.value ?? `${grade}급지`}입니다. ${gradeVoice(grade)}`);
   if (decoded) {
@@ -232,7 +234,9 @@ export function buildShowcaseReport(
   // ── 한계 ────────────────────────────────────────────────
   const limitLines = [
     "이 글은 공공데이터와 공식 기준을 대조한 참고 판단입니다. 수확량이나 성공 가능성을 말하지 않습니다.",
-    `토양 검정 기록은 ${result.soil.sampledAt} 시점이고 시료 유형은 ${result.soil.sampleType}입니다. 그 뒤로 흙에 손을 댔다면 지금 값과 다를 수 있습니다.`,
+    hasPh
+      ? `토양 검정 기록은 ${result.soil.sampledAt} 시점이고 시료 유형은 ${result.soil.sampleType}입니다. 그 뒤로 흙에 손을 댔다면 지금 값과 다를 수 있습니다.`
+      : "산도와 유기물은 검정 이력이 있는 필지에서만 조회됩니다. 이 필지는 이력이 없어 그 항목을 빼고 판단했습니다. 지역 농업기술센터에 토양 검정을 신청하면 값을 확보할 수 있습니다.",
     `최근 날씨는 ${result.recentClimate.station.name} 관측소 기록이라 실제 농지와는 차이가 있을 수 있습니다.`,
     "심기 전에 현장을 직접 보시고, 지역 농업기술센터 확인을 함께 받는 편이 안전합니다.",
   ];
@@ -253,15 +257,16 @@ export function buildShowcaseReport(
   const limitFactor = hasMaterialUplandLimit(result.soil.physicalProfile)
     ? decoded?.uplandLimitingFactor ?? null
     : null;
-  const closing =
-    phState === "good"
+  const closing = !hasPh
+    ? `정리하면 산도는 아직 모르는 상태이고, 판정은 밭 적성등급과 날씨로 냈습니다. 심기 전 토양 검정으로 산도를 확인하는 것이 첫 순서입니다.${limitFactor ? ` 저해요인으로 적힌 ${limitFactor}도 함께 보셔야 합니다.` : ""}`
+    : phState === "good"
       ? limitFactor
         ? `정리하면 산도는 맞습니다. 남은 것은 저해요인으로 적힌 ${withWa(limitFactor)} 고른 기간의 날씨입니다. 이 둘은 흙을 바꾸는 문제가 아니라 관리로 다루는 문제입니다.`
         : `정리하면 산도는 맞고, 남은 변수는 ${grade <= 2 ? "고른 기간의 날씨" : "밭 조건과 날씨"}입니다. 위 확인 목록부터 처리하시면 됩니다.`
       : `정리하면 pH ${withReul(String(ph))} 어떻게 다룰지가 먼저입니다. 심기 전 간이 검정으로 지금 값을 확인한 뒤 투입량을 정하시는 편이 안전합니다.`;
 
   const usedValues = [
-    `pH ${ph}`,
+    hasPh ? `pH ${ph}` : "pH 조회 안 됨",
     `밭 적성등급 ${grade}급지`,
     `적합도 ${result.suitabilityScore}`,
     `위험도 ${result.riskScore}`,
@@ -271,14 +276,19 @@ export function buildShowcaseReport(
   // 강조는 화면이 임의로 고르지 않고 여기서 정한 목록으로만 입힌다.
   // 색 규칙은 판정 색과 같다. 실측 수치=골드, 공식 기준=딥그린, 주의·한계=클레이 레드.
   const highlights: ShowcaseHighlight[] = [
-    // 본문에 `pH 6.9`와 `pH는 6.9` 두 형태로 나오므로 둘 다 등록한다.
-    { text: `pH ${ph}`, kind: "value" },
-    { text: `pH는 ${ph}`, kind: "value" },
     { text: gradeFactor?.value ?? `${grade}급지`, kind: "value" },
     { text: `${result.cropName} 공식 권장 범위 ${phRange}`, kind: "official" },
+    { text: `공식 권장 범위는 ${phRange}`, kind: "official" },
     { text: `권장 범위 ${phRange}`, kind: "official" },
     { text: result.suitabilityLabel, kind: phState === "risk" ? "caution" : "official" },
   ];
+  if (hasPh) {
+    // 본문에 `pH 6.9`와 `pH는 6.9` 두 형태로 나오므로 둘 다 등록한다.
+    highlights.push({ text: `pH ${ph}`, kind: "value" }, { text: `pH는 ${ph}`, kind: "value" });
+  } else {
+    // 조회되지 않았다는 사실 자체를 주의 색으로 드러낸다.
+    highlights.push({ text: "pH를 조회하지 못했습니다", kind: "caution" });
+  }
   if (tempFactor) {
     highlights.push(
       { text: tempFactor.value, kind: "value" },
