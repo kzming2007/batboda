@@ -28,6 +28,16 @@ export type ReportProvider = {
    * null을 돌려주면 `successLabel`로 되돌아간다.
    */
   resolveSuccessLabel?: (input: ReportProviderInput) => string | null;
+  /**
+   * 검증에 쓸 근거 묶음을 바꿔 준다.
+   *
+   * 저장된 응답을 재생하는 제공자는 그 문장이 수집 시점의 예보 수치를 담고 있다. 예보는 하루에도
+   * 여러 번 갱신되므로 오늘 근거로 숫자를 대조하면 멀쩡한 저장본이 매번 검사에 걸린다.
+   * 저장본은 저장 시점 근거와 짝이므로 그 값으로 검사해야 맞다.
+   *
+   * null을 돌려주거나 이 함수가 없으면 오늘 근거를 그대로 쓴다.
+   */
+  resolveValidationBundle?: (input: ReportProviderInput) => ReportBundle | null;
   /** 프롬프트를 받아 설명 초안 문자열만 돌려준다. 판정·수치 변경 여부는 이후 검증에서 확인한다. */
   generate: (input: ReportProviderInput) => Promise<string>;
 };

@@ -21,6 +21,22 @@ export type LlmResponseRecord = {
   collectedAt: string;
   /** 모델이 돌려준 원문 */
   draft: string;
+  /**
+   * 수집 시점의 근거. 저장본은 그때의 예보 수치를 문장에 담고 있으므로
+   * 오늘의 근거로 숫자를 검사하면 예보가 갱신된 만큼 실패한다.
+   * 저장본은 저장 시점 근거와 짝이므로 그 값으로 검사한다.
+   *
+   * 판정과 위험 등급은 검사가 아니라 **재생 가능 여부**를 가리는 데 쓴다.
+   * 저장 시점과 지금의 판정이 다르면 저장본을 쓰지 않는다. 화면 머리글은 오늘 판정을
+   * 보여주는데 설명 문장이 옛 판정을 말하면 같은 화면에서 두 결론이 부딪친다.
+   *
+   * 이 필드가 없는 예전 기록은 오늘 근거로 검사한다.
+   */
+  capturedAt?: {
+    stage: string;
+    riskLabel: string;
+    allowedNumbers: string[];
+  };
 };
 
 type SnapshotFile = { note?: string; records: LlmResponseRecord[] };
@@ -29,6 +45,44 @@ const snapshot = source as SnapshotFile;
 
 export function bundleKey(bundle: ReportBundle) {
   return `${bundle.parcel.address}|${bundle.crop}|${bundle.horizonDays}`;
+}
+
+/**
+ * 저장본을 지금 화면에 쓸 수 있는지 본다.
+ *
+ * 판정이나 위험 등급이 바뀌었으면 쓰지 않는다. 예보가 달라져 판정이 뒤집히는 일은
+ * 실제로 생기고, 그때 옛 문장을 그대로 내보내면 화면 머리글과 설명이 서로 다른 결론을 말한다.
+ */
+export function replayableFor(record: LlmResponseRecord, bundle: ReportBundle) {
+  const captured = record.capturedAt;
+  // 수집 시점 근거가 없는 기록은 쓰지 않는다. 오늘 근거로 숫자를 대조하면 예보가 갱신된 만큼
+  // 검사에 걸려 규칙 문장으로 떨어지고, 저장본을 둔 의미가 없어진다.
+  // 건너뛰면 `replay-live`가 실시간 경로로 넘어가므로 화면은 오히려 낫다. 다시 수집하면 살아난다.
+  if (!captured) {
+    return {
+      ok: false as const,
+      reason: "수집 시점 근거가 없는 예전 기록입니다. 다시 수집해야 재생할 수 있습니다.",
+    };
+  }
+  if (captured.stage !== bundle.stage) {
+    return {
+      ok: false as const,
+      reason: `저장할 때 판정이 '${captured.stage}'였는데 지금은 '${bundle.stage}'입니다.`,
+    };
+  }
+  if (captured.riskLabel !== bundle.riskLabel) {
+    return {
+      ok: false as const,
+      reason: `저장할 때 위험 등급이 '${captured.riskLabel}'였는데 지금은 '${bundle.riskLabel}'입니다.`,
+    };
+  }
+  return { ok: true as const, reason: null };
+}
+
+/** 저장본을 검사할 때 쓸 근거. 수집 시점 값이 있으면 그것으로 대조한다. */
+export function bundleForReplay(record: LlmResponseRecord, bundle: ReportBundle): ReportBundle {
+  if (!record.capturedAt) return bundle;
+  return { ...bundle, allowedNumbers: record.capturedAt.allowedNumbers };
 }
 
 export function findLlmResponse(bundle: ReportBundle): LlmResponseRecord | null {

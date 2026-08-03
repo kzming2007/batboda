@@ -68,17 +68,29 @@ export async function GET(request: Request) {
       records: LlmResponseRecord[];
     };
 
+    // 수집 시점의 근거를 함께 저장한다. 저장본 문장은 이때의 예보 수치를 담고 있어서,
+    // 재생할 때 오늘 근거로 숫자를 대조하면 예보가 갱신된 만큼 검사에 걸린다.
+    // 판정·위험 등급은 나중에 저장본을 쓸 수 있는지 가리는 데 쓴다.
+    const capturedAt = {
+      stage: bundle.stage,
+      riskLabel: bundle.riskLabel,
+      allowedNumbers: bundle.allowedNumbers,
+    };
+    const collectedAt = new Date().toISOString();
+
     const record: LlmResponseRecord = {
       key: bundleKey(bundle),
       model: GEMINI_MODEL,
-      collectedAt: new Date().toISOString(),
+      collectedAt,
       draft,
+      capturedAt,
     };
     const showcaseRecord: LlmResponseRecord = {
       key: showcaseKey(bundle),
       model: GEMINI_MODEL,
-      collectedAt: new Date().toISOString(),
+      collectedAt,
       draft: showcaseDraft,
+      capturedAt,
     };
     const records = [
       ...current.records.filter(

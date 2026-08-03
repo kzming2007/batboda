@@ -1,10 +1,12 @@
 import { registerReportProvider } from "@/lib/report/provider";
 import { geminiGenerate, GEMINI_MODEL } from "@/lib/report/providers/gemini";
 import {
+  bundleForReplay,
   findLlmResponse,
   llmSnapshotSummary,
   readableDate,
   readableModelName,
+  replayableFor,
 } from "@/lib/report/snapshots/llmSnapshot";
 
 /**
@@ -21,6 +23,13 @@ import {
  * 배지에 그대로 표시하므로, 실시간 생성처럼 보이게 하지 않는다.
  */
 
+/** 저장본이 있고 지금 판정과도 맞을 때만 돌려준다. 어긋나면 실시간 경로로 넘긴다. */
+function usableRecord(bundle: Parameters<typeof findLlmResponse>[0]) {
+  const record = findLlmResponse(bundle);
+  if (!record) return null;
+  return replayableFor(record, bundle).ok ? record : null;
+}
+
 export function registerReplayThenLiveProvider() {
   const summary = llmSnapshotSummary();
   const hasKey = Boolean(process.env.GEMINI_API_KEY);
@@ -35,18 +44,28 @@ export function registerReplayThenLiveProvider() {
     name: snapshotLabel && snapshotLabel !== liveLabel ? `${liveLabel} · 저장본 ${snapshotLabel}` : liveLabel,
     successLabel: `AI 설명 · ${liveLabel} · 검사 통과`,
     resolveSuccessLabel({ bundle }) {
-      const record = findLlmResponse(bundle);
+      const record = usableRecord(bundle);
       if (!record) return `AI 설명 · ${liveLabel} · 실시간 생성 · 검사 통과`;
       return (
         `AI 설명 · ${readableModelName(record.model)} · ` +
         `${readableDate(record.collectedAt.slice(0, 10))} 작성 · 검사 통과`
       );
     },
+    resolveValidationBundle({ bundle }) {
+      const record = usableRecord(bundle);
+      return record ? bundleForReplay(record, bundle) : null;
+    },
     async generate({ system, user, bundle }) {
-      const record = findLlmResponse(bundle);
+      const record = usableRecord(bundle);
       if (record) return record.draft;
       if (!hasKey) {
-        throw new Error("저장해 둔 AI 설명이 없고 실시간 호출 키도 설정되지 않았습니다.");
+        const stale = findLlmResponse(bundle);
+        const why = stale ? replayableFor(stale, bundle).reason : null;
+        throw new Error(
+          why
+            ? `저장본을 쓸 수 없고 실시간 호출 키도 설정되지 않았습니다. ${why}`
+            : "저장해 둔 AI 설명이 없고 실시간 호출 키도 설정되지 않았습니다.",
+        );
       }
       return geminiGenerate({ system, user });
     },

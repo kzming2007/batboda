@@ -1,10 +1,12 @@
 import { registerReportProvider } from "@/lib/report/provider";
 import {
+  bundleForReplay,
   bundleKey,
   findLlmResponse,
   llmSnapshotSummary,
   readableDate,
   readableModelName,
+  replayableFor,
 } from "@/lib/report/snapshots/llmSnapshot";
 
 /**
@@ -29,16 +31,27 @@ export function registerReplayProvider() {
     // 스냅샷 전체의 최신 날짜를 쓰면 7월에 받은 문장에 8월 날짜가 붙는다.
     resolveSuccessLabel({ bundle }) {
       const record = findLlmResponse(bundle);
-      if (!record) return null;
+      if (!record || !replayableFor(record, bundle).ok) return null;
       return (
         `AI 설명 · ${readableModelName(record.model)} · ` +
         `${readableDate(record.collectedAt.slice(0, 10))} 작성 · 검사 통과`
       );
     },
+    // 저장본은 수집 시점 근거로 숫자를 대조한다. 오늘 예보로 대조하면 갱신된 만큼 걸린다.
+    resolveValidationBundle({ bundle }) {
+      const record = findLlmResponse(bundle);
+      if (!record || !replayableFor(record, bundle).ok) return null;
+      return bundleForReplay(record, bundle);
+    },
     async generate({ bundle }) {
       const record = findLlmResponse(bundle);
       if (!record) {
         throw new Error(`이 농지·작물 조합으로 저장해 둔 AI 설명이 없습니다(${bundleKey(bundle)}).`);
+      }
+      // 판정이 바뀌었으면 옛 문장을 내보내지 않는다. 화면 머리글과 결론이 어긋난다.
+      const replayable = replayableFor(record, bundle);
+      if (!replayable.ok) {
+        throw new Error(`저장본을 쓸 수 없습니다. ${replayable.reason}`);
       }
       return record.draft;
     },

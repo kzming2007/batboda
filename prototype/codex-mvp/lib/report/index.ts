@@ -145,7 +145,10 @@ export async function createFarmReport(result: AnalysisResult): Promise<FarmRepo
   try {
     // 검증 앞에서 마크다운을 지운다. 화면은 평문을 그대로 출력하므로 별표가 사용자에게 보인다.
     const draft = stripMarkdown(await resolution.provider.generate({ system, user, bundle }));
-    const validation = validateReport(draft, bundle);
+    // 저장된 응답을 재생한 경우에는 수집 시점 근거로 숫자를 대조한다.
+    const validationBundle =
+      resolution.provider.resolveValidationBundle?.({ system, user, bundle }) ?? bundle;
+    const validation = validateReport(draft, validationBundle);
     pipeline.push({
       id: "generate",
       label: "설명 생성",

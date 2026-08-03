@@ -9,9 +9,11 @@ import {
 } from "@/lib/report/showcaseAi";
 import { geminiGenerate, GEMINI_MODEL } from "@/lib/report/providers/gemini";
 import {
+  bundleForReplay,
   findShowcaseResponse,
   readableDate,
   readableModelName,
+  replayableFor,
 } from "@/lib/report/snapshots/llmSnapshot";
 import type { AnalysisResult, ShowcaseReport } from "@/types/domain";
 
@@ -71,7 +73,13 @@ export async function buildShowcaseOutcome(result: AnalysisResult): Promise<Show
     let originLabel: string;
 
     // 저장본을 먼저 본다. `replay`는 없으면 여기서 멈추고, `replay-live`는 실시간으로 넘어간다.
-    const record = provider === "gemini" ? null : findShowcaseResponse(bundle);
+    // 판정이 저장 시점과 달라졌으면 저장본을 쓰지 않는다. 화면 판정과 설명이 어긋난다.
+    const stored = provider === "gemini" ? null : findShowcaseResponse(bundle);
+    const replayable = stored ? replayableFor(stored, bundle) : null;
+    const record = stored && replayable?.ok ? stored : null;
+
+    // 저장본은 수집 시점 근거로 숫자를 대조한다. 예보가 갱신되면 오늘 근거와 어긋난다.
+    const checkBundle = record ? bundleForReplay(record, bundle) : bundle;
 
     if (record) {
       draft = record.draft;
@@ -82,8 +90,8 @@ export async function buildShowcaseOutcome(result: AnalysisResult): Promise<Show
       return curatedOutcome(result, {
         attempted: false,
         passed: false,
-        failures: [],
-        source: "저장된 AI 리포트 없음",
+        failures: replayable?.reason ? [replayable.reason] : [],
+        source: replayable?.reason ? "저장본 판정 불일치" : "저장된 AI 리포트 없음",
       });
     } else {
       draft = await geminiGenerate({
@@ -98,7 +106,7 @@ export async function buildShowcaseOutcome(result: AnalysisResult): Promise<Show
     // 저장된 응답에도 마크다운이 섞여 있을 수 있어 재생·실시간 양쪽 모두 지운다.
     draft = stripMarkdown(draft);
 
-    const validation = validateShowcaseDraft(draft, bundle);
+    const validation = validateShowcaseDraft(draft, checkBundle);
     if (!validation.ok) {
       return curatedOutcome(result, {
         attempted: true,
