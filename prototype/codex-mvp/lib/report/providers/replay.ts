@@ -23,7 +23,18 @@ export function registerReplayProvider() {
 
   registerReportProvider({
     name: `${modelLabel}`,
-    successLabel: `AI 설명 · ${modelLabel} · ${readableDate(summary.collectedAt)} 작성 · 검사 통과`,
+    // 조합에 맞는 응답을 찾지 못한 경우에만 쓰이는 값이다. 이때는 검사 단계까지 가지 않는다.
+    successLabel: `AI 설명 · ${modelLabel} · 검사 통과`,
+    // 배지에는 이 조합에 실제로 쓴 응답의 모델과 수집 시각을 적는다.
+    // 스냅샷 전체의 최신 날짜를 쓰면 7월에 받은 문장에 8월 날짜가 붙는다.
+    resolveSuccessLabel({ bundle }) {
+      const record = findLlmResponse(bundle);
+      if (!record) return null;
+      return (
+        `AI 설명 · ${readableModelName(record.model)} · ` +
+        `${readableDate(record.collectedAt.slice(0, 10))} 작성 · 검사 통과`
+      );
+    },
     async generate({ bundle }) {
       const record = findLlmResponse(bundle);
       if (!record) {

@@ -22,6 +22,12 @@ export type ReportProvider = {
    * 지정하지 않으면 `AI 설명(<name> · 검증 통과)`으로 표시한다.
    */
   successLabel?: string;
+  /**
+   * 요청마다 달라지는 배지 문구. 저장된 응답을 재생하는 제공자는 이 조합에 실제로 쓴
+   * 응답의 수집 시각을 표시해야 하므로, 고정 문구 대신 이 함수를 쓴다.
+   * null을 돌려주면 `successLabel`로 되돌아간다.
+   */
+  resolveSuccessLabel?: (input: ReportProviderInput) => string | null;
   /** 프롬프트를 받아 설명 초안 문자열만 돌려준다. 판정·수치 변경 여부는 이후 검증에서 확인한다. */
   generate: (input: ReportProviderInput) => Promise<string>;
 };

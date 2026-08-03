@@ -191,7 +191,9 @@ export async function createFarmReport(result: AnalysisResult): Promise<FarmRepo
     return {
       origin: "llm",
       originLabel:
-        resolution.provider.successLabel ?? `AI 설명 · ${resolution.provider.name} · 검사 통과`,
+        resolution.provider.resolveSuccessLabel?.({ system, user, bundle }) ??
+        resolution.provider.successLabel ??
+        `AI 설명 · ${resolution.provider.name} · 검사 통과`,
       sections: parseDraftSections(draft),
       actionNotes: ruleBasedActionNotes(bundle),
       text: draft,
