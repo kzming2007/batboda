@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { analyzeFarm } from "@/lib/analysis/engine";
 import { createMockParcel, createMockSoil, createMockWeather } from "@/lib/mock/data";
 import { buildReportBundle } from "@/lib/report/bundle";
-import { validateReport } from "@/lib/report/contract";
+import { stripMarkdown, validateReport } from "@/lib/report/contract";
 import { createFarmReport, ruleBasedSections } from "@/lib/report";
 import { registerReportProvider } from "@/lib/report/provider";
 import { registerCuratedProvider } from "@/lib/report/providers/curated";
@@ -23,6 +23,26 @@ const baseResult = analyzeFarm({
   soil: createMockSoil(selection),
   weather: createMockWeather(selection),
   analyzedAt: "2026-07-25T00:00:00.000Z",
+});
+
+describe("마크다운 제거", () => {
+  // 실제 Gemini 출력이 `**조건부 적합**`처럼 강조를 넣어 화면에 별표가 그대로 보인 사례가 있다.
+  it("강조·제목 기호를 지우고 글자는 남긴다", () => {
+    expect(stripMarkdown("**조건부 적합**하며, **주의** 등급입니다."))
+      .toBe("조건부 적합하며, 주의 등급입니다.");
+    expect(stripMarkdown("__굵게__ 와 `코드` 와 *기울임* 을 지운다."))
+      .toBe("굵게 와 코드 와 기울임 을 지운다.");
+    expect(stripMarkdown("## 한 줄 결론\n> 인용문")).toBe("한 줄 결론\n인용문");
+  });
+
+  it("숫자 범위와 단위의 하이픈은 건드리지 않는다", () => {
+    const text = "상추 공식 범위 6.5–7.0, 적온 15-20℃, 유효토심 50-100cm";
+    expect(stripMarkdown(text)).toBe(text);
+  });
+
+  it("짝이 맞지 않는 별표도 남기지 않는다", () => {
+    expect(stripMarkdown("**조건부 적합 인데 닫히지 않았다")).toBe("조건부 적합 인데 닫히지 않았다");
+  });
 });
 
 describe("설명 리포트 계약", () => {

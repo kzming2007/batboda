@@ -3,6 +3,7 @@ import {
   REPORT_SECTIONS,
   reportSystemPrompt,
   reportUserPrompt,
+  stripMarkdown,
   validateReport,
 } from "@/lib/report/contract";
 import { resolveReportProvider } from "@/lib/report/provider";
@@ -142,7 +143,8 @@ export async function createFarmReport(result: AnalysisResult): Promise<FarmRepo
   }
 
   try {
-    const draft = await resolution.provider.generate({ system, user, bundle });
+    // 검증 앞에서 마크다운을 지운다. 화면은 평문을 그대로 출력하므로 별표가 사용자에게 보인다.
+    const draft = stripMarkdown(await resolution.provider.generate({ system, user, bundle }));
     const validation = validateReport(draft, bundle);
     pipeline.push({
       id: "generate",

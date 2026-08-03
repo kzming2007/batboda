@@ -1,4 +1,5 @@
 import { buildReportBundle } from "@/lib/report/bundle";
+import { stripMarkdown } from "@/lib/report/contract";
 import { buildShowcaseReport } from "@/lib/report/showcase";
 import {
   parseShowcaseDraft,
@@ -90,6 +91,9 @@ export async function buildShowcaseOutcome(result: AnalysisResult): Promise<Show
       });
       originLabel = `AI 설명 · ${readableModelName(GEMINI_MODEL)} · 검사 통과`;
     }
+
+    // 저장된 응답에도 마크다운이 섞여 있을 수 있어 재생·실시간 양쪽 모두 지운다.
+    draft = stripMarkdown(draft);
 
     const validation = validateShowcaseDraft(draft, bundle);
     if (!validation.ok) {
