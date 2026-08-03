@@ -115,7 +115,17 @@ async function request(path: string, params: Record<string, string | number>) {
     cache: "no-store",
     signal: AbortSignal.timeout(12_000),
   });
-  if (!response.ok) throw new Error(`공공데이터 HTTP ${response.status}`);
+  if (!response.ok) {
+    // 상태 코드만으로는 거부 이유를 알 수 없다. 공공데이터포털은 본문에 사유를 적어 보내므로
+    // 앞부분을 함께 실어 화면의 실패 이유에서 바로 확인할 수 있게 한다.
+    // 본문에 인증키가 들어갈 일은 없지만, 혹시 섞여도 노출되지 않게 키 문자열은 가린다.
+    const detail = (await response.text().catch(() => ""))
+      .replace(/\s+/g, " ")
+      .replace(serviceKey(), "[키 가림]")
+      .trim()
+      .slice(0, 300);
+    throw new Error(`공공데이터 HTTP ${response.status}${detail ? ` — ${detail}` : ""}`);
+  }
   const raw = await response.text();
   if (!raw.trim()) throw new Error("공공데이터 응답이 비어 있습니다.");
 
