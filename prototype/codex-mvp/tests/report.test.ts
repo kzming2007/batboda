@@ -99,6 +99,24 @@ describe("설명 리포트 계약", () => {
     expect(inventedNumber.failures.some((failure) => failure.includes("87.3"))).toBe(true);
   });
 
+  // 판정 단계만 검사하던 때에는 실제 Gemini 출력이 위험 등급을 `주의 등급`처럼
+  // 바꿔 써도 통과했다. 두 값을 함께 확인한다.
+  it("위험 등급을 바꿔 쓰면 검증에서 막는다", () => {
+    const bundle = buildReportBundle(baseResult);
+    const changedRisk = validateReport(
+      `한 줄 결론 판정은 ${bundle.stage}입니다. 왜 이렇게 나왔나 위험은 보통 수준입니다. 함께 확인할 점 참고용입니다.`,
+      bundle,
+    );
+
+    expect(changedRisk.ok).toBe(false);
+    expect(changedRisk.failures.some((failure) => failure.includes(bundle.riskLabel))).toBe(true);
+  });
+
+  it("검사 항목은 다섯 가지를 유지한다", () => {
+    // 소개서와 화면이 `다섯 가지로 검사한다`고 설명하므로 개수가 바뀌면 설명과 어긋난다.
+    expect(validateReport("아무 문장", buildReportBundle(baseResult)).checked).toHaveLength(5);
+  });
+
   it("금지 표현이 있으면 검증에서 막는다", () => {
     const bundle = buildReportBundle(baseResult);
     const validation = validateReport(

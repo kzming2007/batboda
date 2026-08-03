@@ -93,7 +93,7 @@ export type ReportValidation = {
 export function validateReport(draft: string, bundle: ReportBundle): ReportValidation {
   const failures: string[] = [];
   const checked = [
-    "판정 그대로 인용",
+    "판정·위험 등급 그대로 인용",
     "금지 표현",
     "근거에 없는 숫자",
     "필수 구성",
@@ -102,6 +102,12 @@ export function validateReport(draft: string, bundle: ReportBundle): ReportValid
 
   if (!draft.includes(bundle.stage)) {
     failures.push(`판정을 '${bundle.stage}' 그대로 쓰지 않고 바꿔 썼습니다.`);
+  }
+  // 판정 단계만 검사하면 위험 등급은 모델이 마음대로 바꿔도 통과한다.
+  // 프롬프트에서 이미 두 값을 함께 금지했으므로 검사도 함께 한다.
+  // 항목을 새로 늘리지 않고 첫 항목 안에서 확인해 검사 개수는 다섯으로 유지한다.
+  if (!draft.includes(bundle.riskLabel)) {
+    failures.push(`위험 등급을 '${bundle.riskLabel}' 그대로 쓰지 않고 바꿔 썼습니다.`);
   }
   for (const phrase of FORBIDDEN_PHRASES) {
     if (draft.includes(phrase)) failures.push(`쓰면 안 되는 표현 '${phrase}'이 있습니다.`);
