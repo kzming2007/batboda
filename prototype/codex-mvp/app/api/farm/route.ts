@@ -16,6 +16,9 @@ import type { AnalysisSelection, ParcelSearch } from "@/types/domain";
  * 좌표에 맞는 스냅샷이 없으면 실패를 그대로 알린다. 조용히 시연 자료로 넘어가지 않는다.
  */
 
+/** 반경 1km에서 후보가 수백 건 나오는 좌표가 있어 기본 상한(10초)보다 여유를 둔다. */
+export const maxDuration = 60;
+
 function mockSearch(selection: AnalysisSelection): ParcelSearch {
   const mock = createMockParcel(selection);
   return {
