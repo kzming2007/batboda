@@ -40,6 +40,14 @@ export type ParcelSearch = {
   candidateCount: number;
   radiusM: 250 | 500 | 1000;
   requiresRefinement: boolean;
+  /** 후보 목록의 출처. connected=실시간 조회, cache=검증 스냅샷, mock=시연 자료 */
+  status: SourceStatus;
+  source: string;
+  /**
+   * 실시간 조회가 실패해 다른 출처로 대체한 경우 그 실패 이유.
+   * 화면에 그대로 보여준다. 대체를 실시간처럼 보이게 하지 않기 위한 값이다.
+   */
+  liveFailure?: string | null;
 };
 
 export type SoilPhysicalProfile = {

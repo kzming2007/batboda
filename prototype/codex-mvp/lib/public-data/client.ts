@@ -18,10 +18,24 @@ const DATA_BASE = "https://apis.data.go.kr";
 
 type LooseObject = Record<string, unknown>;
 
+/**
+ * data.go.kr은 같은 키를 Decoding·Encoding 두 형태로 준다.
+ * 요청을 만들 때 `URLSearchParams`가 한 번 인코딩하므로 코드에는 Decoding 형태가 필요하다.
+ * Encoding 형태를 넣으면 이중 인코딩이 되어 `등록되지 않은 서비스키(403)`로 조용히 실패한다.
+ *
+ * Base64 문자에는 `%`가 없으므로 `%`가 있으면 Encoding 형태로 보고 한 번 되돌린다.
+ * 어느 쪽을 붙여넣어도 동작하게 해, 다른 PC에서 설정할 때 같은 실수를 반복하지 않게 한다.
+ */
 function serviceKey() {
   const key = process.env.DATA_GO_KR_SERVICE_KEY?.trim();
   if (!key) throw new Error("공공데이터 서비스 키가 설정되지 않았습니다.");
-  return key;
+  if (!key.includes("%")) return key;
+  try {
+    return decodeURIComponent(key);
+  } catch {
+    // 디코딩할 수 없는 형태면 원본을 그대로 쓰고 호출 결과로 판단하게 둔다.
+    return key;
+  }
 }
 
 function isObject(value: unknown): value is LooseObject {
@@ -152,6 +166,9 @@ export async function fetchFarmMapCandidates(
       candidateCount: candidates.length,
       radiusM,
       requiresRefinement: candidates.length > 12,
+      status: "connected",
+      source: "농림축산식품부 팜맵 · 실시간 조회",
+      liveFailure: null,
     };
   }
 

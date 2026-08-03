@@ -356,7 +356,17 @@ export default function FarmDecisionApp({ initialResult }: Props) {
                   <p className="candidate-count">
                     반경 {withComma(parcelSearch.radiusM)}m · 후보 {withComma(parcelSearch.candidateCount)}개
                     {parcelSearch.requiresRefinement ? " · 지번 검색 권장" : ""}
+                    {" · "}
+                    <em className={`candidate-origin origin-${parcelSearch.status}`}>
+                      {sourceStatusLabel(parcelSearch.status)}
+                    </em>
                   </p>
+                  {parcelSearch.liveFailure && (
+                    <p className="candidate-fallback-note">
+                      실시간 조회가 실패해 저장해 둔 검증 자료로 후보를 보여줍니다.
+                      실시간 값이 아닙니다. 실패 이유: {parcelSearch.liveFailure}
+                    </p>
+                  )}
                   <div className="parcel-candidate-list">
                     {visibleCandidates.map((candidate) => {
                       const selected = selection.parcelId === candidate.parcelId &&
@@ -390,6 +400,8 @@ export default function FarmDecisionApp({ initialResult }: Props) {
                     <p className="parcel-confirmed">
                       <span aria-hidden="true">✓</span>
                       분석 필지 확인 완료 · {selection.parcelAddress}
+                      {parcelSearch.status !== "connected" &&
+                        ` · ${sourceStatusLabel(parcelSearch.status)}`}
                     </p>
                   )}
                 </div>

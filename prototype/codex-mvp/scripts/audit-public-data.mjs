@@ -1,7 +1,11 @@
 import { XMLParser } from "fast-xml-parser";
 import proj4 from "proj4";
 
-const SERVICE_KEY = process.env.DATA_GO_KR_SERVICE_KEY?.trim();
+// Encoding 형태 키를 넣어도 동작하게 한 번 되돌린다. 앱의 serviceKey()와 같은 규칙이다.
+const RAW_SERVICE_KEY = process.env.DATA_GO_KR_SERVICE_KEY?.trim();
+const SERVICE_KEY = RAW_SERVICE_KEY?.includes("%")
+  ? (() => { try { return decodeURIComponent(RAW_SERVICE_KEY); } catch { return RAW_SERVICE_KEY; } })()
+  : RAW_SERVICE_KEY;
 if (!SERVICE_KEY) {
   throw new Error("DATA_GO_KR_SERVICE_KEY is not configured.");
 }

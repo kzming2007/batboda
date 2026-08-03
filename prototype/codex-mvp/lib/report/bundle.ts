@@ -40,6 +40,10 @@ function collectNumbers(values: string[]) {
   for (const value of values) {
     for (const match of value.matchAll(/\d+(?:\.\d+)?/g)) {
       found.add(match[0]);
+      // `05`처럼 0으로 시작하는 값은 `2025년 5월 2일`같이 한국어 날짜로 풀어 쓸 때 `5`로 나온다.
+      // 근거에 있는 같은 수를 표기만 바꾼 것이므로 함께 허용한다. 새로 만든 수는 여전히 걸린다.
+      const unpadded = match[0].replace(/^0+(?=\d)/, "");
+      if (unpadded !== match[0]) found.add(unpadded);
     }
   }
   return [...found];

@@ -564,6 +564,22 @@ main {
 .candidate-search-row > button { color: var(--leaf-dark); background: var(--leaf-pale); }
 
 .candidate-count { margin: 12px 0 9px; color: var(--muted); font: 12px var(--mono); }
+
+/* 후보 목록의 출처. 실시간과 대체 자료가 같은 모양으로 보이지 않게 색을 나눈다. */
+.candidate-origin { font-style: normal; font-weight: 700; }
+.candidate-origin.origin-connected { color: var(--leaf-dark); }
+.candidate-origin.origin-cache,
+.candidate-origin.origin-fallback { color: var(--clay); }
+.candidate-origin.origin-mock { color: var(--muted); }
+.candidate-fallback-note {
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  border-left: 3px solid var(--clay);
+  background: rgba(196, 90, 66, 0.07);
+  color: var(--soil-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .parcel-candidate-list { display: grid; border-top: 1px solid var(--line); }
 .parcel-candidate-list > button {
   min-height: 55px;

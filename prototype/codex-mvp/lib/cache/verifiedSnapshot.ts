@@ -2,6 +2,7 @@ import snapshot from "@/lib/cache/snapshots/verified.json";
 import type {
   AnalysisSelection,
   ParcelData,
+  ParcelSearch,
   RecentClimateData,
   SoilData,
   VerifiedSnapshotProvenance,
@@ -87,6 +88,34 @@ export function verifiedParcel(selection: AnalysisSelection): ParcelData | null 
     status: "cache",
     source: `농림축산식품부 팜맵 · ${collectedLabel()}`,
     observedAt: source.parcel.observedAt,
+  };
+}
+
+/**
+ * 실시간 팜맵 조회가 실패했을 때 쓸 후보 목록.
+ *
+ * 스냅샷에 담긴 필지 한 곳만 후보로 내놓는다. 실시간 조회의 반경 검색을 대신하지 못하므로
+ * 후보 수를 부풀리지 않고, `status: "cache"`로 출처를 남겨 화면이 실시간과 구분해 표시하게 한다.
+ * 좌표가 스냅샷과 다르면 null을 돌려주고, 호출한 쪽이 실패를 그대로 알리게 둔다.
+ */
+export function verifiedParcelSearch(selection: AnalysisSelection): ParcelSearch | null {
+  const parcel = verifiedParcel(selection);
+  if (!parcel) return null;
+  return {
+    candidates: [
+      {
+        address: parcel.address,
+        parcelId: parcel.parcelId,
+        farmMapId: parcel.farmMapId ?? "팜맵 ID 없음",
+        interpretation: parcel.interpretation,
+        observedAt: parcel.observedAt,
+      },
+    ],
+    candidateCount: 1,
+    radiusM: 1000,
+    requiresRefinement: false,
+    status: "cache",
+    source: parcel.source,
   };
 }
 
