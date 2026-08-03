@@ -6,6 +6,7 @@ import { stripMarkdown, validateReport } from "@/lib/report/contract";
 import { createFarmReport, ruleBasedSections } from "@/lib/report";
 import { registerReportProvider } from "@/lib/report/provider";
 import { registerCuratedProvider } from "@/lib/report/providers/curated";
+import { registerReplayThenLiveProvider } from "@/lib/report/providers/replayThenLive";
 import { registerTamperedProvider } from "@/lib/report/providers/tampered";
 import type { AnalysisSelection } from "@/types/domain";
 
@@ -170,5 +171,43 @@ describe("설명 생성 제공자 경로", () => {
     expect(report.origin).toBe("rule");
     expect(report.originLabel).toContain("AI 호출이 안 되어");
     expect(report.providerNote).toContain("연결 실패");
+  });
+});
+
+/**
+ * `replay`는 저장본이 없으면 규칙 문장으로 내려가고, `gemini`는 무료 한도에 걸리면
+ * 아무 조합도 답하지 못한다. 시연에서는 두 성질이 모두 필요해서 섞은 경로다.
+ * 저장본이 있으면 한도와 무관하게 재생하고, 없으면 실시간으로 넘어간다.
+ */
+describe("저장본 우선 · 실시간 대체 제공자", () => {
+  it("저장본만 있어도 등록된다. 키가 없어도 시연 조합은 답할 수 있어야 한다", () => {
+    expect(process.env.GEMINI_API_KEY).toBeUndefined();
+    expect(registerReplayThenLiveProvider()).toBe(true);
+  });
+
+  it("저장본이 있는 조합은 실시간 호출 없이 재생하고 수집 시각을 밝힌다", async () => {
+    registerReplayThenLiveProvider();
+    const report = await createFarmReport(baseResult);
+
+    expect(report.origin).toBe("llm");
+    expect(report.originLabel).toContain("작성");
+    expect(report.validation?.ok).toBe(true);
+  });
+
+  it("저장본이 없는 조합은 키가 없으면 사유와 함께 규칙 문장으로 내려간다", async () => {
+    registerReplayThenLiveProvider();
+    // 사과는 스냅샷에 없는 조합이다.
+    const other = analyzeFarm({
+      mode: "mock",
+      selection: { ...selection, cropId: "apple" },
+      parcel: createMockParcel(selection),
+      soil: createMockSoil(selection),
+      weather: createMockWeather(selection),
+      analyzedAt: "2026-08-03T00:00:00.000Z",
+    });
+    const report = await createFarmReport(other);
+
+    expect(report.origin).toBe("rule");
+    expect(report.providerNote).toContain("실시간 호출 키도 설정되지 않았습니다");
   });
 });

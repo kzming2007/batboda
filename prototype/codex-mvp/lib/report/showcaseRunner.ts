@@ -57,7 +57,7 @@ export async function buildShowcaseOutcome(result: AnalysisResult): Promise<Show
     };
   }
 
-  if (provider !== "gemini" && provider !== "replay") {
+  if (provider !== "gemini" && provider !== "replay" && provider !== "replay-live") {
     return curatedOutcome(result, {
       attempted: false,
       passed: false,
@@ -70,26 +70,29 @@ export async function buildShowcaseOutcome(result: AnalysisResult): Promise<Show
     let draft: string;
     let originLabel: string;
 
-    if (provider === "replay") {
-      const record = findShowcaseResponse(bundle);
-      if (!record) {
-        return curatedOutcome(result, {
-          attempted: false,
-          passed: false,
-          failures: [],
-          source: "저장된 AI 리포트 없음",
-        });
-      }
+    // 저장본을 먼저 본다. `replay`는 없으면 여기서 멈추고, `replay-live`는 실시간으로 넘어간다.
+    const record = provider === "gemini" ? null : findShowcaseResponse(bundle);
+
+    if (record) {
       draft = record.draft;
       originLabel =
         `AI 설명 · ${readableModelName(record.model)} · ` +
         `${readableDate(record.collectedAt.slice(0, 10))} 작성 · 검사 통과`;
+    } else if (provider === "replay") {
+      return curatedOutcome(result, {
+        attempted: false,
+        passed: false,
+        failures: [],
+        source: "저장된 AI 리포트 없음",
+      });
     } else {
       draft = await geminiGenerate({
         system: showcaseSystemPrompt(),
         user: showcaseUserPrompt(bundle),
       });
-      originLabel = `AI 설명 · ${readableModelName(GEMINI_MODEL)} · 검사 통과`;
+      originLabel =
+        `AI 설명 · ${readableModelName(GEMINI_MODEL)}` +
+        `${provider === "replay-live" ? " · 실시간 생성" : ""} · 검사 통과`;
     }
 
     // 저장된 응답에도 마크다운이 섞여 있을 수 있어 재생·실시간 양쪽 모두 지운다.
