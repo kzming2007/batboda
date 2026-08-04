@@ -257,6 +257,13 @@ export default function FarmDecisionApp({ initialResult }: Props) {
     );
   }
 
+  /** 담아 둔 자리에서 바로 뺀다. 후보 목록을 다시 찾아 들어가지 않아도 되게 한다. */
+  function removeFavorite(farm: FavoriteFarm) {
+    updateFavorites((current) =>
+      current.filter((item) => favoriteId(item) !== favoriteId(farm)),
+    );
+  }
+
   /**
    * 저장해 둔 농지로 되돌아간다. 좌표와 필지를 함께 넣어 지번을 다시 검색하지 않아도 되게 한다.
    * 판정은 담아 두지 않았으므로 분석은 다시 돌린다.
@@ -441,16 +448,31 @@ export default function FarmDecisionApp({ initialResult }: Props) {
                 </p>
               ) : (
                 <div className="favorite-list">
+                  {/*
+                    빼는 동작을 후보 목록까지 찾아 들어가야 하면 번거롭다. 담아 둔 자리에서 바로 뺀다.
+                    마우스를 올렸을 때 드러내되 DOM에서 지우지는 않는다. 키보드로도 닿아야 한다.
+                  */}
                   {favorites.map((farm) => (
-                    <button
-                      key={favoriteId(farm)}
-                      type="button"
-                      aria-pressed={selection.parcelId === farm.parcelId}
-                      onClick={() => restoreFavorite(farm)}
-                    >
-                      <span>{farm.address}</span>
-                      <small>{farm.interpretation}</small>
-                    </button>
+                    <span className="favorite-item" key={favoriteId(farm)}>
+                      <button
+                        type="button"
+                        className="favorite-open"
+                        aria-pressed={selection.parcelId === farm.parcelId}
+                        onClick={() => restoreFavorite(farm)}
+                      >
+                        <span>{farm.address}</span>
+                        <small>{farm.interpretation}</small>
+                      </button>
+                      <button
+                        type="button"
+                        className="favorite-remove"
+                        aria-label={`${farm.address} 즐겨찾기에서 빼기`}
+                        title="즐겨찾기에서 빼기"
+                        onClick={() => removeFavorite(farm)}
+                      >
+                        <span aria-hidden="true">✕</span>
+                      </button>
+                    </span>
                   ))}
                 </div>
               )}

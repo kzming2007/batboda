@@ -3868,30 +3868,73 @@ span.step-number { font-size: 16px; }
   gap: 10px;
 }
 
-.favorite-list button {
+/* 알약 하나에 열기와 빼기가 함께 들어간다. 테두리는 껍데기가 갖고 안쪽 버튼은 투명하게 둔다 */
+.favorite-item {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--paper-white);
+  border: 1px solid var(--line-dark);
+  border-radius: 999px;
+  overflow: hidden;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.favorite-item:hover { background: var(--leaf-pale); border-color: var(--leaf); }
+
+.favorite-open {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 11px 18px;
   color: var(--soil-ink);
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
-  border-radius: 999px;
+  background: transparent;
+  border: 0;
   cursor: pointer;
-  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  transition: color 160ms ease;
 }
 
-.favorite-list button span { font-size: 17px; font-weight: 600; }
-.favorite-list button small { color: var(--muted); font-size: 15px; }
-.favorite-list button:hover { background: var(--leaf-pale); border-color: var(--leaf); }
+.favorite-open span { font-size: 17px; font-weight: 600; }
+.favorite-open small { color: var(--muted); font-size: 15px; }
 
-.favorite-list button[aria-pressed="true"] {
-  color: var(--paper-white);
+.favorite-item:has(.favorite-open[aria-pressed="true"]) {
   background: var(--leaf-dark);
   border-color: var(--leaf-dark);
 }
 
-.favorite-list button[aria-pressed="true"] small { color: rgba(255, 255, 255, 0.78); }
+.favorite-open[aria-pressed="true"] { color: var(--paper-white); }
+.favorite-open[aria-pressed="true"] small { color: rgba(255, 255, 255, 0.78); }
+
+/*
+  빼기 단추는 늘 자리에 있고 흐리게 둔다. 마우스를 올리면 진해진다.
+
+  접었다 펴지 않는다. 손가락에는 hover가 없어 폰에서는 영원히 숨고, 숨은 조작은
+  있는 줄도 모른다. 폭이 고정이라 나타날 때 알약 크기가 흔들리지도 않는다.
+*/
+.favorite-remove {
+  width: 32px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  padding: 0 8px 0 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.4;
+  cursor: pointer;
+  transition: opacity 160ms ease, color 160ms ease;
+}
+
+.favorite-item:hover .favorite-remove,
+.favorite-item:focus-within .favorite-remove { opacity: 1; }
+
+.favorite-remove:hover { color: var(--clay); }
+.favorite-remove:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; opacity: 1; }
+
+.favorite-item:has(.favorite-open[aria-pressed="true"]) .favorite-remove {
+  color: rgba(255, 255, 255, 0.85);
+}
 
 /* 후보 한 줄 = 선택 버튼 + 별표. 별표는 폭을 고정해 주소 길이에 흔들리지 않게 둔다 */
 .parcel-candidate-row {
