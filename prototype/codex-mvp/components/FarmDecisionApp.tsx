@@ -115,19 +115,30 @@ function skyIcon(sky: string) {
  */
 type BadgeTone = "good" | "watch" | "bad" | "info";
 
+/*
+  부호와 낱말은 DESIGN.md의 `State vocabulary`를 그대로 옮긴다.
+
+    기준 안     ✓   초록
+    주의        !   황
+    기준 밖     ×   적
+    확인 필요   ?   회색
+
+  `확인 필요`는 값이 없어 기준과 견줄 수 없는 자리의 낱말이다. 나쁜 것이 아니라 확인되지
+  않은 것이라 경고색을 쓰지 않는다. `주의`가 그 낱말을 가져다 쓰고 있었고, 그러면 값이 있는
+  주의와 값이 없는 자리가 화면에서 같은 말을 하게 된다.
+*/
 const badgeGlyph: Record<BadgeTone, string> = {
   good: "✓",
   watch: "!",
-  bad: "▲",
-  info: "–",
+  bad: "×",
+  info: "?",
 };
 
 const factorBadge: Record<FactorState, { tone: BadgeTone; label: string }> = {
   good: { tone: "good", label: "기준 안" },
-  watch: { tone: "watch", label: "확인 필요" },
+  watch: { tone: "watch", label: "주의" },
   risk: { tone: "bad", label: "기준 밖" },
-  // 값이 없으면 기준과 견줄 수가 없다. `자료 없음`이라고 또 적으면 큰 글자와 같은 말을 두 번 한다.
-  unknown: { tone: "info", label: "기준 대조 못 함" },
+  unknown: { tone: "info", label: "확인 필요" },
   info: { tone: "info", label: "참고" },
 };
 
@@ -138,6 +149,13 @@ const factorBadge: Record<FactorState, { tone: BadgeTone; label: string }> = {
  * 항목 종류(토양 → 기상)를 따르므로, 그 순서로 자르면 기준 밖 요인이 뒤에 있다는
  * 이유만으로 사라진다.
  */
+/** 판정 단계에 맞는 색조. 세 화면이 같은 판정에 같은 색을 쓰게 한 곳에서만 정한다. */
+function stageToneOf(label: string): BadgeTone {
+  if (label === "적합") return "good";
+  if (label === "조건부 적합") return "watch";
+  return "bad";
+}
+
 function factorSeverity(state: FactorState | undefined) {
   if (state === "risk") return 0;
   if (state === "watch") return 1;
@@ -1026,12 +1044,7 @@ function AnalysisView({
       : result.evidenceQuality.level === "weak"
         ? "bad"
         : "watch";
-  const stageTone =
-    result.suitabilityLabel === "적합"
-      ? "good"
-      : result.suitabilityLabel === "조건부 적합"
-        ? "watch"
-        : "bad";
+  const stageTone = stageToneOf(result.suitabilityLabel);
   const leadSentence = result.report?.sections[0]?.body ?? result.summary;
   // 판정 문장과 위험 문장을 한 줄에 붙이지 않고 문장마다 줄을 나눈다.
   // `-다.` 뒤 공백만 끊으므로 pH 6.9 같은 소수점은 잘리지 않는다.
@@ -1668,7 +1681,19 @@ function AnalysisView({
         </button>
       </div>
       <div className="sheet-rule strong" />
-      <h2 id="report-page-title" className="page-title">이 결과를 초보자 말로 옮기면</h2>
+      {/*
+        가장 크게 보이는 글자가 판정이어야 한다. 화면 이름이 판정보다 컸다 — 31px 대 21px.
+        `10초 안에 읽힌다`가 04의 목표인데 먼저 읽히는 것이 화면 이름이면 목표를 못 세운다.
+
+        AI 문장은 그대로 둔다. 판정 낱말은 규칙이 확정한 값이라 앞세워도 AI가 결론을 낸 것으로
+        읽히지 않는다. 화면 이름은 라벨 자리로 내린다.
+      */}
+      <h2 id="report-page-title" className="report-head">
+        <span className="report-head-kind">이 결과를 초보자 말로 옮기면</span>
+        <strong className={`report-head-verdict ${stageToneOf(result.suitabilityLabel)}`}>
+          {result.suitabilityLabel}
+        </strong>
+      </h2>
       <div className="sheet-detail-body">
         <ShowcaseReportView
           result={result}

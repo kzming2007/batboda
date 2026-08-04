@@ -2109,6 +2109,33 @@ main {
 }
 
 /*
+  04 머리. 판정이 가장 크고 화면 이름은 라벨로 내린다.
+  이전에는 화면 이름이 31px, AI 결론 문장이 21px이어서 먼저 읽히는 것이 화면 이름이었다.
+*/
+.report-head {
+  display: grid;
+  gap: var(--s1);
+}
+
+.report-head-kind {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.report-head-verdict {
+  font-size: var(--t-verdict);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.report-head-verdict.good { color: var(--good); }
+.report-head-verdict.watch { color: var(--watch); }
+.report-head-verdict.bad { color: var(--bad); }
+
+/*
   03 제목 줄. 제목 · 판정 · 펼치기가 한 줄에 온다.
   판정이 여기 있어야 아래로 내려가는 동안 무엇을 보는 중인지 잊지 않는다.
 */
