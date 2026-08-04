@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { divIcon, latLngBounds, type LatLngExpression } from "leaflet";
 import {
   Circle,
@@ -24,6 +24,12 @@ type FarmMapProps = {
   searchRadiusM?: number | null;
 };
 
+/** 핀이 먼 곳으로 뛰면 이 배율로 되돌린다. 필지에 밀착한 채 다른 지역을 보면 아무것도 안 보인다. */
+const OVERVIEW_ZOOM = 13;
+
+/** 이 거리(m)를 넘으면 다른 지역으로 옮긴 것으로 본다. 지도 안을 클릭한 정도는 배율을 지킨다. */
+const FAR_JUMP_M = 5000;
+
 /** 경계가 들어오면 그 필지가 화면에 꽉 차게 맞춘다. 없으면 핀을 따라간다. */
 function MapInteraction({
   lat,
@@ -32,21 +38,44 @@ function MapInteraction({
   boundary,
 }: Pick<FarmMapProps, "lat" | "lng" | "onChange" | "boundary">) {
   const map = useMap();
-  const ringKey = boundary?.rings.length ? `${boundary.parcelId}:${boundary.rings.length}` : null;
+  const rings = boundary?.rings.length ? boundary.rings : null;
+  // 경계 자체가 아니라 필지 식별자에만 반응한다. 같은 필지를 다시 그릴 때 흔들리지 않게 한다.
+  const ringKey = rings ? `${boundary!.parcelId}:${rings.length}` : null;
+
+  /**
+   * 지금 지도가 무엇을 보여줘야 하는지를 값 하나로 모은다.
+   *
+   * 경계와 핀을 각각 다른 효과가 맡으면 한 번의 클릭에 둘 다 깨어나 서로 지도를 뺏는다.
+   * 무엇을 보여줄지 먼저 정하고 그 결과만 지도에 반영한다.
+   */
+  const target = ringKey ?? `pin:${lat},${lng}`;
+  const applied = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!boundary || boundary.rings.length === 0) return;
-    const bounds = latLngBounds(boundary.rings.flat());
-    if (!bounds.isValid()) return;
-    map.flyToBounds(bounds, { padding: [36, 36], maxZoom: 18, duration: 0.7 });
-    // 경계 자체가 아니라 필지 식별자에만 반응한다. 같은 필지를 다시 그릴 때 흔들리지 않게 한다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ringKey, map]);
+    if (applied.current === target) return;
+    applied.current = target;
 
-  useEffect(() => {
-    if (boundary && boundary.rings.length > 0) return;
-    map.flyTo([lat, lng], map.getZoom(), { duration: 0.7 });
-  }, [lat, lng, map, boundary]);
+    if (rings) {
+      const bounds = latLngBounds(rings.flat());
+      if (bounds.isValid()) {
+        map.flyToBounds(bounds, { padding: [36, 36], maxZoom: 18, duration: 0.7 });
+        return;
+      }
+    }
+
+    /*
+      핀 이동은 애니메이션 없이 즉시 옮긴다.
+
+      `flyTo`는 requestAnimationFrame으로 도는데, 프레임이 끊기면 비행이 중간에 멈추고
+      지도는 출발한 자리에 남는다. 그러면 다음 클릭에서야 도착한 것처럼 보인다.
+      실제로 `대관령 → 다른 지역`이 한 박자씩 밀린다는 보고가 있었다.
+      대표 농지 버튼은 목적지가 분명한 이동이라 날아가는 그림이 필요하지 않다.
+    */
+    const zoom = map.distance(map.getCenter(), [lat, lng]) > FAR_JUMP_M
+      ? OVERVIEW_ZOOM
+      : map.getZoom();
+    map.setView([lat, lng], zoom, { animate: false });
+  }, [target, rings, lat, lng, map]);
 
   useMapEvents({
     click(event) {
