@@ -1138,6 +1138,13 @@ main {
   border-radius: var(--pill);
 }
 
+/* 지명과 성격이 한 `div` 안에 나란히 온다. 간격이 없으면 `평창 대관령고랭지 밭`으로 붙는다. */
+.map-caption > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
 .map-caption strong {
   font-weight: 700;
 }
@@ -1153,14 +1160,17 @@ main {
 
 /* ── 즐겨찾기와 대표 농지 ───────────────────────────────────────────────── */
 
-.favorite-shortcuts,
-.place-shortcuts {
+.favorite-shortcuts {
   display: grid;
   gap: var(--s2);
 }
 
+/*
+  대표 농지 버튼은 `.place-shortcuts`의 직계 자식이다. 감싸는 `div`가 없으므로 이 요소
+  자체가 가로 줄이어야 한다. grid로 두면 버튼 하나가 한 줄을 차지해 789px까지 늘어난다.
+*/
 .favorite-list,
-.place-shortcuts > div {
+.place-shortcuts {
   display: flex;
   flex-wrap: wrap;
   gap: var(--s2);
@@ -2800,10 +2810,130 @@ main {
   text-wrap: pretty;
 }
 
+/*
+  결론 아래 한 줄. 판정을 정한 것이 규칙이라고 밝힌다. AI 문장과 붙어 있어야 뜻이 사는
+  자리라 여백을 위로 붙이고 아래만 띄운다.
+*/
+.showcase-origin-note {
+  padding: 0 var(--s5) var(--s4);
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.6;
+}
+
+.showcase-origin-note strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
 .showcase-block {
   display: grid;
   gap: var(--s2);
   padding: var(--s4) var(--s5);
+  border-top: 1px solid var(--line);
+}
+
+/*
+  판단 근거 셋. 03의 근거 한 줄과 같은 구조를 쓴다. 같은 것을 두 화면에서 다르게 보이면
+  같은 값인지 알 수 없다. 여기서는 표 없이 세로로만 쌓는다.
+*/
+.showcase-basis {
+  display: grid;
+}
+
+.showcase-basis-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--s2) var(--s3);
+  padding: var(--s3) 0;
+}
+
+.showcase-basis-row + .showcase-basis-row {
+  border-top: 1px solid var(--line);
+}
+
+.showcase-basis-row > strong {
+  font-size: var(--t-lead);
+  font-weight: 700;
+}
+
+.showcase-basis-value {
+  justify-self: end;
+  font-size: var(--t-figure);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.showcase-basis-row .meter,
+.showcase-basis-note {
+  grid-column: 2 / -1;
+}
+
+.showcase-basis-note {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.65;
+}
+
+/* 현장 확인 항목은 순서가 정보를 담지 않는다. 번호 대신 부호를 쓴다. */
+.showcase-checklist.field-checks li::before {
+  content: "·";
+  color: var(--cy-ink);
+  font-size: var(--t-lead);
+}
+
+/*
+  AI가 쓴 산문. 요구사항 ③의 증거라 화면에서 없애지 않고 아래로 보낸다.
+  기본은 접힘이다. 먼저 읽어야 하는 것이 위에 있다.
+*/
+.showcase-prose {
+  border-top: 1px solid var(--line);
+}
+
+.showcase-prose > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2) var(--s3);
+  min-height: var(--touch);
+  padding: var(--s3) var(--s5);
+  color: var(--cy-ink);
+  font-size: var(--t-body);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+  transition: background var(--dur) var(--ease);
+}
+
+.showcase-prose > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* 펼침 여부를 부호로도 알린다. 색만으로 판단하게 하지 않는다. */
+.showcase-prose > summary::before {
+  content: "＋";
+  font-weight: 800;
+}
+
+.showcase-prose[open] > summary::before {
+  content: "－";
+}
+
+.showcase-prose > summary:hover {
+  background: var(--cy-pale);
+}
+
+.showcase-prose > summary small {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  font-weight: 400;
+}
+
+/* 접힌 안쪽 첫 블록은 위 괘선이 요약과 겹친다. */
+.showcase-prose > .showcase-block:first-of-type {
   border-top: 1px solid var(--line);
 }
 

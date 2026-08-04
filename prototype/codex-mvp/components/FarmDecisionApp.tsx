@@ -625,6 +625,11 @@ export default function FarmDecisionApp({ initialResult }: Props) {
               )}
             </div>
 
+            {/*
+              이름표를 눈에 보이게 둔다. `aria-label`만 있으면 보조기기에는 읽히지만
+              화면에서는 바로 위 `내 농지` 아래에 버튼이 붙어, 이 셋이 즐겨찾기처럼 읽힌다.
+            */}
+            <span className="favorite-shortcuts-label">대표 시연 농지</span>
             <div className="place-shortcuts" aria-label="대표 시연 농지">
               {places.map((place) => (
                 <button
@@ -1454,6 +1459,7 @@ function AnalysisView({
       <h2 id="report-page-title" className="page-title">이 결과를 초보자 말로 옮기면</h2>
       <div className="sheet-detail-body">
         <ShowcaseReportView
+          result={result}
           report={result.showcaseReport}
           note={result.showcaseNote}
           trace={result.showcaseTrace}
@@ -1480,15 +1486,67 @@ function AnalysisView({
   return verdictPage;
 }
 
+/**
+ * 이 자료로는 알 수 없어 현장에서 봐야 하는 것.
+ *
+ * 없는 값을 짐작해 채우지 않는 것과, **무엇을 모르는지 말해 주는 것**은 다른 일이다.
+ * 앞은 이미 하고 있었고 뒤가 없었다. 그래서 사용자는 화면을 다 읽고도 무엇을 더
+ * 확인해야 하는지 알 수 없었다.
+ *
+ * 항목은 짐작이 아니라 이 판정에 실제로 쓰인 자료의 한계에서 뽑는다.
+ * 그래서 필지마다 다르고, 해당 없으면 나오지 않는다.
+ */
+function fieldChecks(result: AnalysisResult) {
+  const checks: { title: string; body: string }[] = [];
+  const soilUseKind = cropProfiles[result.selection.cropId].soilUseKind;
+  const limiting = result.soil.physicalProfile
+    ? limitingFactorLabel(result.soil.physicalProfile, soilUseKind)
+    : null;
+
+  // 저해요인은 등급을 낮춘 원인이다. 토양도는 필지 하나를 한 값으로 적으므로 어느 자리가
+  // 문제인지는 걸어 봐야 안다. `제외`·`없음`으로 읽히는 값은 확인할 것이 없다는 뜻이다.
+  if (limiting && !["확인되지 않음", "제외", "없음"].includes(limiting.trim())) {
+    checks.push({
+      title: `${limiting}이 실제로 어느 구역인지`,
+      body: `공식 토양도는 이 필지 전체를 한 값으로 적습니다. ${limiting}으로 적힌 조건이 필지 안 어디에 몰려 있는지는 비가 온 뒤 직접 걸어 보셔야 알 수 있습니다.`,
+    });
+  }
+
+  // 관측소가 멀면 그 값이 이 필지의 미기후를 대표한다고 말할 수 없다. 거리를 그대로 적는다.
+  const station = result.recentClimate.station;
+  if (station.distanceKm !== null && station.distanceKm !== undefined) {
+    checks.push({
+      title: "이 필지의 실제 기온",
+      body: `최근 기후는 ${station.name}(${station.distanceKm}km) 관측 기록입니다. 골짜기와 능선은 같은 지역에서도 온도가 달라, 심을 자리의 값은 현장 온도계로 확인하시는 편이 정확합니다.`,
+    });
+  }
+
+  // pH가 없으면 산도 없이 판정한 것이다. 그 사실을 확인 항목으로 남긴다.
+  if (result.soil.ph === null) {
+    checks.push({
+      title: "토양 산도(pH)",
+      body: "이 필지는 토양검정 기록이 없어 산도를 조회하지 못했습니다. 짐작해 채우지 않았으므로, 심기 전 간이 검정으로 실제 값을 확인하셔야 합니다.",
+    });
+  }
+
+  return checks;
+}
+
 function ShowcaseReportView({
+  result,
   report,
   note,
   trace,
 }: {
+  result: AnalysisResult;
   report: ShowcaseReport | null;
   note: string | null;
   trace: ShowcaseTrace | null;
 }) {
+  // 근거는 판정에 실제로 반영된 것만 앞에 세운다. `참고 · 점수 미반영`은 아래 산문에 남는다.
+  const leadFactors = result.factors.filter((factor) => factor.state !== "info").slice(0, 3);
+  const checks = fieldChecks(result);
+
   return (
     <section className="showcase-section" aria-labelledby="showcase-title">
       <div className="showcase-heading">
@@ -1513,21 +1571,44 @@ function ShowcaseReportView({
         <p className="showcase-empty">{note ?? "이 보고서를 만들 수 있는 조건이 아닙니다."}</p>
       ) : (
         <>
+          {/*
+            결론 한 줄은 AI가 쓴 문장을 그대로 둔다. 다만 그 아래에 판정을 정한 것이
+            규칙이라고 적는다. 문장만 두면 `AI가 결론까지 낸다`로 읽히고, 규칙 문장으로
+            바꾸면 이 화면에서 AI가 한 일이 보이지 않는다. 둘을 병기해 둘 다 지킨다.
+          */}
           <p className="showcase-headline">
             <Emphasized text={report.headline} highlights={report.highlights} />
           </p>
+          <p className="showcase-origin-note">
+            판정 <strong>{result.suitabilityLabel}</strong>은 공식 기준으로 규칙이 확정했습니다.
+            AI는 그 결과를 옮겨 쓰기만 합니다.
+          </p>
 
-          {report.blocks.map((block) => (
-            <div className="showcase-block" key={block.id}>
-              <h4>{block.heading}</h4>
-              <p>
-                <Emphasized text={block.body} highlights={report.highlights} />
-              </p>
+          {/*
+            근거를 산문 안에 묻어 두면 읽는 사람이 문장을 다 읽어야 무엇이 걸리는지 안다.
+            판정에 반영된 항목만 눈금과 함께 앞에 세운다. 값·기준·눈금은 03과 같은 근원이다.
+          */}
+          <div className="showcase-block">
+            <h4>이렇게 판단한 근거</h4>
+            <div className="showcase-basis">
+              {leadFactors.map((factor) => (
+                <div className="showcase-basis-row" key={factor.id}>
+                  <span className={`factor-signal ${factor.state}`} aria-hidden="true" />
+                  <strong>{factor.label}</strong>
+                  <span className="showcase-basis-value">{factor.value}</span>
+                  {factor.meter && (
+                    <FactorMeterView meter={factor.meter} state={factor.state} />
+                  )}
+                  <span className="showcase-basis-note">
+                    공식 기준 {factor.target} · {factor.impact}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
 
           <div className="showcase-block">
-            <h4>심기 전에 확인할 일</h4>
+            <h4>먼저 할 일</h4>
             <ol className="showcase-checklist">
               {report.checklist.map((item) => (
                 <li key={item.title}>
@@ -1539,9 +1620,42 @@ function ShowcaseReportView({
             </ol>
           </div>
 
-          <p className="showcase-closing">
-            <Emphasized text={report.closing} highlights={report.highlights} />
-          </p>
+          {checks.length > 0 && (
+            <div className="showcase-block">
+              <h4>이 자료로는 알 수 없어 현장에서 봐야 하는 것</h4>
+              <ol className="showcase-checklist field-checks">
+                {checks.map((item) => (
+                  <li key={item.title}>
+                    <strong>{item.title}</strong>
+                    <p>{item.body}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {/*
+            AI가 쓴 산문은 버리지 않고 아래로 보낸다. 요구사항 ③의 증거이므로 화면에서
+            없앨 수 없다. 다만 먼저 읽어야 하는 것이 위에 있으므로 기본은 접어 둔다.
+            `open` 속성을 쓰지 않아 발표에서는 접힌 상태로 시작하고, 필요하면 눌러서 연다.
+          */}
+          <details className="showcase-prose">
+            <summary>
+              <span>AI가 쓴 자세한 설명</span>
+              <small>{report.blocks.length}단락 · 눌러서 펼치기</small>
+            </summary>
+            {report.blocks.map((block) => (
+              <div className="showcase-block" key={block.id}>
+                <h4>{block.heading}</h4>
+                <p>
+                  <Emphasized text={block.body} highlights={report.highlights} />
+                </p>
+              </div>
+            ))}
+            <p className="showcase-closing">
+              <Emphasized text={report.closing} highlights={report.highlights} />
+            </p>
+          </details>
 
           {/*
             설명 문장은 `지역 농업기술센터 확인`을 권하는데 어디로 가야 하는지는 말하지 않는다.
