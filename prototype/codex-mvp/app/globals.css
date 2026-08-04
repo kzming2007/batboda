@@ -98,13 +98,13 @@
     7단 고정 척도. 이전 파일은 39종을 썼고 16px·15px·17px이 서로 구분되지 않은 채
     180곳에 흩어져 있었다. 어디를 먼저 볼지 화면이 알려주지 못한 원인이다.
   */
-  --t-verdict: 44px;
-  --t-figure: 31px;
-  --t-section: 25px;
-  --t-lead: 21px;
-  --t-body: 19px;
-  --t-label: 16px;
-  --t-axis: 13px;
+  --t-verdict: 48px;
+  --t-figure: 34px;
+  --t-section: 27px;
+  --t-lead: 23px;
+  --t-body: 20px;
+  --t-label: 17px;
+  --t-axis: 14px;
 
   /* 공간. 4의 배수로만 오른다. */
   /*
@@ -485,7 +485,7 @@ time {
 */
 .meter-track {
   position: relative;
-  height: 16px;
+  height: 22px;
   background: var(--sf-sunk);
   border: 1px solid var(--line);
   border-radius: var(--pill);
@@ -505,9 +505,9 @@ time {
 .meter-mark {
   position: absolute;
   top: -4px;
-  width: 5px;
-  height: 24px;
-  margin-left: -2.5px;
+  width: 6px;
+  height: 30px;
+  margin-left: -3px;
   background: var(--ink);
   border: 1px solid var(--sf);
   border-radius: 2px;
@@ -535,7 +535,9 @@ time {
   있는 값이 나쁜 것처럼 읽힌다. 양 끝에만 옅게 둔다.
 */
 .meter--acid-base .meter-track::before,
-.meter--acid-base .meter-track::after {
+.meter--acid-base .meter-track::after,
+.meter--cold-hot .meter-track::before,
+.meter--cold-hot .meter-track::after {
   content: "";
   position: absolute;
   top: 0;
@@ -544,14 +546,31 @@ time {
   border-radius: var(--pill);
 }
 
+/*
+  양 끝의 뜻이 다른 축에만 색을 둔다.
+
+  pH는 리트머스 관례(산성 적 · 알칼리성 청)를 따르고, 기온은 반대다(찬쪽 청 · 더운쪽 적).
+  두 축의 색 방향이 서로 반대이므로 한 규칙으로 묶지 않고 따로 적는다.
+  안쪽은 칠하지 않는다 — 상태색 적(`기준 밖`)과 겹쳐 기준 띠 안의 값이 나쁜 것처럼 읽힌다.
+*/
 .meter--acid-base .meter-track::before {
   left: 0;
-  background: #f3d3cc;
+  background: #eec7be;
 }
 
 .meter--acid-base .meter-track::after {
   right: 0;
-  background: #cfdcef;
+  background: #c3d3ea;
+}
+
+.meter--cold-hot .meter-track::before {
+  left: 0;
+  background: #c3d3ea;
+}
+
+.meter--cold-hot .meter-track::after {
+  right: 0;
+  background: #eec7be;
 }
 
 .meter-poles {
@@ -561,11 +580,13 @@ time {
   font-weight: 700;
 }
 
-.meter-pole.acid {
+.meter--acid-base .meter-pole.low,
+.meter--cold-hot .meter-pole.high {
   color: #9c4a3a;
 }
 
-.meter-pole.base {
+.meter--acid-base .meter-pole.high,
+.meter--cold-hot .meter-pole.low {
   color: #37567f;
 }
 
@@ -576,7 +597,7 @@ time {
 
 .meter-cells i {
   flex: 1;
-  height: 16px;
+  height: 22px;
   background: var(--sf-sunk);
   border: 1px solid var(--line);
   border-radius: 3px;
@@ -1927,9 +1948,10 @@ main {
   font-weight: 600;
 }
 
+/* 판정 근거 숫자는 이 화면에서 판정 다음으로 큰 글자다. 칸을 채워야 한 눈에 들어온다. */
 .sheet-columns strong {
   display: block;
-  font-size: var(--t-figure);
+  font-size: var(--t-verdict);
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -1984,10 +2006,17 @@ main {
   font-weight: 700;
 }
 
+/*
+  행동 시점(`매일 오전`·`정식 전`). 무엇을 언제 하라는 말이라 제목과 같은 무게가 필요하다.
+  라벨 크기로 두니 제목 옆에서 사라졌다. 주의색 배경을 깔아 시점이라는 것도 표시한다.
+*/
 .sheet-actions time {
+  padding: 3px var(--s2);
   color: var(--watch);
-  font-size: var(--t-label);
+  font-size: var(--t-body);
   font-weight: 700;
+  background: var(--watch-bg);
+  border-radius: 6px;
 }
 
 .sheet-actions p {
@@ -2424,7 +2453,7 @@ main {
 .gauge {
   grid-column: 1 / -1;
   display: block;
-  height: 10px;
+  height: 14px;
   background: var(--sf);
   border: 1px solid var(--line);
   border-radius: var(--pill);
@@ -3145,11 +3174,21 @@ main {
   현장 확인 항목은 순서가 정보를 담지 않으므로 번호를 쓰지 않는다. 다만 가운뎃점 하나만
   두면 마침표로 읽힌다. 확인할 것이라는 뜻이 보이는 부호를 쓴다.
 */
+/*
+  불릿이 첫 줄 글자보다 아래로 떨어져 있었다. 부모가 `align-items: baseline`인데
+  `•` 글리프는 글자 중앙에 놓이도록 만들어져 기준선이 어긋난다. 숫자 칩과 같은 상자를
+  주고 그 안에서 가운데 맞춘다.
+*/
 .showcase-checklist.field-checks li::before {
   content: "•";
+  display: grid;
+  place-items: center;
+  height: 30px;
   color: var(--cy-ink);
-  font-size: var(--t-lead);
+  font-size: var(--t-section);
   font-weight: 700;
+  line-height: 1;
+  background: none;
 }
 
 /*
