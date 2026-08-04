@@ -2,9 +2,14 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { cropList } from "@/lib/analysis/cropProfiles";
+import { cropList, cropProfiles } from "@/lib/analysis/cropProfiles";
 import { baselineEnginePolicy } from "@/lib/analysis/modelPolicy";
-import { decodedSoilProfile } from "@/lib/analysis/soilCodes";
+import {
+  decodedSoilProfile,
+  limitingFactorLabel,
+  soilUseKindLabel,
+  suitabilityGradeLabel,
+} from "@/lib/analysis/soilCodes";
 import {
   favoriteId,
   favoritesServerSnapshot,
@@ -777,6 +782,15 @@ function AnalysisView({
   const decodedProfile = result.soil.physicalProfile
     ? decodedSoilProfile(result.soil.physicalProfile)
     : null;
+  /*
+    판정에 쓴 적성등급은 작물이 정한다. 사과·배는 과수 등급, 상추·오이·감자는 밭 등급이다.
+    화면 문구를 `밭 적성등급`으로 고정해 두면 사과를 골랐을 때 표시가 실제 판정 근거와
+    다른 것을 말한다. 엔진과 같은 기준으로 이름과 값을 뽑는다.
+  */
+  const soilUseKind = cropProfiles[result.selection.cropId].soilUseKind;
+  const gradeName = `${soilUseKindLabel(soilUseKind)} 적성등급`;
+  const gradeValue = suitabilityGradeLabel(result.soil.physicalProfile, soilUseKind);
+  const gradeLimitingFactor = limitingFactorLabel(result.soil.physicalProfile, soilUseKind);
   const factor = (id: string) => result.factors.find((item) => item.id === id);
   const uplandFactor = factor("upland-suitability");
   const phFactor = factor("ph");
@@ -840,15 +854,17 @@ function AnalysisView({
       </div>
 
       {/*
-        판정 근거인 `밭 적성등급`은 밭 기준이다. 팜맵이 논으로 판독한 필지에 그 등급을 그대로
-        쓰면 근거가 약해지므로, 판정을 막지 않고 무엇을 더 확인해야 하는지 한 줄로 알린다.
-        논에 밭작물을 심는 전환은 실제로 있으므로 선택 자체를 차단하지는 않는다.
+        판정 근거로 쓴 적성등급은 작물이 정한 용도(밭 또는 과수) 기준이다. 팜맵이 논으로
+        판독한 필지에 그 등급을 그대로 쓰면 근거가 약해지므로, 판정을 막지 않고 무엇을 더
+        확인해야 하는지 한 줄로 알린다. 논에 밭작물·과수를 심는 전환은 실제로 있으므로
+        선택 자체를 차단하지는 않는다.
       */}
       {isPaddyParcel(result.parcel.interpretation) && (
         <div className="paddy-notice" role="status">
           <strong>논으로 판독된 필지입니다</strong>
           <p>
-            판정 근거인 밭 적성등급은 밭을 기준으로 매겨진 값입니다. 논에 밭작물을 심으시려면 물빠짐과
+            판정 근거인 {gradeName}은 {soilUseKindLabel(soilUseKind)}을 기준으로 매겨진 값입니다.
+            논에 {soilUseKind === "orchard" ? "과수를" : "밭작물을"} 심으시려면 물빠짐과
             배수로를 현장에서 먼저 확인하시고, 지역 농업기술센터에 논 타작물 재배 조건을 함께 문의하세요.
           </p>
         </div>
@@ -960,7 +976,7 @@ function AnalysisView({
           <small>
             {result.showcaseReport
               ? "초보 귀농인 눈높이 자연어 설명"
-              : "pH와 밭 적성등급이 함께 나온 필지에서만 열립니다"}
+              : `pH와 ${gradeName}이 함께 나온 필지에서만 열립니다`}
           </small>
         </button>
       </nav>
@@ -1135,7 +1151,7 @@ function AnalysisView({
             <div>
               <span>공식 토양도(V3)</span>
               <strong>흙의 물리적 조건</strong>
-              <small>농촌진흥청 토양도 코드표로 해석했습니다. 밭 적성등급을 판정의 주 근거로 사용합니다.</small>
+              <small>농촌진흥청 토양도 코드표로 해석했습니다. {result.cropName}는 {soilUseKindLabel(soilUseKind)} 작물이므로 {gradeName}을 판정의 주 근거로 사용합니다.</small>
             </div>
             <dl>
               <div><dt>배수<em>물이 빠지는 정도</em></dt><dd>{decodedProfile?.drainage}</dd></div>
@@ -1143,8 +1159,8 @@ function AnalysisView({
               <div><dt>표토 토성<em>겉흙의 알갱이 구성</em></dt><dd>{decodedProfile?.topsoilTexture}</dd></div>
               <div><dt>토양도상 주 이용<em>이 흙이 주로 쓰이는 용도</em></dt><dd>{decodedProfile?.mainLandUse}</dd></div>
               <div><dt>이용 추천<em>토양도가 권하는 용도</em></dt><dd>{decodedProfile?.useRecommendation}</dd></div>
-              <div><dt>밭 적성등급<em>밭으로 쓰기 좋은 정도 · 1급지가 가장 좋음</em></dt><dd>{decodedProfile?.uplandGrade}</dd></div>
-              <div><dt>저해요인<em>등급을 낮춘 원인</em></dt><dd>{decodedProfile?.uplandLimitingFactor}</dd></div>
+              <div><dt>{gradeName}<em>{soilUseKindLabel(soilUseKind)}으로 쓰기 좋은 정도 · 1급지가 가장 좋음</em></dt><dd>{gradeValue}</dd></div>
+              <div><dt>저해요인<em>등급을 낮춘 원인</em></dt><dd>{gradeLimitingFactor}</dd></div>
             </dl>
             <p>
               선택 농지는 팜맵상 {result.parcel.interpretation}, 토양도상 주 이용은 {decodedProfile?.mainLandUse}입니다.
@@ -1332,7 +1348,7 @@ function AnalysisView({
           <small>
             {result.showcaseReport
               ? "초보 귀농인 눈높이 자연어 설명"
-              : "pH와 밭 적성등급이 함께 나온 필지에서만 열립니다"}
+              : `pH와 ${gradeName}이 함께 나온 필지에서만 열립니다`}
           </small>
         </button>
       </nav>

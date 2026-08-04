@@ -8,6 +8,7 @@ import { analyzeFarm } from "@/lib/analysis/engine";
 import { cropProfiles } from "@/lib/analysis/cropProfiles";
 import { decodedSoilProfile } from "@/lib/analysis/soilCodes";
 import { parseSoilPhysicalProfile } from "@/lib/public-data/client";
+import { buildShowcaseReport } from "@/lib/report/showcase";
 import { createMockParcel, createMockSoil, createMockWeather } from "@/lib/mock/data";
 import {
   verifiedParcel,
@@ -133,6 +134,52 @@ describe("작물 종류에 맞는 적성등급", () => {
     expect(result.suitabilityLabel).toBe("조건부 적합");
     expect(gradeFactorOf(result)?.state).toBe("watch");
     expect(gradeFactorOf(result)?.impact).toContain("저습");
+  });
+});
+
+/**
+ * 규칙 경로 리포트는 AI 문장이 검사에 걸릴 때 그 자리를 대신한다. 그래서 여기서
+ * `밭 적성등급`이라고 적혀 있으면, 판정은 과수 등급으로 내면서 사용자가 읽는 문장은
+ * 밭이라고 말하는 상태가 된다. 시연에서 사과를 고르면 그대로 보인다.
+ */
+describe("쉬운 말 리포트가 판정과 같은 등급을 말한다", () => {
+  it("사과는 과수 등급으로, 상추는 밭 등급으로 문장을 쓴다", () => {
+    const apple = buildShowcaseReport(analyzeWith("apple", {}, 6.2)).report;
+    const lettuce = buildShowcaseReport(analyzeWith("lettuce", {}, 6.7)).report;
+    const soilOf = (report: typeof apple) =>
+      report?.blocks.find((block) => block.id === "soil")?.body ?? "";
+
+    // 시연 자료는 과수 3급지 · 밭 4급지다. 이름과 값이 함께 맞아야 등급을 골라 쓴 것이다.
+    expect(soilOf(apple)).toContain("과수 적성등급");
+    expect(soilOf(apple)).not.toContain("밭 적성등급");
+    expect(apple?.usedValues).toContain("과수 적성등급 3급지");
+
+    expect(soilOf(lettuce)).toContain("밭 적성등급");
+    expect(soilOf(lettuce)).not.toContain("과수 적성등급");
+    expect(lettuce?.usedValues).toContain("밭 적성등급 4급지");
+  });
+
+  it("땅을 무엇으로 쓰는지 말할 때 과수는 과수원이라고 적는다", () => {
+    const apple = buildShowcaseReport(analyzeWith("apple", {}, 6.2)).report;
+    const soil = apple?.blocks.find((block) => block.id === "soil")?.body ?? "";
+
+    expect(soil).toContain("과수원으로");
+    expect(soil).not.toContain("밭으로");
+  });
+
+  it("저해요인도 작물이 보는 용도의 것을 적는다", () => {
+    const patch = {
+      uplandGradeCode: "02",
+      uplandLimitingFactorCode: "02",
+      orchardGradeCode: "02",
+      orchardLimitingFactorCode: "03",
+    };
+    const apple = buildShowcaseReport(analyzeWith("apple", patch, 6.2)).report;
+    const soil = apple?.blocks.find((block) => block.id === "soil")?.body ?? "";
+
+    // `02`는 경사, `03`은 저습이다. 과수 작물이면 저습이 적혀야 한다.
+    expect(soil).toContain("저습");
+    expect(soil).not.toContain("저해요인은 경사");
   });
 });
 

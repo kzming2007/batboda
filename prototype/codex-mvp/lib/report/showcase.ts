@@ -1,10 +1,17 @@
 import { cropProfiles } from "@/lib/analysis/cropProfiles";
 import {
   decodedSoilProfile,
-  hasMaterialUplandLimit,
-  uplandGradeNumber,
+  hasMaterialLimitingFactor,
+  limitingFactorLabel,
+  soilUseKindLabel,
+  suitabilityGradeNumber,
 } from "@/lib/analysis/soilCodes";
-import type { AnalysisResult, ShowcaseHighlight, ShowcaseReport } from "@/types/domain";
+import type {
+  AnalysisResult,
+  ShowcaseHighlight,
+  ShowcaseReport,
+  SoilUseKind,
+} from "@/types/domain";
 
 /**
  * 초보자용 자연어 리포트를 만든다.
@@ -18,7 +25,8 @@ import type { AnalysisResult, ShowcaseHighlight, ShowcaseReport } from "@/types/
  * 1. 수치는 규칙 엔진이 확정한 값만 끌어 쓴다. 새 숫자를 만들지 않는다.
  * 2. 발병 확률·수확량·성공 가능성을 말하지 않는다.
  *
- * pH와 밭 적성등급이 모두 조회된 사례에서만 만든다. 둘 중 하나라도 없으면
+ * pH와 적성등급이 모두 조회된 사례에서만 만든다. 어느 용도의 등급을 보는지는 작물이
+ * 정한다(사과·배는 과수, 나머지는 밭). 둘 중 하나라도 없으면
  * 문장을 채우는 대신 조건을 설명하고 비워 둔다.
  */
 
@@ -109,15 +117,33 @@ const cropVoice: Record<
   },
 };
 
-/** 밭 적성등급을 초보자 표현으로 옮긴다. 등급 자체는 토양특성 V3 공식 코드다. */
-function gradeVoice(grade: number) {
+/**
+ * 산문에서 쓸 용도 이름. 공식 등급 이름은 `과수 적성등급`이지만, 땅을 무엇으로 쓰는지
+ * 말할 때는 `과수원`이 자연스럽다. 공식 용어는 `soilUseKindLabel`을 그대로 쓰고
+ * 이 표는 산문에만 쓴다.
+ */
+const useKindPhrase: Record<SoilUseKind, string> = {
+  upland: "밭",
+  paddy: "논",
+  orchard: "과수원",
+};
+
+/**
+ * 적성등급을 초보자 표현으로 옮긴다. 등급 자체는 토양특성 V3 공식 코드다.
+ *
+ * 어느 용도의 등급인지는 작물이 정한다. 사과·배는 과수 등급으로 판정하므로 문장도
+ * `과수원으로 쓰기에`라고 적어야 한다. 판정은 과수 등급으로 내면서 문장은 밭이라고
+ * 적으면, 그 문장을 그대로 옮기는 AI 경로에서도 같은 어긋남이 그대로 나간다.
+ */
+function gradeVoice(grade: number, kind: SoilUseKind) {
+  const where = useKindPhrase[kind];
   if (grade <= 2) {
-    return "밭으로 쓰기에 조건이 좋은 땅입니다. 경사와 흙 깊이, 물빠짐이 대체로 무난하다는 뜻입니다.";
+    return `${where}으로 쓰기에 조건이 좋은 땅입니다. 경사와 흙 깊이, 물빠짐이 대체로 무난하다는 뜻입니다.`;
   }
   if (grade === 3) {
-    return "밭으로 쓸 수는 있지만 손이 조금 더 가는 땅입니다. 조건 하나가 걸려 있어서 관리로 메워야 합니다.";
+    return `${where}으로 쓸 수는 있지만 손이 조금 더 가는 땅입니다. 조건 하나가 걸려 있어서 관리로 메워야 합니다.`;
   }
-  return "밭으로 쓰기에는 제약이 있는 땅입니다. 경사나 얕은 흙처럼 흙 자체를 바꾸기 어려운 조건이 걸려 있습니다.";
+  return `${where}으로 쓰기에는 제약이 있는 땅입니다. 경사나 얕은 흙처럼 흙 자체를 바꾸기 어려운 조건이 걸려 있습니다.`;
 }
 
 /** 행동 항목마다 `왜 지금 이걸 하나`를 풀어 쓴다. 제목은 규칙 엔진이 정한 값이다. */
@@ -149,13 +175,17 @@ function factorValue(result: AnalysisResult, keyword: string) {
 export function buildShowcaseReport(
   result: AnalysisResult,
 ): { report: ShowcaseReport | null; note: string | null } {
-  const grade = uplandGradeNumber(result.soil.physicalProfile);
+  // 어느 용도의 적성등급을 볼지는 작물이 정한다. 판정 엔진과 같은 기준을 써야 문장이
+  // 판정과 어긋나지 않는다. 사과·배는 과수 등급, 상추·오이·감자는 밭 등급이다.
+  const soilUseKind = cropProfiles[result.selection.cropId].soilUseKind;
+  const gradeName = `${soilUseKindLabel(soilUseKind)} 적성등급`;
+  const grade = suitabilityGradeNumber(result.soil.physicalProfile, soilUseKind);
   const ph = result.soil.ph;
 
   if (ph === null && grade === null) {
     return {
       report: null,
-      note: "이 필지는 토양검정 화학성(pH)과 토양특성(밭 적성등급) 모두 조회되지 않아 리포트를 만들지 않았습니다.",
+      note: `이 필지는 토양검정 화학성(pH)과 토양특성(${gradeName}) 모두 조회되지 않아 리포트를 만들지 않았습니다.`,
     };
   }
   // pH는 검정 이력이 있는 필지에서만 나온다. 반경 1km 258필지 중 18건(7.0%)이었다.
@@ -164,7 +194,7 @@ export function buildShowcaseReport(
   if (grade === null) {
     return {
       report: null,
-      note: "이 필지는 밭 적성등급을 조회하지 못했습니다. 등급이 판정의 주 근거이므로 없는 상태로는 리포트를 만들지 않습니다.",
+      note: `이 필지는 ${gradeName}을 조회하지 못했습니다. 등급이 판정의 주 근거이므로 없는 상태로는 리포트를 만들지 않습니다.`,
     };
   }
 
@@ -195,17 +225,19 @@ export function buildShowcaseReport(
   const soilLines = [voice.soilNeed];
   soilLines.push(
     !hasPh
-      ? `그런데 이 필지는 토양검정을 받은 기록이 없어 pH를 조회하지 못했습니다. ${result.cropName} 공식 권장 범위는 ${phRange}인데, 이 땅의 값이 그 안에 있는지는 지금 자료로 알 수 없습니다. 없는 값을 짐작해 채우지 않았습니다. 아래 판정은 밭 적성등급과 토양도에 적힌 조건으로 냈습니다.`
+      ? `그런데 이 필지는 토양검정을 받은 기록이 없어 pH를 조회하지 못했습니다. ${result.cropName} 공식 권장 범위는 ${phRange}인데, 이 땅의 값이 그 안에 있는지는 지금 자료로 알 수 없습니다. 없는 값을 짐작해 채우지 않았습니다. 아래 판정은 ${gradeName}과 토양도에 적힌 조건으로 냈습니다.`
       : phState === "good"
         ? `이 땅의 pH는 ${ph}입니다. ${result.cropName} 공식 권장 범위 ${phRange} ${phDirection}. 산도를 맞추려고 따로 무언가를 넣을 필요는 없어 보입니다.`
         : phState === "watch"
           ? `이 땅의 pH는 ${ph}로, 권장 범위 ${phRange}를 조금 벗어나 ${phDirection}. 크게 어긋난 정도는 아니지만 심기 전에 한 번 재보시는 편이 좋습니다.`
           : `이 땅의 pH는 ${ph}로, 권장 범위 ${phRange}보다 ${phDirection}. 이 차이가 이번 판정에서 가장 크게 반영된 항목입니다.`,
   );
-  soilLines.push(`밭 적성등급은 ${gradeFactor?.value ?? `${grade}급지`}입니다. ${gradeVoice(grade)}`);
+  soilLines.push(
+    `${gradeName}은 ${gradeFactor?.value ?? `${grade}급지`}입니다. ${gradeVoice(grade, soilUseKind)}`,
+  );
   if (decoded) {
     soilLines.push(
-      `토양도에 적힌 조건을 그대로 옮기면 저해요인은 ${decoded.uplandLimitingFactor}, 물빠짐은 ${decoded.drainage}, 흙 깊이는 ${decoded.effectiveDepth}, 겉흙은 ${decoded.topsoilTexture}입니다.`,
+      `토양도에 적힌 조건을 그대로 옮기면 저해요인은 ${limitingFactorLabel(result.soil.physicalProfile, soilUseKind)}, 물빠짐은 ${decoded.drainage}, 흙 깊이는 ${decoded.effectiveDepth}, 겉흙은 ${decoded.topsoilTexture}입니다.`,
     );
   }
 
@@ -254,20 +286,20 @@ export function buildShowcaseReport(
   }));
 
   // 저해요인이 실질적으로 걸려 있으면 `산도가 맞다`로 끝내지 않는다.
-  const limitFactor = hasMaterialUplandLimit(result.soil.physicalProfile)
-    ? decoded?.uplandLimitingFactor ?? null
+  const limitFactor = hasMaterialLimitingFactor(result.soil.physicalProfile, soilUseKind)
+    ? limitingFactorLabel(result.soil.physicalProfile, soilUseKind)
     : null;
   const closing = !hasPh
-    ? `정리하면 산도는 아직 모르는 상태이고, 판정은 밭 적성등급과 날씨로 냈습니다. 심기 전 토양 검정으로 산도를 확인하는 것이 첫 순서입니다.${limitFactor ? ` 저해요인으로 적힌 ${limitFactor}도 함께 보셔야 합니다.` : ""}`
+    ? `정리하면 산도는 아직 모르는 상태이고, 판정은 ${gradeName}과 날씨로 냈습니다. 심기 전 토양 검정으로 산도를 확인하는 것이 첫 순서입니다.${limitFactor ? ` 저해요인으로 적힌 ${limitFactor}도 함께 보셔야 합니다.` : ""}`
     : phState === "good"
       ? limitFactor
         ? `정리하면 산도는 맞습니다. 남은 것은 저해요인으로 적힌 ${withWa(limitFactor)} 고른 기간의 날씨입니다. 이 둘은 흙을 바꾸는 문제가 아니라 관리로 다루는 문제입니다.`
-        : `정리하면 산도는 맞고, 남은 변수는 ${grade <= 2 ? "고른 기간의 날씨" : "밭 조건과 날씨"}입니다. 위 확인 목록부터 처리하시면 됩니다.`
+        : `정리하면 산도는 맞고, 남은 변수는 ${grade <= 2 ? "고른 기간의 날씨" : `${useKindPhrase[soilUseKind]} 조건과 날씨`}입니다. 위 확인 목록부터 처리하시면 됩니다.`
       : `정리하면 pH ${withReul(String(ph))} 어떻게 다룰지가 먼저입니다. 심기 전 간이 검정으로 지금 값을 확인한 뒤 투입량을 정하시는 편이 안전합니다.`;
 
   const usedValues = [
     hasPh ? `pH ${ph}` : "pH 조회 안 됨",
-    `밭 적성등급 ${grade}급지`,
+    `${gradeName} ${grade}급지`,
     `적합도 ${result.suitabilityScore}`,
     `위험도 ${result.riskScore}`,
     `기간 ${result.selection.horizonDays}일`,
