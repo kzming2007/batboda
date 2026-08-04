@@ -770,7 +770,23 @@ export default function FarmDecisionApp({ initialResult }: Props) {
                     aria-pressed={selection.cropId === crop.id}
                     onClick={() => updateSelection("cropId", crop.id as CropId)}
                   >
-                    <span className="crop-monogram" aria-hidden="true">{crop.emoji}</span>
+                    {/*
+                      hydration 불일치를 이 한 곳만 넘긴다.
+
+                      이 이모지에서 서버와 클라이언트가 어긋난다는 React 오류가 뜬다.
+                      소스(`cropProfiles.ts`)는 정상 UTF-8이고, 서버가 내보낸 HTML에도
+                      다섯 개가 그대로 있고, 클라이언트 번들에도 있다. 셋 다 정상인데
+                      렌더 단계에서만 어긋난다 — 원인을 찾지 못했다. 확장 프로그램 문제도
+                      아니다(확장 없는 창에서 재현).
+
+                      덮어도 되는 근거는 이 글자가 `aria-hidden` 장식이라는 것이다. 바로 옆에
+                      작물 이름이 글자로 있어 사라져도 정보가 없어지지 않는다. 트리를 통째로
+                      다시 그리게 두는 것보다 이 한 곳만 넘기는 편이 낫다.
+                      값을 읽는 자리에는 쓰지 않는다.
+                    */}
+                    <span className="crop-monogram" aria-hidden="true" suppressHydrationWarning>
+                      {crop.emoji}
+                    </span>
                     <span>
                       <strong>{crop.name}</strong>
                       <small>{crop.description}</small>
