@@ -213,7 +213,7 @@ export default function FarmDecisionApp({ initialResult }: Props) {
       parcelAddress: candidate.address,
       parcelInterpretation: candidate.interpretation,
     }));
-    void loadBoundary(candidate);
+    void loadBoundary(candidate.parcelId);
   }
 
   /**
@@ -222,12 +222,12 @@ export default function FarmDecisionApp({ initialResult }: Props) {
    * 판정 흐름과 떼어 둔다. 경계가 없거나 조회가 실패해도 분석은 그대로 진행되고,
    * 화면에는 왜 못 그렸는지만 적는다. 없는 경계를 임의로 그리지 않는다.
    */
-  async function loadBoundary(candidate: ParcelCandidate) {
+  async function loadBoundary(parcelId: string) {
     setBoundary(null);
     setBoundaryNote(null);
     setBoundaryLoading(true);
     try {
-      const params = new URLSearchParams({ parcelId: candidate.parcelId, mode: dataMode });
+      const params = new URLSearchParams({ parcelId, mode: dataMode });
       const response = await fetch(`/api/boundary?${params.toString()}`);
       const body = (await response.json()) as
         | { ok: true; boundary: ParcelBoundary | null; reason: string | null }
@@ -271,7 +271,9 @@ export default function FarmDecisionApp({ initialResult }: Props) {
       parcelAddress: farm.address,
       parcelInterpretation: farm.interpretation,
     }));
+    // 후보 목록은 비우되 경계는 다시 그린다. 목록에서 고른 것과 같은 화면이어야 한다.
     clearParcelSearch();
+    void loadBoundary(farm.parcelId);
   }
 
   function goToView(next: View) {
