@@ -185,14 +185,19 @@ describe("저장본 우선 · 실시간 대체 제공자", () => {
     expect(registerReplayThenLiveProvider()).toBe(true);
   });
 
-  // 지금 저장돼 있는 기록에는 수집 시점 근거가 없다. 그 경우 재생하지 않고 넘기는 것이 맞다.
-  // 오늘 근거로 숫자를 대조하면 예보 갱신분이 그대로 실패로 잡히기 때문이다.
-  it("수집 시점 근거가 없는 저장본은 재생하지 않고 사유를 남긴다", async () => {
+  // 시연 조합은 키도 네트워크도 없이 저장본만으로 끝까지 답해야 한다.
+  // 재생이라는 사실과 수집 시각은 배지에 그대로 적어 실시간 생성처럼 보이지 않게 한다.
+  //
+  // 수집 시점 근거가 없는 예전 기록을 건너뛰는 쪽은 `llmSnapshot.test.ts`가 합성 레코드로 덮는다.
+  // 여기서 같은 것을 확인하려면 실제 저장 파일이 고장나 있어야 해서, 고치는 순간 깨진다.
+  it("수집 시점 근거를 가진 저장본은 키가 없어도 재생한다", async () => {
     registerReplayThenLiveProvider();
     const report = await createFarmReport(baseResult);
 
-    expect(report.origin).toBe("rule");
-    expect(report.providerNote).toContain("다시 수집");
+    expect(report.origin).toBe("llm");
+    expect(report.originLabel).toContain("AI 설명");
+    expect(report.originLabel).toContain("작성");
+    expect(report.validation.ok).toBe(true);
   });
 
   it("저장본이 없는 조합은 키가 없으면 사유와 함께 규칙 문장으로 내려간다", async () => {
