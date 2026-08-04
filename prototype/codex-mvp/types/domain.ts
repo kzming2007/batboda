@@ -35,6 +35,25 @@ export type ParcelCandidate = {
   observedAt: string;
 };
 
+/**
+ * 확정한 필지의 경계.
+ *
+ * 팜맵 PNU 기반 상세조회의 `fmapBdcrd`(EPSG:5179 GeoJSON)를 위경도로 옮겨 담는다.
+ * 요청한 PNU와 응답의 PNU가 문자열로 정확히 같을 때만 만든다.
+ * 같은 요청에 인접 필지가 함께 오기 때문에 이 조건이 필요하다.
+ */
+export type ParcelBoundary = {
+  /** Leaflet이 쓰는 [위도, 경도] 링 목록. MultiPolygon을 링 단위로 펼쳐 담는다. */
+  rings: [number, number][][];
+  /** 일치가 확인된 필지 고유번호 */
+  parcelId: string;
+  farmMapId: string | null;
+  /** 원본 좌표계. 변환 근거를 남기기 위해 기록한다. */
+  sourceCrs: string;
+  /** 팜맵 판독 시점 */
+  observedAt: string;
+};
+
 export type ParcelSearch = {
   candidates: ParcelCandidate[];
   candidateCount: number;

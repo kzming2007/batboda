@@ -11,6 +11,7 @@ import type {
   AnalysisSelection,
   AnalyzeResponse,
   CropId,
+  ParcelBoundary,
   ParcelCandidate,
   ParcelSearch,
   ScoreExplanation,
@@ -99,6 +100,9 @@ export default function FarmDecisionApp({ initialResult }: Props) {
   const [loading, setLoading] = useState(false);
   const [parcelLoading, setParcelLoading] = useState(false);
   const [parcelSearch, setParcelSearch] = useState<ParcelSearch | null>(null);
+  const [boundary, setBoundary] = useState<ParcelBoundary | null>(null);
+  const [boundaryNote, setBoundaryNote] = useState<string | null>(null);
+  const [boundaryLoading, setBoundaryLoading] = useState(false);
   const [candidateQuery, setCandidateQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>("input");
@@ -141,6 +145,9 @@ export default function FarmDecisionApp({ initialResult }: Props) {
   const clearParcelSearch = () => {
     setParcelSearch(null);
     setCandidateQuery("");
+    // 후보를 다시 찾으면 이전 필지의 경계가 지도에 남아 있으면 안 된다.
+    setBoundary(null);
+    setBoundaryNote(null);
   };
 
   const visibleCandidates = useMemo(() => {
@@ -189,6 +196,36 @@ export default function FarmDecisionApp({ initialResult }: Props) {
       parcelAddress: candidate.address,
       parcelInterpretation: candidate.interpretation,
     }));
+    void loadBoundary(candidate);
+  }
+
+  /**
+   * 확정한 필지의 경계를 지도에 올린다.
+   *
+   * 판정 흐름과 떼어 둔다. 경계가 없거나 조회가 실패해도 분석은 그대로 진행되고,
+   * 화면에는 왜 못 그렸는지만 적는다. 없는 경계를 임의로 그리지 않는다.
+   */
+  async function loadBoundary(candidate: ParcelCandidate) {
+    setBoundary(null);
+    setBoundaryNote(null);
+    setBoundaryLoading(true);
+    try {
+      const params = new URLSearchParams({ parcelId: candidate.parcelId, mode: dataMode });
+      const response = await fetch(`/api/boundary?${params.toString()}`);
+      const body = (await response.json()) as
+        | { ok: true; boundary: ParcelBoundary | null; reason: string | null }
+        | { ok: false; error: string };
+      if (!body.ok) {
+        setBoundaryNote(body.error);
+        return;
+      }
+      setBoundary(body.boundary);
+      setBoundaryNote(body.reason);
+    } catch (caught) {
+      setBoundaryNote(caught instanceof Error ? caught.message : "경계를 불러오지 못했습니다.");
+    } finally {
+      setBoundaryLoading(false);
+    }
   }
 
   function goToView(next: View) {
@@ -292,6 +329,8 @@ export default function FarmDecisionApp({ initialResult }: Props) {
               <FarmMap
                 lat={selection.lat}
                 lng={selection.lng}
+                boundary={boundary}
+                searchRadiusM={parcelSearch?.radiusM ?? null}
                 onChange={(lat, lng) =>
                   {
                     setSelection((current) => resetParcel({ ...current, lat, lng }));
@@ -299,6 +338,35 @@ export default function FarmDecisionApp({ initialResult }: Props) {
                   }
                 }
               />
+              {selection.parcelId && (
+                <div className={`map-parcel-card${boundary ? " has-boundary" : ""}`}>
+                  <div className="map-parcel-card__head">
+                    <strong>{selection.parcelAddress ?? "확정한 농지"}</strong>
+                    <em>
+                      {boundaryLoading
+                        ? "경계 조회 중"
+                        : boundary
+                          ? "실제 경계 확인"
+                          : "경계 자료 없음"}
+                    </em>
+                  </div>
+                  <dl>
+                    <div><dt>PNU</dt><dd>{selection.parcelId}</dd></div>
+                    {selection.farmMapId && (
+                      <div><dt>팜맵 ID</dt><dd>{selection.farmMapId}</dd></div>
+                    )}
+                    {selection.parcelInterpretation && (
+                      <div><dt>농지 유형</dt><dd>{selection.parcelInterpretation}</dd></div>
+                    )}
+                    {boundary && (
+                      <div><dt>판독 시점</dt><dd>{boundary.observedAt}</dd></div>
+                    )}
+                  </dl>
+                  {!boundary && boundaryNote && !boundaryLoading && (
+                    <p className="map-parcel-card__note">{boundaryNote}</p>
+                  )}
+                </div>
+              )}
               <div className="map-index" aria-hidden="true">
                 <span>N</span>
                 <i />
