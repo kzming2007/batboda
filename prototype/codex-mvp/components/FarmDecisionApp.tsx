@@ -16,13 +16,13 @@ import {
   type FavoriteFarm,
 } from "@/lib/favorites";
 import { officialLinks } from "@/lib/officialLinks";
-import { highlightsFor } from "@/lib/report/highlight";
+import { StatusChip, type BadgeTone } from "@/components/StateBadge";
+import VerdictMindMap from "@/components/VerdictMindMap";
 import type {
   AnalysisResult,
   AnalysisSelection,
   AnalyzeResponse,
   CropId,
-  FactorState,
   ParcelBoundary,
   ParcelCandidate,
   ParcelSearch,
@@ -49,11 +49,18 @@ type Props = {
  */
 type View = "input" | "verdict" | "evidence" | "report";
 
+/*
+  화면을 둘로 줄인다.
+
+  근거와 쉬운 말을 각각 한 페이지로 펼쳐 두니 03 한 화면에만 4,492자가 쌓였다. 훑을 때 무엇이
+  걸리는지 보이지 않는다는 지적을 받았다. 근거는 마인드맵 가지를 눌렀을 때만 열고, 설명 문장은
+  보고서로 내보낸다. 늘 떠 있어야 하는 것과 필요할 때 꺼내 보는 것을 나눈다.
+
+  03·04 화면 자체는 코드에 남겨 둔다. 이 갈래가 옳은지 아직 사람에게 확인받지 않았다.
+*/
 const viewSteps: { id: View; step: string; label: string }[] = [
   { id: "input", step: "01", label: "농지·작물·기간" },
   { id: "verdict", step: "02", label: "농지 환경 판정서" },
-  { id: "evidence", step: "03", label: "자세한 근거" },
-  { id: "report", step: "04", label: "쉬운 말 보고서" },
 ];
 
 const places = [
@@ -94,61 +101,6 @@ function skyIcon(sky: string) {
   if (sky.includes("흐림") || sky.includes("흐리")) return "☁️";
   if (sky.includes("구름")) return "⛅";
   return "☀️";
-}
-
-/**
- * 상태를 글자 대신 표로 먼저 읽히게 한다.
- *
- * `주의`·`자료 없음`·`현장 확인 필요`는 이미 색과 큰 글자로 나오지만, 문장 안의 단어라서
- * 훑을 때 상태로 잡히지 않는다는 지적을 받았다. 부호와 짧은 이름표를 붙여 눈이 먼저 걸리게 한다.
- *
- * 이모지를 쓰지 않는다. 운영체제마다 그림이 달라 판정서 인상이 기기마다 바뀌고, 크기를 맞추기도
- * 어렵다. 기하 부호는 어디서나 같은 모양으로 나오고 색·굵기를 화면 문법에 맞출 수 있다.
- *
- * 상태 판단은 규칙 엔진이 준 `state`를 그대로 옮긴다. 화면이 다시 판단하지 않는다.
- */
-type BadgeTone = "good" | "watch" | "bad" | "info";
-
-const badgeGlyph: Record<BadgeTone, string> = {
-  good: "✓",
-  watch: "!",
-  bad: "▲",
-  info: "–",
-};
-
-const factorBadge: Record<FactorState, { tone: BadgeTone; label: string }> = {
-  good: { tone: "good", label: "기준 안" },
-  watch: { tone: "watch", label: "확인 필요" },
-  risk: { tone: "bad", label: "기준 밖" },
-  // 값이 없으면 기준과 견줄 수가 없다. `자료 없음`이라고 또 적으면 큰 글자와 같은 말을 두 번 한다.
-  unknown: { tone: "info", label: "기준 대조 못 함" },
-  info: { tone: "info", label: "참고" },
-};
-
-function StateBadge({ state }: { state: FactorState | undefined }) {
-  const badge = factorBadge[state ?? "unknown"];
-  return (
-    <span className={`state-badge ${badge.tone}`}>
-      <i aria-hidden="true">{badgeGlyph[badge.tone]}</i>
-      {badge.label}
-    </span>
-  );
-}
-
-/**
- * 판정서 머리 아래에 상태를 한 줄로 모아 둔다. 훑기만 해도 무엇이 걸리는지 보이게 한다.
- *
- * 값 자체가 무엇에 대한 것인지 말하고 있으면 이름표를 붙이지 않는다.
- * `근거 · 근거 충분`처럼 같은 말이 두 번 나오면 읽는 눈이 한 번 멈춘다.
- */
-function StatusChip({ tone, name, value }: { tone: BadgeTone; name?: string; value: string }) {
-  return (
-    <span className={`status-chip ${tone}`}>
-      <i aria-hidden="true">{badgeGlyph[tone]}</i>
-      {name && <span>{name}</span>}
-      <strong>{value}</strong>
-    </span>
-  );
 }
 
 function basisLabel(basis: ScoreExplanation["terms"][number]["basis"]) {
@@ -777,9 +729,6 @@ function AnalysisView({
   const decodedProfile = result.soil.physicalProfile
     ? decodedSoilProfile(result.soil.physicalProfile)
     : null;
-  const factor = (id: string) => result.factors.find((item) => item.id === id);
-  const uplandFactor = factor("upland-suitability");
-  const phFactor = factor("ph");
   const riskTone: BadgeTone =
     result.riskLevel === "low" ? "good" : result.riskLevel === "high" ? "bad" : "watch";
   const evidenceTone: BadgeTone =
@@ -863,107 +812,13 @@ function AnalysisView({
       )}
 
 
+      {/*
+        3열 근거 · 예방 행동 · 쉬운 설명 · 다음 화면 안내를 마인드맵 하나로 모은다.
+        가지에는 이름과 값만 두고 자세한 것은 눌렀을 때 연다.
+      */}
       <div className="sheet-rule" />
-      <div className="sheet-columns">
-        {/*
-          각 숫자 옆에 그 값이 기준 안인지 밖인지를 부호로 붙인다. 색만으로는 색을 구분하기 어려운
-          사람에게 상태가 전달되지 않고, 훑을 때도 색보다 부호가 먼저 걸린다.
-        */}
-        <article>
-          <span>토양 적성</span>
-          <strong className={uplandFactor?.state === "good" ? "good" : "watch"}>
-            {uplandFactor?.value ?? "자료 없음"}
-          </strong>
-          <StateBadge state={uplandFactor?.state} />
-          <p>공식 {uplandFactor?.target ?? "1–2급지"} 기준 · {uplandFactor?.impact ?? "확인 필요"}</p>
-        </article>
-        <article>
-          <span>토양 산도</span>
-          {/*
-            자료가 없는 것과 기준을 벗어난 것은 다르다. 없는 값을 주의색으로 칠하면 흙에 문제가
-            있는 것처럼 읽힌다. 회색으로 두어 `아직 모른다`로 보이게 한다.
-          */}
-          <strong
-            className={
-              phFactor?.value === "자료 없음" ? "info" : phFactor?.state === "good" ? "good" : "watch"
-            }
-          >
-            {phFactor?.value === "자료 없음" ? "자료 없음" : `pH ${phFactor?.value ?? "–"}`}
-          </strong>
-          <StateBadge state={phFactor?.value === "자료 없음" ? "unknown" : phFactor?.state} />
-          <p>{result.cropName} 공식 범위 {phFactor?.target ?? "–"} 기준</p>
-        </article>
-        <article>
-          <span>가까운 {result.selection.horizonDays}일 위험</span>
-          <strong className={riskTone}>{result.riskLabel}</strong>
-          <StateBadge state={riskTone === "good" ? "good" : riskTone === "bad" ? "risk" : "watch"} />
-          <p>{result.weather.days
-            .map((day) => `${day.label} 비 ${day.rainProbability ?? "–"}%`)
-            .join(" · ")}</p>
-        </article>
-      </div>
-
-      <div className="sheet-rule" />
-      <ol className="sheet-actions">
-        {result.actions.map((action, index) => {
-          const note = result.report?.actionNotes[index]?.note ?? action.detail;
-          return (
-            <li key={action.title}>
-              <div>
-                <span className="action-no">{action.priority}</span>
-                <h3>{action.title}</h3>
-                <time>{action.timing}</time>
-              </div>
-              <p>{note}</p>
-            </li>
-          );
-        })}
-      </ol>
-
-      {result.report && (
-        <>
-          <div className="sheet-rule" />
-          <section className="sheet-explain" aria-labelledby="explain-title">
-            <div className="explain-head">
-              <h3 id="explain-title">쉬운 설명</h3>
-              <strong className={`explain-origin ${result.report.origin}`}>
-                {result.report.originLabel}
-              </strong>
-            </div>
-            <div className="explain-blocks">
-              {result.report.sections.map((section) => (
-                <article key={section.heading}>
-                  <h4>{section.heading}</h4>
-                  <p>
-                    <Emphasized
-                      text={section.body}
-                      highlights={highlightsFor(section.body, result)}
-                    />
-                  </p>
-                </article>
-              ))}
-            </div>
-          </section>
-        </>
-      )}
-
-      <div className="sheet-rule strong" />
-      <nav className="page-jump" aria-label="다음으로 볼 화면">
-        <button type="button" onClick={() => onNavigate("evidence")}>
-          <span>03</span>
-          <strong>자세한 근거</strong>
-          <small>토양·기온 대조 · 예보 · 농지 확인표 · 계산 과정 · 사용한 자료</small>
-        </button>
-        <button type="button" onClick={() => onNavigate("report")}>
-          <span>04</span>
-          <strong>쉬운 말 보고서</strong>
-          <small>
-            {result.showcaseReport
-              ? "초보 귀농인 눈높이 자연어 설명"
-              : "pH와 밭 적성등급이 함께 나온 필지에서만 열립니다"}
-          </small>
-        </button>
-      </nav>
+      {/* 분석을 다시 돌리면 고른 항목도 처음으로 돌아가야 한다. 상태를 손으로 되돌리지 않고 다시 마운트한다. */}
+      <VerdictMindMap key={result.analyzedAt} result={result} />
     </section>
   );
 

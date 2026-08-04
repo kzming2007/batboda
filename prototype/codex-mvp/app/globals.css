@@ -4131,3 +4131,328 @@ span.step-number { font-size: 16px; }
   .status-chip { font-size: 16px; padding: 8px 14px 8px 10px; }
   .state-badge { font-size: 15px; }
 }
+
+/* ─── 마인드맵: 판정과 그 근거 ─────────────────────────────── */
+
+/*
+  가운데에 판정을 두고 근거를 좌우 가지로 편다. 가지에는 이름과 값만 올리고 자세한 것은
+  눌렀을 때 연다. 앞선 화면은 근거를 모두 펼쳐 놓아 한 화면에 글자가 너무 많았다.
+
+  SVG로 좌표를 계산하지 않는다. 창 크기와 글자 길이에 따라 선이 어긋나기 쉽고, 좁은 화면에서
+  다시 짜야 한다. 좌우 두 줄과 가운데 칸으로 두면 좁은 화면에서 위아래로 자연스럽게 접힌다.
+*/
+.mindmap { margin-top: 26px; }
+
+.mindmap-title {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 20px;
+  font-family: var(--display);
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+.mindmap-title small { color: var(--muted); font-size: 17px; font-weight: 500; }
+
+.mindmap-board {
+  display: grid;
+  grid-template-columns: 1fr minmax(210px, 0.8fr) 1fr;
+  align-items: center;
+  gap: 18px;
+}
+
+.mindmap-side { display: grid; gap: 12px; }
+.mindmap-side.right { order: 3; }
+
+/* 가운데 판정으로 이어지는 선. 가지마다 짧은 가로줄 하나면 관계가 읽힌다 */
+.mindmap-branch {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--paper-white);
+  border: 1px solid var(--line-dark);
+}
+
+.mindmap-branch::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 1px;
+  background: var(--line-dark);
+}
+
+.mindmap-side.left .mindmap-branch::after { right: -19px; }
+.mindmap-side.right .mindmap-branch::after { left: -19px; }
+
+.mindmap-branch.good { border-left: 3px solid var(--leaf); }
+.mindmap-branch.watch { border-left: 3px solid #a8641a; }
+.mindmap-branch.bad { border-left: 3px solid #b3462f; }
+.mindmap-branch.info { border-left: 3px solid var(--line-dark); }
+
+.branch-open {
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+  padding: 0;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.branch-label { color: var(--muted); font-size: 16px; font-weight: 500; }
+
+.branch-value {
+  font-family: var(--display);
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.branch-open:hover .branch-value { text-decoration: underline; text-underline-offset: 4px; }
+
+.branch-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.branch-pick input { width: 18px; height: 18px; accent-color: var(--leaf); cursor: pointer; }
+
+.mindmap-core {
+  order: 2;
+  display: grid;
+  gap: 7px;
+  padding: 26px 22px;
+  text-align: center;
+  border: 2px solid var(--rule-strong);
+  background: var(--paper-white);
+}
+
+.mindmap-core span { color: var(--muted); font-size: 16px; letter-spacing: 0.04em; }
+
+.mindmap-core strong {
+  font-family: var(--display);
+  font-size: clamp(30px, 3.6vw, 44px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.mindmap-core small { color: var(--soil-soft); font-size: 16px; }
+
+.mindmap-core.good strong { color: var(--leaf-dark); }
+.mindmap-core.watch strong { color: #a8641a; }
+.mindmap-core.bad strong { color: #b3462f; }
+
+/*
+  좁은 화면에서는 위아래로 접는다. 이때 판정이 먼저 와야 한다. `order` 기본값이 0이라
+  왼쪽 줄에도 값을 주지 않으면 가지가 판정 앞에 선다.
+*/
+@media (max-width: 900px) {
+  .mindmap-board { grid-template-columns: 1fr; }
+  .mindmap-core { order: 1; }
+  .mindmap-side.left { order: 2; }
+  .mindmap-side.right { order: 3; }
+  .mindmap-branch::after { display: none; }
+}
+
+/* ─── 가지 팝업 ────────────────────────────────────────────── */
+
+.branch-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(23, 37, 31, 0.42);
+}
+
+.branch-dialog {
+  width: min(560px, 100%);
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 26px 28px 28px;
+  background: var(--paper-white);
+  border: 1px solid var(--rule-strong);
+}
+
+.branch-dialog.good { border-top: 5px solid var(--leaf); }
+.branch-dialog.watch { border-top: 5px solid #a8641a; }
+.branch-dialog.bad { border-top: 5px solid #b3462f; }
+.branch-dialog.info { border-top: 5px solid var(--line-dark); }
+
+.branch-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.branch-dialog-head > div { display: grid; gap: 5px; }
+.branch-dialog-head span { color: var(--muted); font-size: 17px; }
+
+.branch-dialog-head strong {
+  font-family: var(--display);
+  font-size: 34px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+}
+
+.branch-dialog-head button {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line-dark);
+  border-radius: 50%;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.branch-dialog-head button:hover { color: var(--clay); border-color: var(--clay); }
+
+.branch-dialog-facts { display: grid; gap: 0; margin-top: 16px; }
+
+.branch-dialog-facts > div {
+  display: grid;
+  grid-template-columns: 128px 1fr;
+  gap: 14px;
+  padding: 13px 0;
+  border-top: 1px solid var(--line);
+}
+
+.branch-dialog-facts dt { color: var(--muted); font-size: 16px; }
+.branch-dialog-facts dd { font-size: 17px; line-height: 1.6; }
+
+.branch-dialog-source {
+  margin-top: 20px;
+  padding: 18px 20px;
+  background: var(--field-paper);
+  border-left: 3px solid var(--leaf);
+}
+
+.branch-dialog-source > span {
+  color: var(--leaf);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.branch-dialog-source > strong { display: block; margin-top: 6px; font-size: 19px; }
+.branch-dialog-source > p { margin-top: 3px; color: var(--soil-soft); font-size: 16px; }
+.branch-dialog-source ul { margin: 10px 0 0; padding-left: 17px; }
+.branch-dialog-source li { color: var(--soil-soft); font-size: 16px; line-height: 1.65; }
+.branch-dialog-age { margin-top: 10px; color: var(--muted); font-size: 15px; }
+.branch-dialog-source.empty { border-left-color: var(--line-dark); color: var(--muted); }
+
+/* ─── 바로 해야 할 것 · 보고서 내보내기 ─────────────────────── */
+
+.next-actions,
+.pdf-plan {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rule);
+}
+
+.next-actions h3,
+.pdf-plan h3 {
+  font-family: var(--display);
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+.next-actions ol { margin-top: 8px; list-style: none; }
+.next-actions li { padding: 18px 0; border-top: 1px solid var(--line); }
+.next-actions li:first-child { border-top: 0; }
+.next-actions li > div { display: flex; align-items: center; gap: 12px; }
+.next-actions h4 { font-size: 21px; }
+.next-actions li > p { margin-top: 7px; color: var(--soil-soft); font-size: 18px; line-height: 1.75; }
+
+.pdf-plan-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.pdf-plan-head p { margin-top: 6px; color: var(--muted); font-size: 17px; line-height: 1.6; }
+
+.pdf-button {
+  flex: none;
+  padding: 13px 22px;
+  color: var(--paper-white);
+  background: var(--leaf-dark);
+  border: 1px solid var(--leaf-dark);
+  border-radius: 999px;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pdf-button:hover { background: var(--leaf); border-color: var(--leaf); }
+
+.pdf-button:disabled {
+  color: var(--muted);
+  background: var(--field-paper);
+  border-color: var(--line-dark);
+  cursor: not-allowed;
+}
+
+.pdf-toc { margin-top: 18px; list-style: none; }
+
+.pdf-toc li {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+
+.pdf-toc li:first-child { border-top: 0; }
+.pdf-toc span { color: var(--muted); font: 14px var(--mono); }
+.pdf-toc strong { font-size: 18px; }
+.pdf-toc em { color: var(--muted); font-size: 16px; font-style: normal; }
+.pdf-toc li.from-ai em { color: var(--leaf); }
+.pdf-empty { margin-top: 12px; color: var(--muted); font-size: 17px; }
+
+/* ─── 인쇄(PDF 저장) ──────────────────────────────────────── */
+
+/*
+  인쇄 대화상자의 PDF 저장을 그대로 쓴다. 새 라이브러리를 넣지 않으므로 실패할 자리가 없고,
+  브라우저가 쪽 나눔과 글꼴 심기를 알아서 한다. 조작에 쓰는 것만 감추고 판정서 본문은 남긴다.
+*/
+@media print {
+  body { background: #fff; }
+
+  .app-shell > header,
+  .phase-nav,
+  .flow-guide,
+  .workbench,
+  .pdf-plan-head button,
+  .branch-pick,
+  .sheet-edit,
+  .app-shell > footer { display: none !important; }
+
+  .verdict-sheet { padding: 0; border: 0; }
+  .mindmap-board { grid-template-columns: 1fr 1fr; }
+  .mindmap-branch::after { display: none; }
+  .branch-dialog-backdrop { display: none !important; }
+
+  /* 항목 하나가 쪽 경계에서 잘리지 않게 묶어 둔다 */
+  .mindmap-branch,
+  .next-actions li,
+  .pdf-toc li { break-inside: avoid; }
+
+  .pdf-plan { break-before: page; }
+}
