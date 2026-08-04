@@ -437,6 +437,15 @@ export default function FarmDecisionApp({ initialResult }: Props) {
         | { ok: false; error: string };
       if (!body.ok) throw new Error(body.error);
       setParcelSearch(body.data);
+      /*
+        후보 목록으로 내려간다. 목록이 지도 아래에 새로 생기므로 화면 밖에서 나타난다.
+        `주변 농지 찾기`를 누른 사람이 다음에 볼 것이 그 목록이다.
+      */
+      window.requestAnimationFrame(() => {
+        document
+          .querySelector(".parcel-candidate-list")
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "농지 후보를 찾지 못했습니다.");
     } finally {
@@ -454,11 +463,14 @@ export default function FarmDecisionApp({ initialResult }: Props) {
     }));
     void loadBoundary(candidate.parcelId);
     /*
-      지도로 되돌아간다. 후보 목록은 지도 아래에 있어서 경계가 그려지는 순간 지도가
-      화면 밖일 수 있다. 경계를 보여주는 것이 이 동작의 목적이므로 그 자리로 옮긴다.
+      분석 버튼 자리로 옮긴다.
+
+      경계는 지도에 그려지고 지도는 왼쪽 칸이라, 오른쪽 칸의 버튼을 화면 가운데에 두면
+      경계와 다음에 누를 것이 함께 보인다. 지도만 겨냥하면 버튼이 화면 밖으로 나가고,
+      고른 뒤에 무엇을 해야 하는지 알 수 없었다.
       `prefers-reduced-motion`이 걸린 환경에서는 브라우저가 `smooth`를 알아서 끈다.
     */
-    document.querySelector(".map-frame")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.querySelector(".analyze-button")?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   /**
@@ -2238,6 +2250,28 @@ function sourceStatusLabel(status: SourceStatus) {
 }
 
 
+/**
+ * 산식을 조각으로 나눈다. 표시 단계에서만 한다 — 식 자체는 규칙 엔진이 확정한 문자열이다.
+ *
+ * `100 - pH 18 - 등급 25 = 57`처럼 연산자로 이어진 한 줄이다. `=` 뒤는 결과,
+ * `-` 뒤는 감점, `+` 뒤는 가점, 맨 앞은 기준점으로 본다. 규칙에 없는 모양이 오면
+ * 아무 색도 주지 않고 그대로 내보낸다.
+ */
+function formulaParts(formula: string) {
+  const parts: { text: string; kind: string }[] = [];
+  const [left, right] = formula.split("=");
+  const chunks = left.split(/(?=[-+])/).map((chunk) => chunk.trim()).filter(Boolean);
+  chunks.forEach((chunk, index) => {
+    if (index === 0) parts.push({ text: chunk, kind: "base" });
+    else parts.push({ text: chunk, kind: chunk.startsWith("+") ? "plus" : "minus" });
+  });
+  if (right !== undefined) {
+    parts.push({ text: "=", kind: "eq" });
+    parts.push({ text: right.trim(), kind: "result" });
+  }
+  return parts;
+}
+
 function ScoreLedger({
   explanation,
   score,
@@ -2254,7 +2288,18 @@ function ScoreLedger({
         </div>
         <strong>{score}</strong>
       </header>
-      <code>{explanation.formula}</code>
+      {/*
+        산식을 조각으로 나눠 색을 준다. `100 - pH 18 - 등급 25 = 57`에서 기준점·감점·결과가
+        다 같은 색이라 한 덩어리로 읽혔다. 식을 고치지 않고 자르는 자리만 정한다 —
+        연산자 앞뒤로 끊고, `=` 뒤를 결과로 본다.
+      */}
+      <code className="score-formula">
+        {formulaParts(explanation.formula).map((part, index) => (
+          <span key={`${part.text}-${index}`} className={part.kind}>
+            {part.text}
+          </span>
+        ))}
+      </code>
       <ul>
         {explanation.terms.map((term) => (
           <li key={term.id}>

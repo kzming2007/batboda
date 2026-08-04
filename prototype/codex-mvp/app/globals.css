@@ -3110,16 +3110,56 @@ main {
   분수나 첨자가 없는 한 줄 뺄셈이라 조판이 줄 것이 없다. 대신 고정폭으로 자리를 맞추고
   크기를 본문에 맞춰 읽히게 한다.
 */
+/*
+  산식에 고정폭을 쓰지 않는다. `100 - pH 18 - 밭 등급 25 = 57`처럼 한글이 섞여 있고,
+  IBM Plex Mono에 한글이 없어 `밭 등급`만 다른 서체로 떨어졌다. 후보 칩·행동 시점과
+  같은 문제다. 본문 서체를 쓰고 숫자 자리만 `tabular-nums`로 맞춘다.
+*/
 .score-ledger > code {
   display: block;
   padding: var(--s3);
   color: var(--cy-ink);
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
   font-size: var(--t-body);
   line-height: 1.7;
   background: var(--sf);
   border: 1px solid var(--line);
   border-radius: 6px;
   overflow-wrap: anywhere;
+}
+
+/*
+  산식 조각별 색. 기준점·감점·가점·결과가 같은 색이라 한 덩어리로 읽혔다.
+  색은 상태 어휘를 그대로 쓴다 — 감점은 주의색, 가점은 초록, 결과는 본문 잉크.
+  기준점은 브랜드 색이다.
+*/
+.score-formula {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s2);
+}
+
+.score-formula .base {
+  color: var(--cy-ink);
+  font-weight: 700;
+}
+
+.score-formula .minus {
+  color: var(--watch);
+}
+
+.score-formula .plus {
+  color: var(--good);
+}
+
+.score-formula .eq {
+  color: var(--ink-soft);
+}
+
+.score-formula .result {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .score-ledger ul {
