@@ -335,6 +335,19 @@ export default function FarmDecisionApp({ initialResult }: Props) {
     return () => clearInterval(tick);
   }, [loading]);
 
+  /*
+    맨 위로 버튼을 보일지. 03·04는 화면이 길어서 다 읽으면 머리로 되돌아갈 길이 없었다.
+    짧은 화면에서는 가릴 것만 되므로 한 화면 가까이 내려간 뒤에만 띄운다.
+  */
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > window.innerHeight * 0.8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const [parcelLoading, setParcelLoading] = useState(false);
   const [parcelSearch, setParcelSearch] = useState<ParcelSearch | null>(null);
   const [boundary, setBoundary] = useState<ParcelBoundary | null>(null);
@@ -1003,6 +1016,16 @@ export default function FarmDecisionApp({ initialResult }: Props) {
         )}
       </main>
 
+      {scrolled && (
+        <button
+          type="button"
+          className="to-top"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        >
+          맨 위로
+        </button>
+      )}
+
       <footer className="site-footer">
         <span>밭보다 · 재배 판단을 돕는 참고 서비스</span>
         <span>실제 영농 결정 전 현장 확인과 전문가 검토가 필요합니다.</span>
@@ -1381,7 +1404,7 @@ function AnalysisView({
                 <div className="weather-day">
                   <div className="weather-date">
                     <strong>{day.label}</strong>
-                    <time>{day.date.slice(5).replace("-", ".")}</time>
+                    <time>{day.date.slice(5).replace("-", "/")}</time>
                   </div>
                   <p className="weather-sky">
                     <span aria-hidden="true">{skyIcon(day.sky)}</span>

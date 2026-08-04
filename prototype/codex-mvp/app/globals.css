@@ -143,6 +143,7 @@
     임의값(999, 9999)을 쓰지 않는다.
   */
   --z-map-overlay: 720;
+  --z-sticky: 800;
 
   /* 폭의 단일 근원. 머리·본문·바닥이 모두 이 값을 쓴다. */
   --page: min(1440px, calc(100vw - 64px));
@@ -805,6 +806,42 @@ time {
 .paddy-notice p,
 .cache-notice p {
   color: var(--ink-soft);
+}
+
+/*
+  맨 위로.
+
+  03·04는 화면이 길어서 다 읽으면 머리로 되돌아갈 길이 없었다. 스크롤이 한 화면을
+  넘어간 뒤에만 나타난다 — 짧은 화면에서는 가릴 것만 된다.
+  `position: fixed`를 쓰는 유일한 자리다.
+*/
+.to-top {
+  position: fixed;
+  right: var(--s5);
+  bottom: var(--s5);
+  z-index: var(--z-sticky);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: var(--touch);
+  padding: 0 var(--s5);
+  color: var(--sf);
+  font-size: var(--t-label);
+  font-weight: 700;
+  background: var(--cy);
+  border: 0;
+  border-radius: var(--pill);
+  box-shadow: 0 2px 10px rgb(16 38 46 / 0.22);
+  transition: background var(--dur) var(--ease);
+}
+
+.to-top:hover {
+  background: var(--cy-ink);
+}
+
+.to-top::before {
+  content: "↑";
+  font-weight: 800;
 }
 
 /* ══ 4. 골격 ═══════════════════════════════════════════════════════════════ */
@@ -2894,10 +2931,17 @@ main {
   border-top: 1px solid var(--line);
 }
 
+/*
+  원과 옆 굵은 글자를 가운데로 맞춘다.
+
+  처음에는 고정 `margin-top`으로 맞췄고 글자를 키울 때마다 어긋났다. 다음에는 테두리로
+  높이를 늘려 맞췄는데 원이 타원으로 늘어났다. 줄이 한 줄이므로 줄 자체를 가운데
+  정렬하면 된다 — 크기를 건드리지 않는 방법이다.
+*/
 .requirement-coverage li > div {
   display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) auto;
-  align-items: baseline;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
   gap: var(--s2);
 }
 
@@ -2906,14 +2950,9 @@ main {
   어긋났다. 글자 높이를 따라가는 상자를 주고 그 안에서 가운데 맞춘다.
 */
 .requirement-coverage li > div > span {
-  align-self: start;
-  display: block;
   width: 14px;
-  height: calc(var(--t-body) * 1.25);
+  height: 14px;
   border-radius: 50%;
-  background-clip: content-box;
-  border: calc((var(--t-body) * 1.25 - 14px) / 2) solid transparent;
-  box-sizing: content-box;
 }
 
 .requirement-coverage li.ready > div > span {
@@ -3796,6 +3835,7 @@ main {
   .sheet-edit,
   .evidence-expand,
   .report-print,
+  .to-top,
   .intro-section,
   .workbench,
   .showcase-legend,
