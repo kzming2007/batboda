@@ -1,4169 +1,3189 @@
+/*
+  밭보다 스타일시트
+
+  근거는 `DESIGN.md`와 `PRODUCT.md`에 있다. 이 파일을 고칠 때는 그 두 문서를 먼저 읽는다.
+
+  이전 파일은 4,169행이었고 같은 선택자를 237개가 두 번 이상 재선언했다(최다 7회).
+  화면의 실제 값은 뒤쪽 `보정` 구역에서 나왔고 앞쪽 원본 규칙은 대부분 덮여 있었다.
+  그래서 토큰을 바꿔도 화면이 바뀌지 않았다. 실측 기록은
+  `docs/20260804_스타일시트_인벤토리_v1.md`에 있다.
+
+  이 파일이 지키는 규칙 넷.
+
+  1. 공유 규칙 하나와 그 바로 뒤의 특화 규칙 하나까지만 허용한다. 알약 버튼이 공통
+     모양을 받고 곧바로 자기 배치를 정하는 식이다. 멀리 떨어진 자리에서 같은 속성을
+     다시 덮지 않는다. 값을 바꾸려면 원래 자리를 고친다.
+     2026-08-04 실측 — 선택자·속성 1,856쌍 중 값이 겹치는 것은 8쌍이고 모두 이 형태다.
+  2. 색·크기·굵기는 토큰에서만 온다. 리터럴은 토큰 정의부와 아래 명시한 예외에만 쓴다.
+  3. 반응형은 파일 끝 한 곳에 분기점별로 모은다. 규칙 사이에 미디어쿼리를 흩지 않는다.
+  4. 크기를 화면 폭에 연동하지 않는다(`clamp()`를 쓰지 않는다). 좁은 칸에서 오히려 나빠진다.
+*/
+
+/* ══ 1. 토큰 ═══════════════════════════════════════════════════════════════ */
+
 :root {
   /*
-    팔레트 근거는 DESIGN.md에 있다. 요약하면 셋이다.
-
-    1. 초록을 브랜드 색에서 뺀다. 농사라서 초록을 쓰는 것은 분야만 듣고 짐작되는 첫 반사이고,
-       그 다음 반사인 흙빛도 같은 이유로 피한다. 초록은 `기준 안` 상태색으로만 남긴다.
-    2. 브랜드는 딥 시안. 상태색 셋(초록·황·적)과 색조가 멀어 버튼과 경고가 헷갈리지 않는다.
-    3. 배경은 채도를 거의 뺀다. 이전 `#f7f5ef`는 크림 대역이라 따뜻한 기운이 화면을 덮었다.
-
-    보조 본문 색이 이전에 `#6d7b73`이었다. 배경 대비 4.0:1로 기준 미달이었고,
-    한 색이 스무 곳에 쓰여 화면이 흐려 보이는 원인이었다(2026-08-04 브라우저 감사 실측).
-
-    이전 이름은 지우지 않고 새 값으로 잇는다. 참조가 수백 곳이라 한 번에 갈면 화면이 깨진다.
+    초록을 브랜드 색에서 뺀다. 농사라서 초록을 쓰는 것은 분야만 듣고 짐작되는 첫 반사이고,
+    그 다음 반사인 흙빛도 같은 이유로 피한다. 초록은 `기준 안` 상태색으로만 남긴다.
+    브랜드는 딥 시안이다. 상태색 셋(초록·황·적)과 색조가 멀어 버튼과 경고가 헷갈리지 않는다.
   */
-  --soil-ink: #14181a;
-  --soil-soft: #3c474c;
-  --field-paper: #eef2f3;
-  --paper-white: #ffffff;
+  --pg: #f7f9fa;
+  --sf: #ffffff;
+  --sf-sunk: #f1f4f5;
+  --ink: #14181a;
+  --ink-soft: #55636a;
+  --line: #dde4e6;
+  --line-strong: #b9c4c7;
 
-  /* 브랜드 */
-  --cyan: #0e7490;
-  --cyan-ink: #0b5a72;
-  --cyan-bright: #06b6d4;
-  --cyan-pale: #cbf1f8;
-  --cyan-on-pale: #08333d;
+  --cy: #0e7490;
+  --cy-ink: #0b5a72;
+  --cy-lt: #06b6d4;
+  --cy-pale: #cbf1f8;
+  /*
+    밝은 시안 `--cy-lt`에 흰 글자를 얹으면 대비 2.5:1로 크게 미달한다.
+    밝은 시안은 밑줄과 강조 면 바탕으로만 쓰고 그 위 글자는 이 색을 쓴다.
+  */
+  --cy-on-pale: #08333d;
 
-  /* `--leaf` 계열은 이제 브랜드 색이 아니라 브랜드 색을 가리키는 옛 이름이다. */
-  --leaf: var(--cyan);
-  --leaf-dark: var(--cyan-ink);
-  --leaf-pale: var(--cyan-pale);
+  /*
+    상태색. `확인 필요`는 나쁜 값이 아니라 값이 없는 것이라 경고색을 쓰지 않는다.
 
-  /* 상태색. `확인 필요`는 나쁜 값이 아니라 값이 없는 것이라 경고색을 쓰지 않는다. */
-  --good: #1f7a3d;
+    글자색 셋은 자기 배경 위에서 4.5:1을 넘겨야 한다. 배지·태그 글자가 15px이라
+    큰 글자 기준(3:1)을 쓸 수 없다. 2026-08-04 브라우저 실측에서 이전 값 셋이
+    모두 미달이었다 — 초록 4.38:1, 황 3.26:1, 적 4.38:1. 황은 흰 바탕에서도
+    3.87:1로 미달이어서 `먼저 할 일`의 시점 글자까지 걸렸다.
+
+    지금 값의 실측 대비:
+      초록 #1c6f37  자기 배경 5.06:1  흰 바탕 6.22:1
+      황   #8a5806  자기 배경 5.07:1  흰 바탕 6.04:1
+      적   #b13327  자기 배경 5.02:1  흰 바탕 6.23:1
+  */
+  --good: #1c6f37;
   --good-bg: #dcecdf;
-  --watch: #b5730a;
+  --good-line: #a9cdb4;
+  --watch: #8a5806;
   --watch-bg: #f7ead2;
-  --bad: #c0392b;
+  --watch-line: #e0c592;
+  --bad: #b13327;
   --bad-bg: #f8e2de;
+  --bad-line: #e6b3a5;
   --unknown: #55636a;
   --unknown-bg: #e6eae7;
+  --unknown-line: #c6cec9;
 
-  --crop-gold: #a8690f;
-  --clay: #b23a28;
-  --rain: #4a7288;
-  --line: #dde4e6;
-  --line-dark: #b9c4c7;
-  --muted: #55636a;
+  /* 어두운 면. 확정한 필지와 최근 관측에만 쓴다. 두 곳뿐이라 화면이 어두워지지 않는다. */
+  --deep: #10262e;
+  --deep-soft: #a7c0c8;
+  --deep-line: #2b4550;
 
-  /* 본문 기준 크기. 17px과 18px을 실제 렌더로 비교해 확정한다. */
-  --body: 18px;
-  /*
-    본문과 판정·제목이 같은 얼굴을 쓴다. 판정서 문법은 세리프가 아니라 크기·굵기·괘선이 만든다.
-    세리프 제목은 명조 인상이 강해 초보 귀농인 대상에 무겁게 읽혔다.
-
-    `--display`는 판정·제목 자리다. 이름을 `--serif-kr`로 두면 sans를 가리키는 세리프 변수가 되어
-    다음 사람이 오해한다. 대체 글꼴도 sans로 맞춘다. 파일을 못 받았을 때 바탕체가 튀어나오면
-    화면 인상이 통째로 달라진다.
-  */
-  /* 대체 글꼴은 `next/font`가 이 변수 안에 이미 넣어 준다. 여기서 또 적으면 같은 이름이 두 번 붙는다. */
+  /* 글꼴. `--pretendard`는 `next/font`가 대체 글꼴까지 넣어 준다. 여기서 또 적지 않는다. */
   --sans: var(--pretendard), sans-serif;
-  --display: var(--pretendard), sans-serif;
   --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+
+  /*
+    7단 고정 척도. 이전 파일은 39종을 썼고 16px·15px·17px이 서로 구분되지 않은 채
+    180곳에 흩어져 있었다. 어디를 먼저 볼지 화면이 알려주지 못한 원인이다.
+  */
+  --t-verdict: 42px;
+  --t-figure: 29px;
+  --t-section: 24px;
+  --t-lead: 20px;
+  --t-body: 18px;
+  --t-label: 15px;
+  --t-axis: 13px;
+
+  /* 공간. 4의 배수로만 오른다. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 28px;
+  --s7: 36px;
+  --s8: 48px;
+
+  /* 누를 수 있는 것의 최소 크기. 고령층이 사용자에 포함된다. */
+  --touch: 44px;
+
+  --radius: 10px;
+  --pill: 999px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur: 180ms;
+
+  /*
+    층. 지도 안쪽 Leaflet pane이 400~700을 쓰므로 지도 위에 얹는 것은 그 위로 올린다.
+    임의값(999, 9999)을 쓰지 않는다.
+  */
+  --z-map-overlay: 720;
+
+  /* 폭의 단일 근원. 머리·본문·바닥이 모두 이 값을 쓴다. */
   --page: min(1440px, calc(100vw - 64px));
-  --ivory: #f7f5ef;
-  --rule: #ccc9c0;
-  --rule-strong: #1a1a17;
 }
 
-* {
+/* ══ 2. 리셋과 기초 ════════════════════════════════════════════════════════ */
+
+*,
+*::before,
+*::after {
   box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
 html {
   scroll-behavior: smooth;
-  background: var(--field-paper);
+  -webkit-text-size-adjust: 100%;
+}
+
+/*
+  `html`과 `body` 둘 다 배경을 준다. 하나만 두면 오버스크롤 영역 색이 달라진다.
+  `word-break: keep-all`은 한글 어절 단위 줄바꿈이다. 빠지면 판정 문장이 낱자로 끊긴다.
+*/
+html,
+body {
+  margin: 0;
+  background: var(--pg);
 }
 
 body {
-  min-height: 100vh;
-  color: var(--soil-ink);
-  background: var(--field-paper);
+  color: var(--ink);
   font-family: var(--sans);
+  font-size: var(--t-body);
+  font-weight: 400;
+  line-height: 1.7;
   word-break: keep-all;
   -webkit-font-smoothing: antialiased;
 }
 
-button,
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+}
+
+ol,
+ul,
+dl,
+dd {
+  margin: 0;
+  padding: 0;
+}
+
+li {
+  list-style: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+a {
+  color: var(--cy-ink);
+  text-decoration-color: var(--cy-lt);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--cy);
+}
+
 input {
   font: inherit;
 }
 
-button,
-a {
-  -webkit-tap-highlight-color: transparent;
+code,
+time {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 
-button {
-  color: inherit;
+/* 화면 전체에서 포커스 표시는 이 하나다. 브랜드 색으로 두어 누를 자리와 같은 언어를 쓴다. */
+:focus-visible {
+  outline: 3px solid var(--cy-lt);
+  outline-offset: 2px;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-button:focus-visible,
-a:focus-visible,
-input:focus-visible {
-  outline: 3px solid rgba(214, 162, 62, 0.55);
-  outline-offset: 3px;
-}
-
+/* 좌우 넘침을 잘라낸다. 이것이 있어 자료 표의 최소폭이 페이지를 가로로 밀지 않는다. */
 .app-shell {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
   min-height: 100vh;
   overflow: hidden;
 }
 
+/* ══ 3. 원시 요소 ══════════════════════════════════════════════════════════ */
+
+/* 구역 사이 괘선. 판정서 문법은 서체가 아니라 크기·굵기·괘선이 만든다. */
+.sheet-rule {
+  display: block;
+  height: 1px;
+  background: var(--line);
+}
+
+.sheet-rule.strong {
+  background: var(--ink);
+}
+
+/* 작은 번호. 01·02·03은 실제 진행 순서라서 번호가 정보를 담는다. */
+.step-number,
+.candidate-index,
+.action-no {
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 var(--s1);
+  color: var(--cy-ink);
+  font-family: var(--mono);
+  font-size: var(--t-label);
+  font-weight: 700;
+  background: var(--cy-pale);
+  border-radius: var(--radius);
+}
+
+/* 이름표. 구역이 무엇인지 한 낱말로 알린다. */
+.eyebrow,
+.phase-label,
+.favorite-shortcuts-label,
+.subsection-heading > div > span,
+.parcel-sheet-heading > div > span,
+.coverage-model > span,
+.calculation-heading > div > span,
+.source-table-heading > span,
+.showcase-heading > div > span,
+.station-docket > span,
+.sheet-brand,
+.sheet-kind {
+  display: block;
+  color: var(--cy-ink);
+  font-size: var(--t-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* 보조 설명. 본문보다 작고 흐리지만 대비 4.5:1을 넘긴다. */
+.sheet-issued,
+.candidate-count,
+.candidate-scroll-hint,
+.calculation-basis,
+.source-table-note,
+.parcel-sheet-note,
+.map-parcel-card__note,
+.candidate-empty,
+.favorite-empty {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.6;
+}
+
+/*
+  알약. 대표 농지·기간·즐겨찾기·고치기가 같은 모양을 쓴다. 같은 일을 하는 것은 같게 보인다.
+  최소 높이는 터치 규격이다.
+*/
+.place-shortcuts button,
+.period-options button,
+.favorite-item,
+.sheet-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: var(--touch);
+  padding: var(--s2) var(--s4);
+  color: var(--ink);
+  background: var(--sf);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--pill);
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.place-shortcuts button:hover,
+.period-options button:hover,
+.favorite-item:hover,
+.sheet-edit:hover {
+  background: var(--cy-pale);
+  border-color: var(--cy);
+}
+
+.place-shortcuts button[aria-pressed="true"],
+.period-options button[aria-pressed="true"] {
+  color: var(--sf);
+  background: var(--cy);
+  border-color: var(--cy);
+}
+
+/*
+  상태 표시. 색 하나로 판단하게 하지 않는다. 색 + 기하 부호 + 낱말 셋을 함께 둔다.
+  부호는 TSX가 `✓ ! ▲ –`로 넣는다. 이모지를 쓰지 않는 이유는 플랫폼마다 모양이 달라서다.
+*/
+.status-chip,
+.state-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 6px var(--s3) 6px var(--s2);
+  font-size: var(--t-label);
+  font-weight: 700;
+  line-height: 1.3;
+  border: 1px solid;
+  border-radius: var(--pill);
+}
+
+.status-chip > i,
+.state-badge > i {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--sf);
+  font-size: var(--t-axis);
+  font-weight: 800;
+  font-style: normal;
+  line-height: 1;
+  border-radius: 50%;
+}
+
+.status-chip > span {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.status-chip.good,
+.state-badge.good {
+  color: var(--good);
+  background: var(--good-bg);
+  border-color: var(--good-line);
+}
+
+.status-chip.watch,
+.state-badge.watch {
+  color: var(--watch);
+  background: var(--watch-bg);
+  border-color: var(--watch-line);
+}
+
+.status-chip.bad,
+.state-badge.bad {
+  color: var(--bad);
+  background: var(--bad-bg);
+  border-color: var(--bad-line);
+}
+
+.status-chip.info,
+.state-badge.info {
+  color: var(--unknown);
+  background: var(--unknown-bg);
+  border-color: var(--unknown-line);
+}
+
+.status-chip.good > i,
+.state-badge.good > i {
+  background: var(--good);
+}
+
+.status-chip.watch > i,
+.state-badge.watch > i {
+  background: var(--watch);
+}
+
+.status-chip.bad > i,
+.state-badge.bad > i {
+  background: var(--bad);
+}
+
+.status-chip.info > i,
+.state-badge.info > i {
+  background: var(--unknown);
+}
+
+/*
+  ── 기준 대비 눈금 ──────────────────────────────────────────────────────
+
+  값만 보여주면 그 값이 기준에서 얼마나 벗어났는지 알 수 없다. 문제정의서 요구사항 ④가
+  요구하는 "전문 용어를 직관적인 시각 요소로 치환"이 이것이다.
+
+  숫자는 엔진이 `AnalysisFactor.meter`로 내보낸다. 화면이 문자열을 파싱하지 않는다.
+  띠와 표식의 위치는 데이터에서 나오므로 TSX가 인라인 `left`/`width`로 넣는다.
+
+    연속값   pH 6.9    ──[ 기준 6.0–6.5 ]──┃──
+    등급값   2급지     ■■□□□
+    단계값   주의      ■■□
+*/
+.meter {
+  display: grid;
+  gap: 6px;
+  --meter-fill: var(--unknown);
+}
+
+.meter.good {
+  --meter-fill: var(--good);
+}
+
+.meter.watch {
+  --meter-fill: var(--watch);
+}
+
+.meter.bad {
+  --meter-fill: var(--bad);
+}
+
+.meter-track {
+  position: relative;
+  height: 12px;
+  background: var(--sf-sunk);
+  border: 1px solid var(--line);
+  border-radius: var(--pill);
+}
+
+/* 공식 권장 범위. 이 띠 안에 표식이 들어오면 기준 안이다. */
+.meter-band {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  background: var(--cy-pale);
+  border: 1px solid var(--cy-lt);
+  border-radius: var(--pill);
+}
+
+/* 이 농지의 값. 띠보다 위에 오고 띠 밖에서도 보여야 한다. */
+.meter-mark {
+  position: absolute;
+  top: -5px;
+  width: 4px;
+  height: 20px;
+  margin-left: -2px;
+  background: var(--ink);
+  border: 1px solid var(--sf);
+  border-radius: 2px;
+}
+
+/* 축 숫자. 읽지 않아도 판단이 되는 자리라 13px을 쓰는 유일한 곳이다. */
+.meter-axis {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: var(--t-axis);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.meter-cells {
+  display: flex;
+  gap: 3px;
+}
+
+.meter-cells i {
+  flex: 1;
+  height: 14px;
+  background: var(--sf-sunk);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+
+.meter-cells i.on {
+  background: var(--meter-fill);
+  border-color: var(--meter-fill);
+}
+
+.meter-note {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+}
+
+/* 근거 종류 태그. 공식 기준과 우리가 정한 가중치를 구분한다. */
+.basis-tag {
+  display: inline-block;
+  padding: 2px var(--s2);
+  font-size: var(--t-label);
+  font-weight: 700;
+  font-style: normal;
+  border-radius: 6px;
+}
+
+.basis-tag.official {
+  color: var(--good);
+  background: var(--good-bg);
+}
+
+.basis-tag.operational {
+  color: var(--watch);
+  background: var(--watch-bg);
+}
+
+.basis-tag.mixed {
+  color: var(--cy-ink);
+  background: var(--cy-pale);
+}
+
+.basis-tag.missing,
+.basis-tag.outlier {
+  color: var(--unknown);
+  background: var(--unknown-bg);
+}
+
+/* 리포트 본문 강조. 밑줄 색으로 종류를 구분하고 배경을 칠하지 않는다. */
+.report-mark {
+  padding-bottom: 1px;
+  color: inherit;
+  font-weight: 700;
+  background: none;
+  border-bottom: 2px solid;
+}
+
+.report-mark.value {
+  border-color: var(--cy-lt);
+}
+
+.report-mark.official {
+  border-color: var(--good);
+}
+
+.report-mark.caution {
+  border-color: var(--bad);
+}
+
+.mark-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+}
+
+.mark-legend::before {
+  content: "";
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.mark-legend.value::before {
+  background: var(--cy-lt);
+}
+
+.mark-legend.official::before {
+  background: var(--good);
+}
+
+.mark-legend.caution::before {
+  background: var(--bad);
+}
+
+/*
+  면. 근거의 각 묶음이 같은 면 문법을 쓴다. 카드 안에 카드를 넣지 않는다.
+  이전 파일은 이 여덟 묶음을 서로 다른 배경·괘선·여백으로 두어 같은 층인지 알 수 없었다.
+*/
+.factor-section,
+.weather-section,
+.parcel-sheet,
+.requirement-coverage,
+.report-pipeline-block,
+.calculation-section,
+.source-table-section,
+.showcase-section {
+  background: var(--sf);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* 면의 머리. 이름표 · 제목 · 한 줄 설명이 늘 같은 자리에 온다. */
+.subsection-heading,
+.parcel-sheet-heading,
+.coverage-model,
+.calculation-heading,
+.source-table-heading,
+.showcase-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3) var(--s5);
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--line);
+}
+
+.subsection-heading h3,
+.parcel-sheet-heading h3,
+.coverage-model h3,
+.calculation-heading h3,
+.source-table-heading h3,
+.showcase-heading h3 {
+  font-size: var(--t-section);
+  font-weight: 700;
+}
+
+.subsection-heading p,
+.parcel-sheet-heading p,
+.coverage-model p {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.6;
+}
+
+/* 알림 상자. 판정을 막지 않고 무엇을 더 확인해야 하는지만 알린다. 색 띠를 두르지 않는다. */
+.paddy-notice,
+.data-warning,
+.cache-notice,
+.form-error,
+.candidate-fallback-note,
+.showcase-empty {
+  display: grid;
+  gap: var(--s1);
+  padding: var(--s3) var(--s4);
+  font-size: var(--t-label);
+  line-height: 1.65;
+  border: 1px solid;
+  border-radius: var(--radius);
+}
+
+.paddy-notice,
+.cache-notice,
+.candidate-fallback-note,
+.showcase-empty {
+  color: var(--ink);
+  background: var(--unknown-bg);
+  border-color: var(--unknown-line);
+}
+
+.data-warning,
+.form-error {
+  color: var(--bad);
+  background: var(--bad-bg);
+  border-color: var(--bad-line);
+}
+
+.paddy-notice strong,
+.cache-notice strong {
+  font-size: var(--t-body);
+  font-weight: 700;
+}
+
+.paddy-notice p,
+.cache-notice p {
+  color: var(--ink-soft);
+}
+
+/* ══ 4. 골격 ═══════════════════════════════════════════════════════════════ */
+
 .site-header {
-  width: var(--page);
-  height: 84px;
-  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--line-dark);
+  gap: var(--s5);
+  width: var(--page);
+  min-height: 76px;
+  margin: 0 auto;
+  border-bottom: 1px solid var(--ink);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 11px;
-  font-size: 23px;
+  gap: var(--s3);
+  min-height: var(--touch);
+  color: var(--ink);
+  font-size: var(--t-section);
   font-weight: 800;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
+  text-decoration: none;
 }
 
 .brand-mark {
   display: grid;
-  width: 36px;
-  height: 36px;
   place-items: center;
-  color: var(--field-paper);
-  background: var(--soil-ink);
-  border-radius: 50% 50% 46% 54% / 48% 46% 54% 52%;
-  font-size: 15px;
+  width: 34px;
+  height: 34px;
+  color: var(--sf);
+  font-size: var(--t-label);
   font-weight: 800;
-  transform: rotate(-3deg);
+  background: var(--cy);
+  border-radius: 50%;
 }
 
 .header-context {
   display: flex;
   align-items: center;
-  gap: 18px;
-  color: var(--soil-soft);
-  font-size: 14px;
+  gap: var(--s4);
+  color: var(--ink-soft);
+  font-size: var(--t-label);
   font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.phase-label {
-  font-family: var(--mono);
-  font-size: 13px;
-  letter-spacing: 0.08em;
 }
 
 .header-rule {
-  width: 48px;
-  height: 1px;
-  background: var(--line-dark);
+  width: 1px;
+  height: 18px;
+  background: var(--line-strong);
 }
 
 main {
+  display: grid;
+  gap: var(--s6);
   width: var(--page);
   margin: 0 auto;
+  padding: var(--s6) 0 var(--s8);
 }
+
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s5);
+  width: var(--page);
+  min-height: 72px;
+  margin: 0 auto;
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  border-top: 1px solid var(--line);
+}
+
+/* ══ 5. 들머리와 단계 내비 ══════════════════════════════════════════════════ */
 
 .intro-section {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(520px, 1.1fr);
-  align-items: center;
-  gap: 56px;
-  padding: 40px 0 30px;
-}
-
-.eyebrow {
-  margin-bottom: 12px;
-  color: var(--leaf);
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  gap: var(--s5);
 }
 
 .intro-section h1 {
-  max-width: 700px;
-  font-size: clamp(35px, 3.3vw, 50px);
-  line-height: 1.18;
-  letter-spacing: -0.05em;
-  font-weight: 760;
+  max-width: 32ch;
+  font-size: var(--t-figure);
+  font-weight: 800;
+  letter-spacing: -0.025em;
 }
 
+/* 세 단계는 실제 진행 순서다. 번호가 정보를 담으므로 번호를 남긴다. */
 .flow-guide {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  list-style: none;
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
+  background: var(--sf);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .flow-guide li {
-  min-height: 112px;
   display: grid;
   align-content: center;
-  gap: 5px;
-  padding: 18px 20px;
-  border-right: 1px solid var(--line);
+  gap: var(--s1);
+  padding: var(--s4) var(--s5);
 }
 
-.flow-guide li:last-child { border-right: 0; }
-.flow-guide span { color: var(--leaf); font-family: var(--mono); font-size: 14px; font-weight: 700; }
-.flow-guide strong { font-size: 18px; }
-.flow-guide small { color: var(--muted); font-size: 15px; line-height: 1.45; }
-
-.phase-nav {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  margin-bottom: 12px;
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
+.flow-guide li + li {
+  border-left: 1px solid var(--line);
 }
 
-.phase-nav a {
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 0 18px;
-  font-size: 16px;
+.flow-guide li > span {
+  color: var(--cy-ink);
+  font-family: var(--mono);
+  font-size: var(--t-label);
   font-weight: 700;
 }
 
-.phase-nav a + a { border-left: 1px solid var(--line); }
-.phase-nav a:hover { background: var(--leaf-pale); }
-.phase-nav span { color: var(--leaf); font-family: var(--mono); font-size: 13px; }
+.flow-guide li strong {
+  font-size: var(--t-lead);
+  font-weight: 700;
+}
 
+.flow-guide li small {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.55;
+}
+
+.phase-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--sf);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.phase-nav button {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: var(--touch);
+  padding: var(--s3) var(--s4);
+  font-size: var(--t-label);
+  font-weight: 700;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  transition: background var(--dur) var(--ease);
+}
+
+.phase-nav button + button {
+  border-left: 1px solid var(--line);
+}
+
+.phase-nav button:hover:not(:disabled) {
+  background: var(--cy-pale);
+}
+
+.phase-nav button:disabled {
+  color: var(--ink-soft);
+}
+
+.phase-nav button[aria-current="page"] {
+  color: var(--cy-ink);
+  background: var(--cy-pale);
+  box-shadow: inset 0 -3px 0 var(--cy-lt);
+}
+
+/* 13px은 눈금 축에만 쓴다. 단계 번호는 읽는 글자라 15px 아래로 내리지 않는다. */
+.phase-nav button > span {
+  color: inherit;
+  font-family: var(--mono);
+  font-size: var(--t-label);
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+/* ══ 6. 01 조건 설정 화면 ══════════════════════════════════════════════════ */
+
+/*
+  `hidden` 속성을 쓰지 않는 이유가 여기 있다. `display`를 명시하면 브라우저 기본
+  `[hidden] { display: none }`을 명시도로 이겨서 다른 화면에서도 지도가 남는다(TSX 419–424).
+*/
 .workbench {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(380px, 0.55fr);
-  min-height: 590px;
-  scroll-margin-top: 16px;
-  border: 1px solid var(--line-dark);
-  background: var(--paper-white);
+  grid-template-columns: minmax(0, 1.35fr) minmax(380px, 0.65fr);
+  background: var(--sf);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .map-panel {
-  min-width: 0;
-  padding: 30px 34px 28px 0;
-  border-right: 1px solid var(--line-dark);
+  display: grid;
+  align-content: start;
+  gap: var(--s4);
+  padding: var(--s5);
+  border-right: 1px solid var(--line);
 }
 
 .control-panel {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding: 30px 0 28px 34px;
+  display: grid;
+  align-content: start;
+  gap: var(--s5);
+  padding: var(--s5);
 }
 
 .panel-heading {
-  min-height: 49px;
-  margin-bottom: 22px;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2) var(--s4);
 }
 
 .panel-heading > div {
   display: flex;
-  align-items: baseline;
-  gap: 13px;
+  align-items: center;
+  gap: var(--s3);
 }
 
 .panel-heading h2 {
-  font-size: 23px;
-  font-weight: 760;
-  letter-spacing: -0.035em;
-}
-
-.panel-heading p {
-  padding-top: 5px;
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.panel-heading.compact {
-  min-height: auto;
-  margin-bottom: 17px;
-}
-
-.step-number,
-.section-kicker > span {
-  color: var(--leaf);
-  font-family: var(--mono);
-  font-size: 13px;
+  font-size: var(--t-section);
   font-weight: 700;
 }
 
+.panel-heading p {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+}
+
+/* ── 지도 ────────────────────────────────────────────────────────────────── */
+
 .map-frame {
   position: relative;
-  height: 420px;
+  aspect-ratio: 16 / 10;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
   overflow: hidden;
-  background: #dfe5dc;
-  border: 1px solid var(--line-dark);
-}
-
-/* 확정한 필지 정보 카드. 지도 위에 얹되 조작을 가리지 않게 왼쪽 아래에 둔다. */
-.map-parcel-card {
-  position: absolute;
-  left: 12px;
-  /* 좌표 칩이 왼쪽 아래에 있다. 겹치면 마지막 줄이 가려지므로 그 위로 올린다. */
-  bottom: 56px;
-  z-index: 500;
-  max-width: min(340px, calc(100% - 24px));
-  padding: 11px 13px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid var(--line-dark);
-  border-left: 3px solid var(--muted);
-  box-shadow: 0 2px 10px rgba(23, 37, 31, 0.14);
-  font-size: 13px;
-  line-height: 1.5;
-}
-.map-parcel-card.has-boundary { border-left-color: var(--leaf); }
-.map-parcel-card__head {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 7px;
-}
-.map-parcel-card__head strong { color: var(--soil-ink); font-size: 14px; }
-.map-parcel-card__head em {
-  flex: none;
-  color: var(--muted);
-  font: 700 11px var(--mono);
-  font-style: normal;
-}
-.map-parcel-card.has-boundary .map-parcel-card__head em { color: var(--leaf-dark); }
-.map-parcel-card dl { display: grid; gap: 3px; margin: 0; }
-.map-parcel-card dl > div { display: flex; gap: 8px; }
-.map-parcel-card dt { flex: none; width: 62px; color: var(--muted); font-size: 12px; }
-.map-parcel-card dd { margin: 0; color: var(--soil-soft); font: 12px var(--mono); word-break: break-all; }
-.map-parcel-card__note { margin: 7px 0 0; color: var(--clay); font-size: 12px; }
-
-@media (max-width: 720px) {
-  .map-parcel-card { left: 8px; right: 8px; bottom: 52px; max-width: none; font-size: 12px; }
-  .map-parcel-card dt { width: 56px; }
 }
 
 .farm-map-shell,
-.farm-map,
-.map-loading {
+.farm-map {
+  position: relative;
   width: 100%;
   height: 100%;
 }
 
-.farm-map-shell {
-  position: relative;
-}
-
 .map-loading {
   display: grid;
   place-items: center;
-  color: var(--muted);
-  font-size: 15px;
-  background:
-    repeating-linear-gradient(45deg, transparent, transparent 16px, rgba(23, 37, 31, 0.04) 16px, rgba(23, 37, 31, 0.04) 17px),
-    #e6ebe3;
+  width: 100%;
+  height: 100%;
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  background: var(--sf-sunk);
 }
 
-.map-network-state {
-  position: absolute;
-  z-index: 480;
-  top: 16px;
-  left: 50%;
-  padding: 10px 14px;
-  color: var(--soil-soft);
-  background: rgba(250, 249, 244, 0.94);
-  border: 1px solid var(--line-dark);
-  box-shadow: 0 5px 18px rgba(23, 37, 31, 0.14);
-  font-size: 15px;
-  line-height: 1.45;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.map-network-state.error {
-  width: min(390px, calc(100% - 32px));
-  display: grid;
-  gap: 6px;
-  pointer-events: auto;
-}
-
-.map-network-state.error strong {
-  font-size: 16px;
-}
-
-.map-network-state.error span {
-  color: var(--muted);
-  font-size: 15px;
-}
-
-.map-network-state.error button {
-  width: fit-content;
-  margin-top: 3px;
-  padding: 7px 10px;
-  color: var(--paper-white);
-  background: var(--leaf);
-  border: 0;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
+/*
+  Leaflet 재정의. `leaflet.css`가 `FarmMap.tsx`에서 컴포넌트 단위로 import되어
+  로드 순서가 보장되지 않는다. 그래서 아래 셋에만 `!important`가 필요하다.
+*/
 .leaflet-container {
   font-family: var(--sans);
-  background: #dfe5dc;
+  background: var(--sf-sunk);
 }
 
+/*
+  지도 채도를 낮춰 핀과 필지 경계가 위로 읽히게 한다. 이전에는 `sepia(0.08)`이 함께 있어
+  화면에서 가장 큰 요소가 흙빛으로 물들었다. 팔레트를 시안으로 옮긴 뒤에도 화면이
+  따뜻하게 보인 원인이 이것이다. 채도만 낮추고 색조는 건드리지 않는다.
+*/
 .leaflet-tile-pane {
-  filter: saturate(0.62) sepia(0.08) contrast(0.96) brightness(1.03);
+  filter: saturate(0.55) contrast(0.97) brightness(1.04);
 }
 
 .leaflet-control-zoom {
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: 0 4px 18px rgba(23, 37, 31, 0.13) !important;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: var(--radius) !important;
+  overflow: hidden;
 }
 
 .leaflet-control-zoom a {
-  color: var(--soil-ink) !important;
+  color: var(--ink) !important;
   border-color: var(--line) !important;
 }
 
+/* 지도 제공자 표시 규격이라 없앨 수 없다. 13px 하한을 벗어난 유일한 의도적 예외다. */
 .leaflet-control-attribution {
-  color: var(--muted);
-  font-size: 9px !important;
+  font-size: 10px !important;
 }
 
+/*
+  Leaflet이 `divIcon`에 `position: absolute`와 `iconSize`를 인라인으로 넣는다.
+  아래 두 자식이 `inset`으로 그 상자에 붙으므로 여기 `position`을 다시 적어 의존을 밝힌다.
+*/
 .farm-map-marker {
-  position: relative;
-  background: transparent;
+  position: absolute;
+}
+
+.farm-map-marker__pulse,
+.farm-map-marker__core {
+  position: absolute;
+  border-radius: 50%;
 }
 
 .farm-map-marker__pulse {
-  position: absolute;
-  left: 2px;
-  top: 2px;
-  width: 32px;
-  height: 32px;
-  border: 1px solid rgba(196, 90, 66, 0.65);
-  border-radius: 50%;
-  background: rgba(196, 90, 66, 0.17);
-  animation: marker-pulse 2s ease-out infinite;
+  inset: 0;
+  background: rgb(6 182 212 / 0.45);
+  animation: marker-pulse 2s var(--ease) infinite;
 }
 
 .farm-map-marker__core {
-  position: absolute;
-  left: 11px;
-  top: 10px;
-  width: 14px;
-  height: 14px;
-  border: 3px solid var(--paper-white);
-  border-radius: 50% 50% 50% 0;
-  background: var(--clay);
-  box-shadow: 0 3px 9px rgba(23, 37, 31, 0.32);
-  transform: rotate(-45deg);
+  inset: 25%;
+  background: var(--cy);
+  border: 2px solid var(--sf);
 }
 
 @keyframes marker-pulse {
-  0% { transform: scale(0.65); opacity: 1; }
-  80%, 100% { transform: scale(1.25); opacity: 0; }
+  0% {
+    transform: scale(0.65);
+    opacity: 1;
+  }
+  80%,
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
 }
 
-.map-index {
+/* 지도 위에 얹는 것들. 조작을 가리지 않게 두고 Leaflet pane보다 위 층에 올린다. */
+.map-parcel-card,
+.map-network-state,
+.map-index,
+.map-caption {
   position: absolute;
-  z-index: 500;
-  top: 18px;
-  right: 18px;
+  z-index: var(--z-map-overlay);
+}
+
+/* 좌표 칩과 겹치지 않게 그 위로 올린 값이다. */
+.map-parcel-card {
+  left: var(--s3);
+  bottom: 56px;
   display: grid;
-  justify-items: center;
-  color: var(--soil-ink);
-  font-family: var(--mono);
-  font-size: 12px;
+  gap: 6px;
+  max-width: min(320px, calc(100% - 24px));
+  padding: var(--s3);
+  font-size: var(--t-label);
+  line-height: 1.5;
+  background: rgb(255 255 255 / 0.96);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.map-parcel-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2);
+}
+
+.map-parcel-card__head strong {
+  font-size: var(--t-body);
   font-weight: 700;
 }
 
-.map-index i {
-  width: 1px;
-  height: 28px;
-  margin-top: 4px;
-  background: var(--soil-ink);
+.map-parcel-card__head em {
+  color: var(--cy-ink);
+  font-size: var(--t-label);
+  font-style: normal;
+  font-weight: 700;
 }
 
-.map-index i::before {
-  content: "";
-  display: block;
-  width: 5px;
-  height: 5px;
-  margin-left: -2px;
-  background: var(--soil-ink);
-  transform: rotate(45deg);
-}
-
-.map-caption {
-  position: absolute;
-  z-index: 500;
-  right: 18px;
-  bottom: 18px;
-  left: 18px;
-  min-height: 68px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 13px 16px;
-  color: var(--paper-white);
-  background: rgba(23, 37, 31, 0.92);
-  box-shadow: 0 12px 30px rgba(23, 37, 31, 0.16);
-  backdrop-filter: blur(6px);
-}
-
-.map-caption > div {
+.map-parcel-card dl {
   display: grid;
-  gap: 3px;
+  gap: 2px;
 }
 
-.map-caption strong {
-  font-size: 16px;
+.map-parcel-card dl div {
+  display: flex;
+  gap: var(--s2);
 }
 
-.map-caption span {
-  color: #b9c8bd;
-  font-size: 15px;
+.map-parcel-card dt {
+  color: var(--ink-soft);
 }
 
-.map-caption code {
-  color: #d7e1d9;
+.map-parcel-card dd {
   font-family: var(--mono);
-  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
-.place-shortcuts {
+.map-network-state {
+  left: var(--s3);
+  top: var(--s3);
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  border-left: 1px solid var(--line);
+  gap: 6px;
+  padding: var(--s2) var(--s3);
+  font-size: var(--t-label);
+  line-height: 1.45;
+  background: rgb(255 255 255 / 0.96);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
 }
 
-.place-shortcuts button {
+.map-network-state.error {
+  color: var(--bad);
+  border-color: var(--bad-line);
+}
+
+.map-network-state button {
+  justify-self: start;
+  min-height: 32px;
+  padding: 0 var(--s3);
+  color: var(--cy-ink);
+  font-size: var(--t-label);
+  font-weight: 700;
+  background: var(--cy-pale);
+  border: 1px solid var(--cy);
+  border-radius: var(--pill);
+}
+
+.map-index {
+  right: var(--s3);
+  top: var(--s3);
   display: grid;
-  gap: 3px;
-  padding: 13px 15px;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  border-right: 1px solid var(--line);
-  cursor: pointer;
-  transition: background 160ms ease, color 160ms ease;
-}
-
-.place-shortcuts button:last-child {
-  border-right: 0;
-}
-
-.place-shortcuts button:hover,
-.place-shortcuts button[aria-pressed="true"] {
-  color: var(--paper-white);
-  background: var(--leaf);
-}
-
-.place-shortcuts span {
-  font-size: 16px;
-  font-weight: 750;
-}
-
-.place-shortcuts small {
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.place-shortcuts button:hover small,
-.place-shortcuts button[aria-pressed="true"] small {
-  color: #dbe8dc;
-}
-
-.parcel-finder {
-  margin-top: 16px;
-  border: 1px solid var(--line-dark);
-  background: var(--paper-white);
-}
-
-.parcel-finder-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 18px 20px;
-  border-bottom: 1px solid var(--line);
-}
-
-.parcel-finder-heading > div { display: grid; gap: 3px; }
-.parcel-finder-heading span { color: var(--leaf); font-family: var(--mono); font-size: 10px; font-weight: 750; letter-spacing: 0.12em; }
-.parcel-finder-heading h3 { font-size: 21px; letter-spacing: -0.03em; }
-.parcel-finder-heading p { color: var(--muted); font-size: 13px; line-height: 1.45; }
-
-.parcel-finder-heading > button,
-.candidate-search-row > button {
-  flex: none;
-  padding: 9px 12px;
-  color: var(--paper-white);
-  background: var(--leaf-dark);
-  border: 1px solid var(--leaf-dark);
-  font-size: 13px;
-  font-weight: 720;
-  cursor: pointer;
-}
-
-.parcel-finder-heading > button:disabled { cursor: wait; opacity: 0.6; }
-.parcel-candidate-workspace { padding: 16px 18px 18px; }
-
-.candidate-search-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: end;
-  gap: 10px;
-}
-
-.candidate-search-row label { display: grid; gap: 6px; }
-.candidate-search-row label > span { color: var(--soil-soft); font-size: 12px; font-weight: 700; }
-.candidate-search-row input {
-  min-height: 38px;
-  padding: 8px 10px;
-  color: var(--soil-ink);
-  background: #f8faf7;
-  border: 1px solid var(--line-dark);
-  border-radius: 0;
-  font: 14px var(--mono);
-}
-.candidate-search-row > button { color: var(--leaf-dark); background: var(--leaf-pale); }
-
-.candidate-count { margin: 12px 0 9px; color: var(--muted); font: 12px var(--mono); }
-
-/* 후보 목록의 출처. 실시간과 대체 자료가 같은 모양으로 보이지 않게 색을 나눈다. */
-.candidate-origin { font-style: normal; font-weight: 700; }
-.candidate-origin.origin-connected { color: var(--leaf-dark); }
-.candidate-origin.origin-cache,
-.candidate-origin.origin-fallback { color: var(--clay); }
-.candidate-origin.origin-mock { color: var(--muted); }
-.candidate-fallback-note {
-  margin: 0 0 10px;
-  padding: 9px 11px;
-  border-left: 3px solid var(--clay);
-  background: rgba(196, 90, 66, 0.07);
-  color: var(--soil-soft);
-  font-size: 12px;
-  line-height: 1.5;
-}
-.parcel-candidate-list { display: grid; border-top: 1px solid var(--line); }
-.parcel-candidate-list > button {
-  min-height: 55px;
-  display: grid;
-  grid-template-columns: 42px 1fr;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 8px;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  cursor: pointer;
-}
-.parcel-candidate-list > button:hover { background: #f0f5ef; }
-.parcel-candidate-list > button[aria-pressed="true"] { background: var(--leaf-pale); box-shadow: inset 3px 0 0 var(--leaf); }
-.candidate-index { color: var(--muted); font: 10px var(--mono); }
-.parcel-candidate-list > button[aria-pressed="true"] .candidate-index { color: var(--leaf-dark); font-weight: 800; }
-.parcel-candidate-list > button > span:last-child { display: grid; gap: 3px; min-width: 0; }
-.parcel-candidate-list strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
-.parcel-candidate-list small { overflow: hidden; color: var(--muted); font: 10px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
-.candidate-empty { padding: 24px 9px; color: var(--muted); font-size: 13px; text-align: center; }
-.parcel-confirmed { display: flex; gap: 9px; margin-top: 14px; color: var(--leaf-dark); font-size: 13px; font-weight: 700; line-height: 1.4; }
-.parcel-confirmed span { width: 18px; height: 18px; display: grid; flex: none; place-items: center; color: white; background: var(--leaf); border-radius: 50%; font-size: 10px; }
-
-.control-block {
-  padding-bottom: 23px;
-  border-bottom: 1px solid var(--line);
-}
-
-.crop-list {
-  border-top: 1px solid var(--line);
-}
-
-.crop-option {
-  position: relative;
-  width: 100%;
-  min-height: 58px;
-  display: grid;
-  grid-template-columns: 38px 1fr 18px;
-  align-items: center;
-  gap: 12px;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  cursor: pointer;
-  transition: padding 160ms ease, background 160ms ease;
-}
-
-.crop-option:hover {
-  padding-left: 7px;
-  background: #f1f5ee;
-}
-
-.crop-option[aria-pressed="true"] {
-  padding-left: 8px;
-  background: var(--leaf-pale);
-}
-
-.crop-monogram {
-  display: grid;
-  width: 32px;
-  height: 32px;
   place-items: center;
-  color: var(--leaf-dark);
-  border: 1px solid #aabdab;
-  border-radius: 50%;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.crop-option[aria-pressed="true"] .crop-monogram {
-  color: var(--paper-white);
-  background: var(--leaf);
-  border-color: var(--leaf);
-}
-
-.crop-option > span:nth-child(2) {
-  display: grid;
-  gap: 3px;
-}
-
-.crop-option strong {
-  font-size: 17px;
-  font-weight: 750;
-}
-
-.crop-option small {
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.crop-option i {
-  width: 8px;
-  height: 8px;
-  justify-self: center;
-  border: 1px solid var(--line-dark);
-  border-radius: 50%;
-}
-
-.crop-option[aria-pressed="true"] i {
-  border: 2px solid var(--paper-white);
-  background: var(--crop-gold);
-  box-shadow: 0 0 0 2px var(--leaf);
-}
-
-.period-block {
-  padding-top: 23px;
-}
-
-.period-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border: 1px solid var(--line-dark);
-}
-
-.period-options button {
-  min-height: 64px;
-  display: grid;
-  align-content: center;
-  gap: 3px;
-  padding: 9px 14px;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  border-right: 1px solid var(--line-dark);
-  cursor: pointer;
-}
-
-.period-options button:last-child {
-  border-right: 0;
-}
-
-.period-options button[aria-pressed="true"] {
-  color: var(--paper-white);
-  background: var(--soil-ink);
-}
-
-.period-options strong {
-  font-family: var(--mono);
-  font-size: 18px;
-}
-
-.period-options small {
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.period-options button[aria-pressed="true"] small {
-  color: #b9c8bd;
-}
-
-.data-mode-row {
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  color: var(--muted);
-  font-size: 15px;
-}
-
-.data-mode-row > div,
-.data-mode-row label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--crop-gold);
-  box-shadow: 0 0 0 3px rgba(214, 162, 62, 0.16);
-}
-
-.status-dot.ready {
-  background: var(--leaf);
-  box-shadow: 0 0 0 3px rgba(62, 116, 81, 0.15);
-}
-
-.data-mode-row label {
-  cursor: pointer;
-  user-select: none;
-}
-
-.data-mode-row label.disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.data-mode-row input {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--leaf);
-}
-
-.analyze-button {
-  width: 100%;
-  min-height: 58px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  color: var(--paper-white);
-  background: var(--leaf);
-  border: 0;
-  cursor: pointer;
-  transition: background 160ms ease, transform 160ms ease;
-}
-
-.analyze-button:hover:not(:disabled) {
-  background: var(--leaf-dark);
-  transform: translateY(-1px);
-}
-
-.analyze-button:disabled {
-  cursor: wait;
-  opacity: 0.68;
-}
-
-.analyze-button span {
-  font-size: 16px;
-  font-weight: 750;
-}
-
-.analyze-button svg {
-  width: 21px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.7;
-}
-
-.form-error {
-  margin-top: 10px;
-  color: var(--clay);
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-.mode-badge {
-  padding: 4px 8px;
-  color: var(--leaf-dark);
-  border: 1px solid var(--leaf);
-  font-family: var(--mono);
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.mode-badge.mock {
-  color: #76561b;
-  border-color: var(--crop-gold);
-}
-
-.mode-badge.fallback {
-  color: var(--clay);
-  border-color: var(--clay);
-}
-
-.parcel-sheet {
-  margin-bottom: 18px;
-  background: var(--paper-white);
-  border: 2px solid var(--soil-ink);
-}
-
-.parcel-sheet-heading {
-  min-height: 112px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 22px 26px;
-  color: var(--paper-white);
-  background: var(--soil-ink);
-}
-
-.parcel-sheet-heading > div { display: grid; gap: 6px; }
-.parcel-sheet-heading span { color: #a9c2af; font-family: var(--mono); font-size: 13px; letter-spacing: 0.08em; }
-.parcel-sheet-heading h3 { font-size: 29px; letter-spacing: -0.035em; }
-.parcel-sheet-heading p { color: #c8d5cb; font-size: 16px; }
-
-.parcel-status {
-  flex: none;
-  padding: 9px 12px;
-  color: #d9ecdd;
-  border: 1px solid #7faa89;
-  font-size: 15px;
-}
-
-.parcel-status.needs_confirmation { color: #f2d38f; border-color: var(--crop-gold); }
-.parcel-status.mock { color: #e3c478; border-color: var(--crop-gold); }
-
-.parcel-facts {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.parcel-facts > div {
-  min-width: 0;
-  min-height: 90px;
-  display: grid;
-  align-content: center;
-  gap: 7px;
-  padding: 16px 20px;
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-}
-
-.parcel-facts > div:nth-child(3n) { border-right: 0; }
-.parcel-facts dt { color: var(--muted); font-size: 14px; font-weight: 700; }
-.parcel-facts dd { overflow-wrap: anywhere; font-family: var(--mono); font-size: 15px; font-weight: 650; line-height: 1.45; }
-
-.parcel-sheet-note {
-  padding: 14px 20px;
-  color: var(--soil-soft);
-  background: #edf4ee;
-  font-size: 15px;
-  line-height: 1.55;
-}
-
-.soil-profile-band {
-  display: grid;
-  grid-template-columns: minmax(210px, 0.8fr) 2.2fr;
-  background: #f7f8f4;
-  border-bottom: 1px solid var(--line);
-}
-
-.soil-profile-band > div { display: grid; align-content: center; gap: 4px; padding: 17px 20px; border-right: 1px solid var(--line); }
-.soil-profile-band > div span { color: var(--leaf); font: 10px var(--mono); font-weight: 750; letter-spacing: 0.11em; }
-.soil-profile-band > div strong { font-size: 15px; }
-.soil-profile-band > div small { color: var(--muted); font-size: 12px; line-height: 1.45; }
-.soil-profile-band > dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.soil-profile-band > dl div { display: grid; align-content: center; gap: 5px; min-height: 78px; padding: 12px; border-right: 1px solid var(--line); }
-.soil-profile-band > dl div:nth-child(4n) { border-right: 0; }
-.soil-profile-band dt { color: var(--muted); font-size: 10px; }
-.soil-profile-band dd { overflow-wrap: anywhere; font: 15px var(--mono); font-weight: 650; line-height: 1.35; }
-.soil-profile-band > p { grid-column: 1 / -1; padding: 12px 23px; color: var(--muted); background: #f0f2ed; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.5; }
-
-.recent-climate-band {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(250px, 0.75fr) 2fr;
-  margin-bottom: 18px;
-  color: var(--paper-white);
-  background: #24352e;
-  border: 1px solid var(--soil-ink);
-}
-
-.station-docket { padding: 24px 26px 50px; border-right: 1px solid rgba(255,255,255,0.15); }
-.station-docket > span { color: #9db8a4; font: 10px var(--mono); letter-spacing: 0.12em; }
-.station-docket h3 { margin-top: 8px; font-size: 23px; }
-.station-docket > p { margin-top: 7px; color: #b5c5ba; font-size: 12px; line-height: 1.45; }
-.station-docket dl { display: grid; gap: 6px; margin-top: 20px; }
-.station-docket dl div { display: flex; justify-content: space-between; gap: 14px; font-size: 12px; }
-.station-docket dt { color: #8fa097; }
-.station-docket dd { color: #e2ebe4; font-family: var(--mono); }
-.climate-observation-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
-.climate-observation-grid > div { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-width: 0; min-height: 154px; padding: 20px; border-right: 1px solid rgba(255,255,255,0.13); }
-.climate-observation-grid > div:last-child { border-right: 0; }
-.climate-observation-grid span { color: #9caf9f; font-size: 12px; }
-.climate-observation-grid strong { font: 25px var(--mono); letter-spacing: -0.04em; }
-.climate-observation-grid em { margin-left: 3px; color: #91a59a; font-size: 12px; font-style: normal; }
-.climate-observation-grid small { color: #aebcb3; font-size: 10px; }
-.climate-caveat { position: absolute; right: 23px; bottom: 15px; left: calc(27.3% + 23px); color: #8fa097; font-size: 10px; line-height: 1.45; }
-
-.data-warning {
-  margin-bottom: 18px;
-  padding: 12px 15px;
-  color: #74571f;
-  background: #f4ead3;
-  border-left: 3px solid var(--crop-gold);
-  font-size: 15px;
-  line-height: 1.55;
-}
-
-.cache-notice {
-  margin-bottom: 18px;
-  padding: 12px 15px;
-  background: #e8eef2;
-  border-left: 3px solid var(--rain);
-  font-size: 15px;
-  line-height: 1.55;
-}
-
-.cache-notice strong {
-  display: block;
-  margin-bottom: 4px;
-  color: #3c5f72;
-  font-family: var(--mono);
-  font-size: 13px;
-  letter-spacing: 0.04em;
-}
-
-.cache-notice p {
+  width: 34px;
+  height: 34px;
   color: var(--ink);
-}
-
-.requirement-coverage {
-  display: grid;
-  grid-template-columns: minmax(260px, 0.8fr) 2fr;
-  margin-bottom: 18px;
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
-}
-
-.coverage-model {
-  padding: 24px 26px;
-  background: var(--soil-ink);
-  color: #f1f5f1;
-}
-
-.coverage-model > span {
-  color: #a9bbae;
   font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-}
-
-.coverage-model h3 {
-  margin-top: 8px;
-  font-size: 21px;
-  letter-spacing: -0.03em;
-}
-
-.coverage-model p {
-  max-width: 420px;
-  margin-top: 10px;
-  color: #c6d1c9;
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.requirement-coverage ul {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  list-style: none;
-}
-
-.requirement-coverage li {
-  min-width: 0;
-  padding: 21px 18px;
-  border-left: 1px solid var(--line);
-}
-
-.requirement-coverage li > div {
-  display: grid;
-  grid-template-columns: 7px 1fr auto;
-  align-items: center;
-  gap: 7px;
-}
-
-.requirement-coverage li > div > span {
-  width: 7px;
-  height: 7px;
-  background: var(--line-dark);
+  font-size: var(--t-axis);
+  font-weight: 700;
+  background: rgb(255 255 255 / 0.94);
+  border: 1px solid var(--line-strong);
   border-radius: 50%;
 }
 
-.requirement-coverage li.ready > div > span { background: var(--leaf); }
-.requirement-coverage li.partial > div > span { background: var(--crop-gold); }
-.requirement-coverage li.blocked > div > span { background: var(--clay); }
-
-.requirement-coverage li strong {
-  overflow: hidden;
-  font-size: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.requirement-coverage li em {
-  color: var(--muted);
+.map-index i {
   font-size: 10px;
   font-style: normal;
 }
 
-.requirement-coverage li p {
-  margin-top: 11px;
-  color: var(--soil-soft);
-  font-size: 12px;
-  line-height: 1.5;
+.map-caption {
+  left: var(--s3);
+  bottom: var(--s3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 6px var(--s3);
+  color: var(--sf);
+  font-size: var(--t-axis);
+  background: rgb(16 38 46 / 0.9);
+  border-radius: var(--pill);
 }
 
-.quality-heading p {
-  font-size: 15px;
+.map-caption strong {
+  font-weight: 700;
 }
 
-.quality-heading strong {
-  display: block;
-  margin-top: 9px;
-  color: #9cc0d2;
-  font-size: 21px;
+.map-caption span {
+  color: var(--deep-soft);
 }
 
-.quality-marks {
+.map-caption code {
+  color: var(--sf);
+  font-size: var(--t-axis);
+}
+
+/* ── 즐겨찾기와 대표 농지 ───────────────────────────────────────────────── */
+
+.favorite-shortcuts,
+.place-shortcuts {
   display: grid;
-  grid-template-columns: repeat(5, 14px);
-  align-items: end;
-  gap: 7px;
-  margin: 24px 0 20px;
-  color: #9cc0d2;
+  gap: var(--s2);
 }
 
-.quality-marks i {
-  height: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 999px 999px 4px 4px;
-  background: transparent;
-}
-
-.quality-marks i:nth-child(2),
-.quality-marks i:nth-child(4) { height: 38px; }
-
-.quality-marks i.active {
-  border-color: currentColor;
-  background: currentColor;
-  box-shadow: inset 0 -8px 0 rgba(23, 37, 31, 0.16);
-}
-
-/* 판단선: 왼쪽 장기 토양 조건 ↔ 오른쪽 선택 기간 위험을 하나의 선으로 잇는다. */
-.decision-line {
-  position: relative;
-  margin-bottom: 18px;
-  padding: 34px 30px 26px;
-  color: var(--paper-white);
-  background: var(--soil-ink);
-}
-
-.weather-watch {
-  margin-top: 10px;
-  padding: 3px 7px;
-  display: inline-block;
-  color: #74571f;
-  background: #f4ead3;
-  font-family: var(--mono);
-  font-size: 12px;
-}
-
-.calculation-section {
-  margin-bottom: 18px;
-  padding: 28px;
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
-}
-
-.calculation-heading {
+.favorite-list,
+.place-shortcuts > div {
   display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--line-dark);
+  flex-wrap: wrap;
+  gap: var(--s2);
 }
 
-.calculation-heading span { color: var(--leaf); font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 0.12em; }
-.calculation-heading h3 { margin-top: 5px; font-size: 26px; letter-spacing: -0.035em; }
-.calculation-heading p { color: var(--muted); font-size: 15px; }
-
-.calculation-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-}
-
-.score-ledger {
-  min-width: 0;
-  padding: 20px;
-  background: #f7f9f6;
-  border: 1px solid var(--line);
-}
-
-.score-ledger header { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
-.score-ledger header span { color: var(--muted); font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; }
-.score-ledger h4 { margin-top: 5px; font-size: 18px; }
-.score-ledger header > strong { font-family: var(--mono); font-size: 31px; font-weight: 550; }
-.score-ledger > code { display: block; min-height: 56px; margin: 18px 0; padding: 12px 13px; overflow-wrap: anywhere; color: var(--leaf-dark); background: #e7eee8; font-family: var(--mono); font-size: 13px; line-height: 1.5; }
-.score-ledger ul { display: grid; list-style: none; }
-.score-ledger li { min-height: 46px; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); font-size: 14px; }
-.score-ledger li > strong { font-family: var(--mono); font-size: 14px; }
-.basis-tag { padding: 3px 6px; color: var(--leaf-dark); background: #e0ebe2; font-size: 10px; font-style: normal; font-weight: 700; }
-.basis-tag.operational { color: #785111; background: #f4e7cb; }
-.basis-tag.mixed { color: #31576a; background: #dfeaf0; }
-.basis-tag.missing { color: #934331; background: #f5dfda; }
-.basis-tag.outlier { color: #7b3b6c; background: #f0dfec; }
-.score-ledger > p { margin-top: 16px; color: var(--muted); font-size: 13px; line-height: 1.55; }
-
-.score-row {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-  margin-top: 12px;
-}
-
-.score-row strong {
-  font-family: var(--mono);
-  font-size: 60px;
-  line-height: 1;
-  font-weight: 500;
-  letter-spacing: -0.07em;
-}
-
-.score-row span {
-  color: #92a49a;
-  font-family: var(--mono);
-  font-size: 12px;
-}
-
-.risk .score-track i {
-  background: var(--crop-gold);
-}
-
-.risk.high .score-track i {
-  background: var(--clay);
-}
-
-.judgement-axis {
-  position: relative;
-  z-index: 2;
-  display: flex;
+.place-shortcuts button {
+  flex: 1 1 150px;
   flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+}
+
+.place-shortcuts button strong,
+.period-options button strong {
+  font-size: var(--t-label);
+  font-weight: 700;
+}
+
+.place-shortcuts button small,
+.period-options button small {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+}
+
+.place-shortcuts button[aria-pressed="true"] small,
+.period-options button[aria-pressed="true"] small {
+  color: rgb(255 255 255 / 0.85);
+}
+
+.favorite-item {
+  padding: 0;
+  overflow: hidden;
+}
+
+.favorite-open {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: var(--touch);
+  padding: var(--s2) var(--s2) var(--s2) var(--s4);
+  color: inherit;
+  background: transparent;
+  border: 0;
+}
+
+.favorite-open span {
+  font-size: var(--t-label);
+  font-weight: 700;
+}
+
+.favorite-open small {
+  color: var(--ink-soft);
+  font-size: var(--t-axis);
+}
+
+.favorite-item:has(.favorite-open[aria-pressed="true"]) {
+  color: var(--sf);
+  background: var(--cy);
+  border-color: var(--cy);
+}
+
+.favorite-item:has(.favorite-open[aria-pressed="true"]) .favorite-open small {
+  color: rgb(255 255 255 / 0.85);
+}
+
+/*
+  삭제 버튼은 평소 흐리게 두고 hover·focus에서 드러낸다. 세 경로 중 하나라도 빠지면
+  키보드 사용자가 즐겨찾기를 지울 수 없다.
+*/
+.favorite-remove {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  width: 36px;
+  color: inherit;
+  font-size: var(--t-body);
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  opacity: 0.45;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.favorite-item:hover .favorite-remove,
+.favorite-item:focus-within .favorite-remove {
+  opacity: 1;
+}
+
+/* ── 01-B 농지 후보 ─────────────────────────────────────────────────────── */
+
+.parcel-finder {
+  display: grid;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.parcel-finder-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3) var(--s5);
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--line);
+}
+
+.parcel-finder-heading h3 {
+  font-size: var(--t-lead);
+  font-weight: 700;
+}
+
+.parcel-finder-heading p {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.55;
+}
+
+/* 브랜드 색을 쓰는 자리는 주요 동작과 현재 선택뿐이다. 장식에는 쓰지 않는다. */
+.parcel-finder-heading > button,
+.candidate-search-row > button {
+  min-height: var(--touch);
+  padding: 0 var(--s5);
+  color: var(--sf);
+  font-size: var(--t-label);
+  font-weight: 700;
+  background: var(--cy);
+  border: 1px solid var(--cy);
+  border-radius: var(--pill);
+  transition: background var(--dur) var(--ease);
+}
+
+.parcel-finder-heading > button:hover,
+.candidate-search-row > button:hover {
+  background: var(--cy-ink);
+}
+
+.parcel-candidate-workspace {
+  display: grid;
+  gap: var(--s3);
+  padding: var(--s4) var(--s5);
+}
+
+.candidate-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--s2);
+}
+
+.candidate-search-row label {
+  display: grid;
+  gap: var(--s1);
+}
+
+.candidate-search-row label > span {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  font-weight: 600;
+}
+
+.candidate-search-row input {
+  min-height: var(--touch);
+  padding: 0 var(--s3);
+  font-size: var(--t-body);
+  background: var(--sf);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.candidate-search-row input:focus {
+  border-color: var(--cy);
+  outline: none;
+}
+
+/* 후보가 실시간인지 저장 자료인지 색과 낱말로 함께 구분한다. 같은 모양으로 보이면 안 된다. */
+.candidate-origin {
+  font-style: normal;
+  font-weight: 700;
+}
+
+.candidate-origin.origin-connected {
+  color: var(--good);
+}
+
+.candidate-origin.origin-cache,
+.candidate-origin.origin-fallback {
+  color: var(--watch);
+}
+
+.candidate-origin.origin-mock {
+  color: var(--unknown);
+}
+
+/* 목록이 길어도 화면이 늘어나지 않게 한다. 이 두 줄이 그 역할을 한다. */
+.parcel-candidate-list {
+  display: grid;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) var(--sf-sunk);
+}
+
+.parcel-candidate-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--touch);
+}
+
+.parcel-candidate-row + .parcel-candidate-row {
+  border-top: 1px solid var(--line);
+}
+
+.parcel-candidate-row > button:first-child {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s3);
+  min-height: var(--touch);
+  padding: var(--s2) var(--s3);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  transition: background var(--dur) var(--ease);
+}
+
+.parcel-candidate-row > button:first-child:hover {
+  background: var(--sf-sunk);
+}
+
+.parcel-candidate-row > button[aria-pressed="true"] {
+  background: var(--cy-pale);
+  box-shadow: inset 3px 0 0 var(--cy);
+}
+
+/* 지번 대조가 이 화면의 목적이다. 지번이 잘리면 화면의 기능이 사라진다. */
+.parcel-candidate-list strong {
+  display: block;
+  font-size: var(--t-body);
+  font-weight: 700;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.parcel-candidate-list small {
+  display: block;
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+}
+
+.candidate-favorite {
+  display: grid;
+  place-items: center;
+  color: var(--line-strong);
+  font-size: var(--t-lead);
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--line);
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+.candidate-favorite:hover {
+  color: var(--cy);
+  background: var(--cy-pale);
+}
+
+.candidate-favorite[aria-pressed="true"] {
+  color: var(--watch);
+}
+
+.parcel-confirmed {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--good);
+  font-size: var(--t-label);
+  font-weight: 700;
+}
+
+.parcel-confirmed > span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  color: var(--sf);
+  font-size: var(--t-axis);
+  background: var(--good);
+  border-radius: 50%;
+}
+
+/* ── 02 작물과 기간 ─────────────────────────────────────────────────────── */
+
+.control-block {
+  display: grid;
+  gap: var(--s3);
+}
+
+.crop-list {
+  display: grid;
+  gap: var(--s2);
+}
+
+.crop-option {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: var(--s3);
+  min-height: var(--touch);
+  padding: var(--s2) var(--s3);
+  text-align: left;
+  background: var(--sf);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.crop-option:hover {
+  background: var(--cy-pale);
+  border-color: var(--cy);
+}
+
+.crop-option[aria-pressed="true"] {
+  background: var(--cy-pale);
+  border-color: var(--cy);
+  box-shadow: inset 0 0 0 1px var(--cy);
+}
+
+/* 작물 이모지는 상태가 아니라 대상 표시라서 남긴다. 상태에는 이모지를 쓰지 않는다. */
+.crop-monogram {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  font-size: var(--t-section);
+  line-height: 1;
+  background: var(--sf-sunk);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+
+.crop-option[aria-pressed="true"] .crop-monogram {
+  background: var(--sf);
+  border-color: var(--cy);
+}
+
+.crop-option strong {
+  display: block;
+  font-size: var(--t-lead);
+  font-weight: 700;
+}
+
+.crop-option small {
+  display: block;
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+}
+
+.crop-option i {
+  justify-self: end;
+  color: var(--cy);
+  font-size: var(--t-lead);
+  font-style: normal;
+}
+
+.period-options {
+  display: flex;
+  gap: var(--s2);
+}
+
+.period-options button {
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+}
+
+.period-block > p {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+}
+
+.data-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s4);
+  min-height: var(--touch);
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+}
+
+.data-mode-row > div,
+.data-mode-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: var(--touch);
+}
+
+/* 체크박스가 14×14로 측정됐다. 터치 규격에 맞춘다. */
+.data-mode-row input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+  accent-color: var(--cy);
+}
+
+.data-mode-row label.disabled {
+  opacity: 0.55;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  background: var(--unknown);
+  border-radius: 50%;
+}
+
+.status-dot.ready {
+  background: var(--good);
+}
+
+.analyze-button {
+  display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
+  gap: var(--s2);
+  min-height: 56px;
+  padding: 0 var(--s5);
+  color: var(--sf);
+  font-size: var(--t-lead);
+  font-weight: 700;
+  background: var(--cy);
+  border: 0;
+  border-radius: var(--radius);
+  transition: background var(--dur) var(--ease);
 }
 
-.judgement-axis::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 1px;
-  background: rgba(255, 255, 255, 0.26);
+.analyze-button:hover:not(:disabled) {
+  background: var(--cy-ink);
 }
 
-.judgement-axis > * {
-  position: relative;
-  z-index: 1;
-  padding-right: 8px;
-  padding-left: 8px;
-  background: var(--soil-ink);
+.analyze-button:disabled {
+  color: var(--ink-soft);
+  background: var(--sf-sunk);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
 }
 
-.judgement-axis span,
-.judgement-axis small {
-  color: #92a49a;
-  font-size: 10px;
+/* ══ 7. 02 판정서 ══════════════════════════════════════════════════════════ */
+
+.verdict-sheet {
+  display: grid;
+  gap: var(--s4);
+  padding: var(--s6);
+  background: var(--sf);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
 }
 
-.judgement-axis strong {
-  margin: 7px 0;
-  color: var(--paper-white);
+.sheet-masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2) var(--s4);
+}
+
+.sheet-issued {
+  margin-left: auto;
+}
+
+/* 보조 동작이지만 누르는 것이라 터치 규격을 낮추지 않는다. */
+.sheet-edit {
+  padding: 0 var(--s4);
+  font-size: var(--t-label);
+  font-weight: 700;
+}
+
+.sheet-subject {
+  color: var(--ink-soft);
+  font-size: var(--t-lead);
+}
+
+/* 판정 한 마디. 이 화면에서 가장 큰 글자이고 42px을 쓰는 유일한 자리다. */
+.sheet-verdict {
+  font-size: var(--t-verdict);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.sheet-verdict.good {
+  color: var(--good);
+}
+
+.sheet-verdict.watch {
+  color: var(--watch);
+}
+
+.sheet-verdict.bad {
+  color: var(--bad);
+}
+
+.status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.sheet-lead {
+  display: grid;
+  gap: var(--s2);
+  max-width: 70ch;
+  text-wrap: pretty;
+}
+
+/* 근거 셋. 값과 상태를 같은 자리에 두어 훑기만 해도 무엇이 걸리는지 보이게 한다. */
+.sheet-columns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s4);
+}
+
+.sheet-columns article {
+  display: grid;
+  align-content: start;
+  gap: var(--s2);
+  padding: var(--s4);
+  background: var(--sf-sunk);
+  border-radius: var(--radius);
+}
+
+.sheet-columns article > span:first-of-type {
+  display: block;
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  font-weight: 600;
+}
+
+.sheet-columns strong {
+  display: block;
+  font-size: var(--t-figure);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.sheet-columns strong.good {
+  color: var(--good);
+}
+
+.sheet-columns strong.watch {
+  color: var(--watch);
+}
+
+.sheet-columns strong.bad {
+  color: var(--bad);
+}
+
+.sheet-columns strong.info {
+  color: var(--ink-soft);
+}
+
+.sheet-columns .state-badge {
+  justify-self: start;
+}
+
+.sheet-columns p {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.6;
+}
+
+/* 먼저 할 일. 순서가 정보를 담으므로 번호를 남긴다. */
+.sheet-actions {
+  display: grid;
+  gap: var(--s4);
+}
+
+.sheet-actions li {
+  display: grid;
+  gap: var(--s1);
+}
+
+.sheet-actions li > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+}
+
+.sheet-actions h3 {
+  font-size: var(--t-lead);
+  font-weight: 700;
+}
+
+.sheet-actions time {
+  color: var(--watch);
+  font-size: var(--t-label);
+  font-weight: 700;
+}
+
+.sheet-actions p {
+  max-width: 70ch;
+  color: var(--ink-soft);
+}
+
+.sheet-explain {
+  display: grid;
+  gap: var(--s4);
+}
+
+.explain-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.explain-head h3 {
+  font-size: var(--t-section);
+  font-weight: 700;
+}
+
+/* 규칙이 쓴 문장과 AI가 쓴 문장을 화면에서 구분한다. */
+.explain-origin,
+.showcase-origin {
+  padding: 4px var(--s3);
+  font-size: var(--t-label);
+  font-weight: 700;
+  border-radius: var(--pill);
+}
+
+.explain-origin.rule,
+.showcase-origin.rule {
+  color: var(--ink-soft);
+  background: var(--unknown-bg);
+}
+
+.explain-origin.llm,
+.showcase-origin.llm {
+  color: var(--cy-ink);
+  background: var(--cy-pale);
+}
+
+.explain-blocks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s4);
+}
+
+.explain-blocks article {
+  display: grid;
+  align-content: start;
+  gap: var(--s2);
+}
+
+.explain-blocks h4 {
+  color: var(--cy-ink);
+  font-size: var(--t-label);
+  font-weight: 700;
+}
+
+.explain-blocks p {
+  font-size: var(--t-label);
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+
+/* 다음 화면으로 가는 문. 카드가 아니라 넓은 누를 자리로 둔다. */
+.page-jump {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--s3);
+}
+
+.page-jump button {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-height: 76px;
+  padding: var(--s4) var(--s5);
+  text-align: left;
+  background: var(--sf-sunk);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.page-jump button:hover {
+  background: var(--cy-pale);
+  border-color: var(--cy);
+}
+
+.page-jump button > span {
+  color: var(--cy-ink);
   font-family: var(--mono);
-  font-size: 24px;
-  font-weight: 500;
+  font-size: var(--t-axis);
+  font-weight: 700;
+}
+
+.page-jump button strong {
+  font-size: var(--t-lead);
+  font-weight: 700;
+}
+
+.page-jump button small {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+}
+
+/* ══ 8. 03 자세한 근거 ═════════════════════════════════════════════════════ */
+
+.page-title {
+  font-size: var(--t-figure);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.sheet-detail-body {
+  display: grid;
+  gap: var(--s6);
 }
 
 .evidence-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  border-right: 1px solid var(--line-dark);
-  border-bottom: 1px solid var(--line-dark);
-  border-left: 1px solid var(--line-dark);
-}
-
-.factor-section,
-.weather-section {
-  min-width: 0;
-  padding: 35px 38px 38px;
-}
-
-.factor-section {
-  border-right: 1px solid var(--line-dark);
-}
-
-.subsection-heading {
-  min-height: 52px;
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 15px;
-  border-bottom: 1px solid var(--line-dark);
-}
-
-.subsection-heading span,
-.action-heading > span {
-  display: block;
-  margin-bottom: 3px;
-  color: var(--leaf);
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.13em;
-}
-
-.subsection-heading h3,
-.action-heading h3 {
-  font-size: 23px;
-  letter-spacing: -0.035em;
-}
-
-.subsection-heading > p {
-  padding-top: 14px;
-  color: var(--muted);
-  font-size: 13px;
-  text-align: right;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: var(--s4);
 }
 
 .factor-table {
   display: grid;
 }
 
+/*
+  근거 한 줄. 이전 파일은 5열 표를 폭마다 여덟 번 다시 짰고 모바일에서는 열 제목을
+  `::before`로 되살렸다. 여기서는 폭에 관계없이 같은 구조를 쓴다. 값마다 이름표가
+  붙어 있으므로 표 머리가 필요 없다.
+
+    [부호] 항목 이름              내 값
+           ──── 눈금 ──────────────────
+           공식 기준 · …
+           판단 · …
+*/
 .factor-row {
-  min-height: 72px;
   display: grid;
-  grid-template-columns: 8px 1.2fr 0.8fr 1fr 1.15fr;
-  align-items: center;
-  gap: 10px;
-  border-bottom: 1px solid var(--line);
-  font-size: 15px;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "signal name   value"
+    ".      meter  meter"
+    ".      target target"
+    ".      impact impact";
+  align-items: baseline;
+  gap: var(--s2) var(--s3);
+  padding: var(--s4) var(--s5);
 }
 
+.factor-row + .factor-row {
+  border-top: 1px solid var(--line);
+}
+
+/* 값과 기준이 여러 줄이 되어도 부호는 행 중앙이 아니라 첫 줄에 맞춘다. */
 .factor-signal {
-  width: 6px;
-  height: 6px;
+  grid-area: signal;
+  align-self: start;
+  width: 14px;
+  height: 14px;
+  margin-top: 7px;
   border-radius: 50%;
-  background: var(--line-dark);
 }
 
-.factor-signal.good { background: var(--leaf); }
-.factor-signal.watch { background: var(--crop-gold); }
-.factor-signal.risk { background: var(--clay); }
-.factor-signal.info { background: var(--rain); }
+.factor-signal.good {
+  background: var(--good);
+}
+
+.factor-signal.watch {
+  background: var(--watch);
+}
+
+.factor-signal.risk {
+  background: var(--bad);
+}
+
+.factor-signal.info,
+.factor-signal.unknown {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--line-strong);
+}
 
 .factor-row > strong {
-  font-size: 15px;
+  grid-area: name;
+  font-size: var(--t-lead);
+  font-weight: 700;
 }
 
 .factor-value {
-  color: var(--soil-ink);
-  font-family: var(--mono);
-  font-weight: 600;
+  grid-area: value;
+  justify-self: end;
+  font-size: var(--t-figure);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
+.factor-row .meter {
+  grid-area: meter;
+}
+
+.factor-target {
+  grid-area: target;
+}
+
+.factor-impact {
+  grid-area: impact;
+}
+
+/* 기준과 판단은 값이 아니라 설명이다. 이름표를 붙여 무엇인지 말한다. */
 .factor-target,
 .factor-impact {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.4;
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.65;
 }
 
-.factor-impact {
-  text-align: right;
+.factor-target::before {
+  content: "공식 기준 ";
+  color: var(--cy-ink);
+  font-weight: 700;
 }
+
+.factor-impact::before {
+  content: "판단 ";
+  color: var(--cy-ink);
+  font-weight: 700;
+}
+
+/* ── 예보 ────────────────────────────────────────────────────────────────── */
 
 .weather-timeline {
-  min-height: 264px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--s3);
+  padding: var(--s4);
 }
 
 .weather-timeline article {
-  position: relative;
-  padding: 24px 16px 15px;
-  border-right: 1px solid var(--line);
+  display: grid;
+  align-content: start;
+  gap: var(--s3);
+  padding: var(--s4);
+  background: var(--sf-sunk);
+  border-radius: var(--radius);
 }
 
-.weather-timeline article:last-child {
-  border-right: 0;
-}
-
+/* 선택 기간에서 가장 주의할 날. 색이 아니라 테두리로 표시해 색을 못 봐도 남는다. */
 .weather-timeline article.weather-focus {
-  background: rgba(85, 126, 150, 0.07);
+  background: var(--sf);
+  box-shadow: inset 0 0 0 2px var(--cy);
 }
 
-.weather-timeline article > div:first-child {
+.weather-day {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 7px;
+  gap: var(--s2);
 }
 
-.weather-timeline article > div strong {
-  font-size: 13px;
+.weather-date {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
 }
 
-.weather-timeline time {
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: 9px;
+.weather-date strong {
+  font-size: var(--t-lead);
+  font-weight: 700;
 }
 
-.weather-line {
-  display: block;
-  width: 100%;
-  height: 3px;
-  margin: 14px 0 21px;
-  background: var(--rain);
-  opacity: 0.45;
-}
-
-.weather-focus .weather-line {
-  opacity: 1;
+.weather-date time {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
 }
 
 .weather-sky {
-  min-height: 29px;
-  color: var(--rain);
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  font-weight: 600;
+}
+
+.weather-sky span {
+  font-size: var(--t-lead);
+}
+
+.weather-watch {
+  justify-self: start;
+  padding: 4px var(--s3);
+  color: var(--watch);
+  font-size: var(--t-label);
+  font-weight: 700;
+  background: var(--watch-bg);
+  border-radius: var(--pill);
 }
 
 .weather-temp {
   display: flex;
   align-items: baseline;
-  gap: 7px;
+  gap: var(--s2);
 }
 
 .weather-temp strong {
-  font-family: var(--mono);
-  font-size: 30px;
-  font-weight: 500;
+  font-size: var(--t-figure);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .weather-temp span {
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: 14px;
-}
-
-.weather-timeline dl {
-  display: grid;
-  gap: 6px;
-  margin-top: 20px;
-}
-
-.weather-timeline dl div {
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.weather-timeline dd {
-  color: var(--soil-soft);
-  font-family: var(--mono);
-}
-
-.source-state {
-  width: 6px;
-  height: 6px;
-  margin-top: 2px;
-  border-radius: 50%;
-  background: var(--leaf);
-}
-
-.source-state.mock { background: var(--crop-gold); }
-.source-state.fallback { background: var(--clay); }
-.source-state.cache { background: var(--rain); }
-
-.site-footer {
-  width: var(--page);
-  min-height: 90px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  color: var(--muted);
-  border-top: 1px solid var(--line);
-  font-size: 10px;
-}
-
-@media (max-width: 1100px) {
-  :root { --page: min(100% - 40px, 1040px); }
-
-  .workbench {
-    grid-template-columns: minmax(0, 1.25fr) minmax(330px, 0.75fr);
-  }
-
-  .map-panel { padding-right: 24px; }
-  .control-panel { padding-left: 24px; }
-  .factor-section, .weather-section { padding: 30px 24px; }
-  .factor-row { grid-template-columns: 8px 1.2fr 0.8fr 1fr; }
-  .factor-impact { display: none; }
-  .calculation-grid { grid-template-columns: 1fr; }
-  .score-ledger > code { min-height: auto; }
-  .requirement-coverage { grid-template-columns: 1fr; }
-  .requirement-coverage li:first-child { border-left: 0; }
-  .soil-profile-band { grid-template-columns: 1fr; }
-  .soil-profile-band > div { border-right: 0; border-bottom: 1px solid var(--line); }
-  .recent-climate-band { grid-template-columns: 1fr; }
-  .station-docket { padding-bottom: 24px; border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.15); }
-  .climate-caveat { position: static; grid-column: 1 / -1; padding: 0 20px 16px; }
-}
-
-@media (max-width: 820px) {
-  :root { --page: min(100% - 28px, 760px); }
-
-  .site-header { height: 70px; }
-  .header-context > span:last-child, .header-rule { display: none; }
-
-  .intro-section {
-    grid-template-columns: 1fr;
-    gap: 22px;
-    padding: 36px 0 28px;
-  }
-
-  .intro-section h1 { max-width: 707px; font-size: clamp(35px, 7vw, 50px); }
-  .flow-guide li { min-height: 96px; }
-
-  .workbench { display: block; }
-  .map-panel { padding: 26px 0; border-right: 0; border-bottom: 1px solid var(--line-dark); }
-  .control-panel { padding: 26px 0; }
-  .map-frame { height: 430px; }
-  .parcel-facts { grid-template-columns: repeat(2, 1fr); }
-  .parcel-facts > div:nth-child(3n) { border-right: 1px solid var(--line); }
-  .parcel-facts > div:nth-child(2n) { border-right: 0; }
-  .calculation-heading { align-items: start; flex-direction: column; gap: 8px; }
-  .score-row strong { font-size: 48px; }
-
-  .evidence-grid { grid-template-columns: 1fr; }
-  .factor-section { border-right: 0; border-bottom: 1px solid var(--line-dark); }
-  .requirement-coverage ul { grid-template-columns: repeat(2, 1fr); }
-  .requirement-coverage li:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
-  .requirement-coverage li:nth-child(4) { border-top: 1px solid var(--line); }
-  .candidate-search-row { grid-template-columns: 1fr; }
-  .candidate-search-row > button { justify-self: start; }
-  .climate-observation-grid { grid-template-columns: repeat(2, 1fr); }
-  .climate-observation-grid > div:nth-child(2) { border-right: 0; }
-  .climate-observation-grid > div:nth-child(-n+2) { border-bottom: 1px solid rgba(255,255,255,0.13); }
-}
-
-@media (max-width: 560px) {
-  :root { --page: calc(100% - 22px); }
-
-  .phase-label { font-size: 10px; }
-  .intro-section { padding-top: 28px; }
-  .intro-section h1 { font-size: 34px; }
-  .flow-guide { grid-template-columns: 1fr; }
-  .flow-guide li { min-height: 76px; border-right: 0; border-bottom: 1px solid var(--line); }
-  .flow-guide li:last-child { border-bottom: 0; }
-  .phase-nav { grid-template-columns: 1fr; }
-  .phase-nav a + a { border-top: 1px solid var(--line); border-left: 0; }
-
-  .map-frame { height: 380px; }
-  .map-caption {
-    right: 10px;
-    bottom: 10px;
-    left: 10px;
-    min-height: 58px;
-    padding: 10px 12px;
-  }
-  .map-caption code { display: none; }
-  .place-shortcuts button { padding: 11px 8px; }
-  .place-shortcuts small { display: none; }
-  .parcel-finder-heading { align-items: flex-start; flex-direction: column; }
-  .parcel-finder-heading > button { width: 100%; }
-  .parcel-candidate-list > button { grid-template-columns: 36px 1fr; }
-
-  .parcel-sheet-heading { align-items: flex-start; flex-direction: column; padding: 20px; }
-  .parcel-sheet-heading h3 { font-size: 24px; }
-  .parcel-facts { grid-template-columns: 1fr; }
-  .parcel-facts > div,
-  .parcel-facts > div:nth-child(2n),
-  .parcel-facts > div:nth-child(3n) { min-height: 76px; border-right: 0; }
-  .soil-profile-band > dl { grid-template-columns: repeat(2, 1fr); }
-  .soil-profile-band > dl div { border-bottom: 1px solid var(--line); }
-  .soil-profile-band > dl div:nth-child(2n) { border-right: 0; }
-  .soil-profile-band > dl div:last-child { border-right: 1px solid var(--line); border-bottom: 0; }
-  .climate-observation-grid { grid-template-columns: 1fr; }
-  .climate-observation-grid > div,
-  .climate-observation-grid > div:nth-child(2) { min-height: 104px; border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.13); }
-  .calculation-section { padding: 20px 14px; }
-  .calculation-heading h3 { font-size: 23px; }
-  .score-ledger { padding: 17px 14px; }
-  .score-ledger li { grid-template-columns: 1fr auto; }
-  .score-ledger li .basis-tag { grid-column: 1; grid-row: 2; justify-self: start; margin-bottom: 5px; }
-  .score-ledger li > strong { grid-column: 2; grid-row: 1 / span 2; }
-  .score-row strong { font-size: 41px; }
-  .judgement-axis { width: 1px; }
-  .judgement-axis > * { display: none; }
-
-  .factor-section, .weather-section { padding: 25px 16px; }
-  .factor-row { grid-template-columns: 8px 1fr 0.8fr; }
-  .factor-target { display: none; }
-  .weather-timeline article { padding-right: 8px; padding-left: 8px; }
-  .weather-timeline article > div:first-child { display: grid; }
-  .weather-temp strong { font-size: 24px; }
-
-  .requirement-coverage ul { grid-template-columns: 1fr; }
-  .requirement-coverage li,
-  .requirement-coverage li:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
-  .requirement-coverage li:first-child { border-top: 0; }
-  .site-footer { align-items: flex-start; flex-direction: column; justify-content: center; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* ─── 판정서(에디토리얼) 결과 화면 ─────────────────────────── */
-
-.verdict-sheet {
-  padding: 64px 0 70px;
-  scroll-margin-top: 16px;
-}
-
-.sheet-masthead {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.sheet-brand {
-  font-family: var(--display);
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.sheet-kind {
-  color: var(--muted);
-  font-size: 17px;
-}
-
-.sheet-issued {
-  margin-left: auto;
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.sheet-edit {
-  color: var(--leaf-dark);
-  font-size: 16px;
-  font-weight: 600;
-  border-bottom: 1px solid var(--leaf);
-}
-
-.sheet-rule {
-  height: 1px;
-  margin: 20px 0;
-  background: var(--rule);
-}
-
-.sheet-rule.strong {
-  height: 2px;
-  background: var(--rule-strong);
-}
-
-.sheet-subject {
-  font-family: var(--display);
-  font-size: clamp(24px, 2.2vw, 33px);
-  font-weight: 700;
-  line-height: 1.45;
-  letter-spacing: -0.02em;
-}
-
-.sheet-verdict {
-  margin: 10px 0 18px;
-  font-family: var(--display);
-  font-size: clamp(54px, 7vw, 96px);
-  font-weight: 900;
-  line-height: 1.1;
-  letter-spacing: -0.045em;
-}
-
-.sheet-verdict.good { color: var(--leaf-dark); }
-.sheet-verdict.watch { color: #a8641a; }
-.sheet-verdict.bad { color: #b3462f; }
-
-.sheet-lead {
-  max-width: 880px;
-  font-family: var(--display);
-  font-size: clamp(20px, 1.4vw, 23px);
-  line-height: 1.78;
-}
-
-.sheet-columns {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.sheet-columns article {
-  padding: 26px 28px;
-  border-left: 1px solid var(--rule);
-}
-
-.sheet-columns article:first-child {
-  padding-left: 0;
-  border-left: 0;
-}
-
-/*
-  칼럼 머리 이름표만 고른다. `span` 전체를 잡으면 나중에 들어온 상태 배지까지 블록으로 늘어난다.
-  실제로 배지가 칼럼 폭을 꽉 채우는 막대로 나왔다.
-*/
-.sheet-columns article > span:first-of-type {
-  display: block;
-  color: var(--muted);
-  font-size: 17px;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-}
-
-.sheet-columns strong {
-  display: block;
-  margin: 12px 0;
-  font-family: var(--display);
-  font-size: clamp(35px, 3.4vw, 46px);
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
-}
-
-.sheet-columns strong.good { color: var(--leaf-dark); }
-.sheet-columns strong.watch { color: #a8641a; }
-.sheet-columns strong.bad { color: #b3462f; }
-/* 자료가 없는 것은 기준을 벗어난 것과 다르다. 주의색으로 칠하면 흙에 문제가 있는 것처럼 읽힌다 */
-.sheet-columns strong.info { color: var(--muted); }
-
-.sheet-columns p {
-  color: var(--muted);
-  font-size: 17px;
-  line-height: 1.7;
-}
-
-.sheet-actions {
-  list-style: none;
-}
-
-.sheet-actions li {
-  padding: 20px 0;
-  border-top: 1px solid var(--rule);
-}
-
-.sheet-actions li:first-child { border-top: 0; }
-
-.sheet-actions li > div {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-
-.sheet-actions .action-no {
-  font-family: var(--display);
-  font-size: 31px;
-  font-weight: 900;
-  color: var(--leaf-dark);
-}
-
-.sheet-actions h3 {
-  font-family: var(--display);
-  font-size: 23px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.sheet-actions time {
-  margin-left: auto;
-  color: var(--muted);
-  font-size: 17px;
-}
-
-.sheet-actions li > p {
-  margin-top: 9px;
-  color: var(--soil-soft);
-  font-size: 17px;
-  line-height: 1.75;
-}
-
-.explain-head {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-}
-
-.explain-head h3 {
-  font-family: var(--display);
-  font-size: 23px;
-  font-weight: 700;
-}
-
-.explain-origin {
-  margin-left: auto;
-  padding: 5px 10px;
-  color: #7a5a12;
-  border: 1px solid var(--crop-gold);
-  font-size: 15px;
-}
-
-.explain-origin.llm {
-  color: var(--leaf-dark);
-  border-color: var(--leaf);
-}
-
-.explain-blocks {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-top: 20px;
-}
-
-.explain-blocks h4 {
-  margin-bottom: 9px;
-  font-family: var(--display);
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.explain-blocks p {
-  color: var(--soil-soft);
-  font-size: 17px;
-  line-height: 1.8;
-}
-
-.explain-pipeline {
-  margin-top: 20px;
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: 14px;
-  line-height: 1.7;
-}
-
-.sheet-detail summary {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-  padding: 6px 0;
-  cursor: pointer;
-  list-style: none;
-}
-
-.sheet-detail summary::-webkit-details-marker { display: none; }
-
-.sheet-detail summary span {
-  font-family: var(--display);
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--leaf-dark);
-  border-bottom: 1px solid var(--leaf);
-}
-
-.sheet-detail summary small {
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.sheet-detail summary::after {
-  content: "펼치기";
-  margin-left: auto;
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: 14px;
-}
-
-.sheet-detail[open] summary::after { content: "접기"; }
-
-.sheet-detail-body {
-  display: grid;
-  gap: 34px;
-  padding-top: 26px;
-}
-
-@media (max-width: 820px) {
-  .verdict-sheet { padding: 44px 0 50px; }
-  .sheet-issued { margin-left: 0; width: 100%; }
-  .sheet-columns { grid-template-columns: 1fr; }
-  .sheet-columns article { padding: 20px 0; border-left: 0; border-top: 1px solid var(--rule); }
-  .sheet-columns article:first-child { border-top: 0; }
-  .explain-blocks { grid-template-columns: 1fr; gap: 20px; }
-  .sheet-actions time { margin-left: 0; }
-  .sheet-actions li > div { flex-wrap: wrap; gap: 10px; }
-}
-
-/* ─── 입력 화면도 판정서 문법으로 정돈 ─────────────────────── */
-
-.intro-section h1,
-.panel-heading h2,
-.parcel-finder-heading h3,
-.crop-option strong,
-.period-options strong,
-.factor-section h3,
-.weather-section h3,
-.calculation-heading h3,
-.parcel-sheet-heading h3,
-.coverage-model h3,
-.recent-climate-band h3 {
-  font-family: var(--display);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-}
-
-.intro-section h1 {
-  font-size: clamp(35px, 3.1vw, 48px);
-  line-height: 1.26;
-}
-
-.eyebrow {
-  font-family: var(--sans);
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-
-.flow-guide small,
-.phase-nav a,
-.panel-heading p,
-.crop-option small,
-.period-options small {
-  font-size: 16px;
-}
-
-.flow-guide span,
-.phase-nav span,
-.step-number {
-  font-family: var(--sans);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.analyze-button span {
-  font-family: var(--display);
-  font-size: 21px;
-  font-weight: 700;
-}
-
-.data-mode-row {
-  font-size: 16px;
-}
-
-/* ─── 입력 영역: 좌우 여백 균형과 글자 크기 보정 ───────────── */
-
-.map-panel {
-  padding: 34px 34px 32px 34px;
-}
-
-.control-panel {
-  padding: 34px 34px 32px 34px;
-}
-
-.panel-heading h2 {
-  font-size: 28px;
-}
-
-.panel-heading p {
-  font-size: 17px;
-}
-
-.crop-option {
-  min-height: 66px;
-}
-
-.crop-option strong {
-  font-size: 21px;
-}
-
-.crop-option small {
-  font-size: 16px;
-}
-
-.crop-monogram {
-  width: 36px;
-  height: 36px;
-  font-size: 17px;
-}
-
-.period-options strong {
-  font-size: 23px;
-}
-
-.period-options small {
-  font-size: 16px;
-}
-
-.parcel-finder-heading span {
-  font-family: var(--sans);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.parcel-finder-heading h3 {
-  font-size: 23px;
-}
-
-.parcel-finder-heading p {
-  font-size: 16px;
-  line-height: 1.6;
-}
-
-.parcel-finder-heading > button,
-.candidate-search-row > button {
-  padding: 11px 16px;
-  font-size: 16px;
-}
-
-.map-caption strong {
-  font-size: 20px;
-}
-
-.map-caption span,
-.map-caption code {
-  font-size: 15px;
-}
-
-.place-shortcuts button span {
-  font-size: 17px;
-}
-
-.place-shortcuts button small {
-  font-size: 15px;
-}
-
-.candidate-count,
-.parcel-confirmed,
-.candidate-empty {
-  font-size: 16px;
-}
-
-.analyze-button {
-  min-height: 64px;
-}
-
-@media (max-width: 820px) {
-  .map-panel,
-  .control-panel {
-    padding: 26px 20px;
-  }
-}
-
-/* ─── 대표 시연 농지: 알약 버튼 ────────────────────────────── */
-
-.place-shortcuts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 14px;
-  border: 0;
-}
-
-.place-shortcuts button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 18px;
-  text-align: center;
-  color: var(--soil-ink);
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
-  border-radius: 999px;
-  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
-}
-
-.place-shortcuts button:last-child {
-  border-right: 1px solid var(--line-dark);
-}
-
-.place-shortcuts button span {
-  font-size: 17px;
-  font-weight: 600;
-}
-
-.place-shortcuts button small {
-  color: var(--muted);
-  font-size: 15px;
-}
-
-.place-shortcuts button:hover {
-  background: var(--leaf-pale);
-  border-color: var(--leaf);
-}
-
-.place-shortcuts button[aria-pressed="true"] {
-  color: var(--paper-white);
-  background: var(--leaf-dark);
-  border-color: var(--leaf-dark);
-}
-
-.place-shortcuts button[aria-pressed="true"] small {
-  color: rgba(255, 255, 255, 0.78);
-}
-
-/* 작물 이모지 아이콘 */
-.crop-monogram {
-  font-size: 23px;
-  line-height: 1;
-  background: var(--leaf-pale);
-  border-radius: 999px;
-}
-
-.crop-option[aria-pressed="true"] .crop-monogram {
-  background: var(--paper-white);
-}
-
-/* 기간 버튼도 같은 알약 문법으로 */
-.period-options button {
-  border-radius: 999px;
-}
-
-/* ─── 조작 패널 폭·정렬 보정 ───────────────────────────────── */
-
-.workbench {
-  grid-template-columns: minmax(0, 1.3fr) minmax(420px, 0.7fr);
-}
-
-.period-options {
-  display: flex;
-  gap: 10px;
-}
-
-.period-options button {
-  flex: 1;
-  min-height: 62px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 10px 14px;
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.period-options button[aria-pressed="true"] {
-  color: var(--paper-white);
-  background: var(--leaf-dark);
-  border-color: var(--leaf-dark);
-}
-
-.period-options button[aria-pressed="true"] small {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.data-mode-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 18px;
-}
-
-.data-mode-row > div,
-.data-mode-row label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-}
-
-/* ─── 판정서 본문 글자 확대와 행동 시각 위치 조정 ──────────── */
-
-.sheet-lead {
-  font-size: clamp(22px, 1.5vw, 24px);
-  line-height: 1.8;
-}
-
-.sheet-columns article > span:first-of-type { font-size: 18px; }
-.sheet-columns p { font-size: 18px; line-height: 1.75; }
-
-.sheet-actions h3 { font-size: 26px; }
-
-.sheet-actions time {
-  margin-left: 4px;
-  padding: 4px 12px;
-  color: var(--soil-soft);
-  background: var(--leaf-pale);
-  border-radius: 999px;
-  font-size: 16px;
-  white-space: nowrap;
-}
-
-.sheet-actions li > p {
-  font-size: 20px;
-  line-height: 1.8;
-}
-
-.sheet-actions .action-no { font-size: 33px; }
-
-.explain-head h3 { font-size: 26px; }
-.explain-blocks h4 { font-size: 22px; }
-.explain-blocks p { font-size: 20px; line-height: 1.85; }
-.explain-origin { font-size: 16px; }
-
-.sheet-detail summary span { font-size: 23px; }
-.sheet-detail summary small { font-size: 17px; }
-
-.sheet-subject { font-size: clamp(26px, 2.3vw, 35px); }
-.sheet-kind, .sheet-issued, .sheet-edit { font-size: 17px; }
-
-/* 데이터 모드 줄이 잘리지 않도록 */
-.data-mode-row label {
-  white-space: normal;
-}
-
-.data-mode-row {
-  font-size: 17px;
-}
-
-/* ─── 자세한 근거: 대조 표와 글자 크기 정리 ────────────────── */
-
-.sheet-detail-body .factor-table {
-  border-top: 1px solid var(--line);
-}
-
-.sheet-detail-body .factor-row {
-  display: grid;
-  grid-template-columns: 14px minmax(150px, 1.1fr) minmax(120px, 0.9fr) minmax(150px, 1.1fr) minmax(160px, 1.2fr);
-  align-items: baseline;
-  gap: 16px;
-  padding: 16px 4px;
-  border-bottom: 1px solid var(--line);
-}
-
-.sheet-detail-body .factor-row.head {
-  padding: 10px 4px;
-  background: transparent;
-}
-
-.sheet-detail-body .factor-row.head strong,
-.sheet-detail-body .factor-row.head span {
-  color: var(--muted);
-  font-family: var(--sans);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.sheet-detail-body .factor-row strong {
-  font-family: var(--display);
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.5;
-}
-
-.sheet-detail-body .factor-value {
-  display: block;
-  color: var(--soil-ink);
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.sheet-detail-body .factor-target,
-.sheet-detail-body .factor-impact {
-  display: block;
-  color: var(--muted);
-  font-size: 17px;
-  line-height: 1.65;
-}
-
-.sheet-detail-body .subsection-heading h3,
-.sheet-detail-body .parcel-sheet-heading h3,
-.sheet-detail-body .coverage-model h3,
-.sheet-detail-body .calculation-heading h3,
-.sheet-detail-body .recent-climate-band h3 {
-  font-size: 24px;
-}
-
-.sheet-detail-body .subsection-heading span,
-.sheet-detail-body .parcel-sheet-heading span,
-.sheet-detail-body .coverage-model span,
-.sheet-detail-body .calculation-heading > div span,
-.sheet-detail-body .station-docket span {
-  font-family: var(--sans);
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.sheet-detail-body .subsection-heading p,
-.sheet-detail-body .parcel-sheet-note,
-.sheet-detail-body .coverage-model p,
-.sheet-detail-body .requirement-coverage p {
-  font-size: 17px;
-  line-height: 1.7;
-}
-
-.sheet-detail-body .parcel-facts dt { font-size: 16px; font-weight: 600; }
-.sheet-detail-body .parcel-facts dd { font-size: 18px; line-height: 1.6; }
-.sheet-detail-body .parcel-facts > div { min-height: 100px; padding: 18px 22px; }
-
-.sheet-detail-body .soil-profile-band > div strong { font-size: 20px; }
-.sheet-detail-body .soil-profile-band > div small { font-size: 16px; line-height: 1.65; }
-.sheet-detail-body .soil-profile-band dt { font-size: 15px; }
-.sheet-detail-body .soil-profile-band dd { font-size: 18px; line-height: 1.5; }
-.sheet-detail-body .soil-profile-band > dl div { min-height: 92px; padding: 16px; }
-.sheet-detail-body .soil-profile-band > p { font-size: 16px; line-height: 1.7; padding: 16px 23px; }
-
-.sheet-detail-body .climate-observation-grid span { font-size: 16px; }
-.sheet-detail-body .climate-observation-grid strong { font-size: 30px; }
-.sheet-detail-body .climate-observation-grid em { font-size: 15px; }
-.sheet-detail-body .climate-observation-grid small { font-size: 15px; }
-.sheet-detail-body .station-docket p { font-size: 17px; }
-.sheet-detail-body .station-docket dt,
-.sheet-detail-body .station-docket dd { font-size: 16px; }
-
-/* 관측소 각주가 겹치지 않도록 흐름 안으로 되돌린다 */
-.sheet-detail-body .climate-caveat {
-  position: static;
-  grid-column: 1 / -1;
-  padding: 14px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  font-size: 15px;
-  line-height: 1.7;
-}
-
-.sheet-detail-body .requirement-coverage li strong { font-size: 20px; }
-.sheet-detail-body .requirement-coverage li em { font-size: 15px; }
-.sheet-detail-body .requirement-coverage li p { font-size: 16px; }
-
-.calculation-legend {
-  max-width: 620px;
-  display: grid;
-  gap: 8px;
-}
-
-.calculation-legend p {
-  color: var(--muted);
-  font-size: 17px;
-  line-height: 1.7;
-}
-
-.calculation-legend .basis-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  font-style: normal;
-  font-size: 15px;
-}
-
-.calculation-audit {
-  color: var(--soil-soft);
-  font-size: 16px;
-}
-
-.sheet-detail-body .score-ledger > code { font-size: 16px; line-height: 1.7; }
-.sheet-detail-body .score-ledger h4 { font-size: 21px; }
-.sheet-detail-body .score-ledger li { font-size: 17px; }
-.sheet-detail-body .score-ledger > p { font-size: 16px; line-height: 1.75; }
-
-/* 자세한 근거 안에서는 표가 전체 폭을 쓰게 세로로 쌓는다 */
-.sheet-detail-body .evidence-grid {
-  grid-template-columns: 1fr;
-  gap: 0;
-}
-
-.sheet-detail-body .factor-section {
-  padding: 0 0 30px;
-  border-right: 0;
-  border-bottom: 1px solid var(--line-dark);
-}
-
-.sheet-detail-body .weather-section {
-  padding: 30px 0 0;
-}
-
-.sheet-detail-body .factor-row {
-  grid-template-columns: 14px minmax(190px, 1fr) minmax(150px, 0.8fr) minmax(190px, 1fr) minmax(230px, 1.2fr);
-  gap: 20px;
-}
-
-.sheet-detail-body .factor-impact {
-  text-align: right;
-}
-
-.sheet-detail-body .weather-timeline {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-}
-
-@media (max-width: 820px) {
-  .sheet-detail-body .factor-row {
-    grid-template-columns: 14px 1fr;
-    gap: 6px 14px;
-    row-gap: 4px;
-  }
-  .sheet-detail-body .factor-row.head { display: none; }
-  .sheet-detail-body .factor-value,
-  .sheet-detail-body .factor-target,
-  .sheet-detail-body .factor-impact {
-    grid-column: 2;
-    text-align: left;
-  }
-}
-
-/* ─── 사용한 자료 출처 표 ──────────────────────────────────── */
-
-.calculation-basis {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-  color: var(--soil-soft);
-  font-size: 16px;
-  line-height: 1.75;
-}
-
-.source-table-section {
-  padding: 28px;
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
-}
-
-.source-table-heading {
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--line-dark);
-}
-
-.source-table-heading span {
-  font-family: var(--sans);
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--leaf);
-}
-
-.source-table-heading h3 {
-  margin-top: 4px;
-  font-family: var(--display);
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-}
-
-.source-table-scroll {
-  overflow-x: auto;
-}
-
-.source-table {
-  width: 100%;
-  min-width: 620px;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-.source-table thead th {
-  padding: 0 14px 10px 0;
-  border-bottom: 1px solid var(--line-dark);
-  color: var(--muted);
-  font-family: var(--sans);
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.source-table tbody tr {
-  border-bottom: 1px solid var(--line);
-}
-
-.source-table tbody tr:last-child {
-  border-bottom: 0;
-}
-
-.source-table tbody th,
-.source-table tbody td {
-  padding: 15px 14px 15px 0;
-  vertical-align: top;
-}
-
-.source-table tbody th {
-  width: 26%;
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.source-table tbody td {
-  font-size: 17px;
-  line-height: 1.65;
-}
-
-.source-table tbody ul {
-  display: grid;
-  gap: 3px;
-  list-style: none;
-}
-
-.source-table tbody ul li {
-  padding-left: 11px;
-  position: relative;
-}
-
-.source-table tbody ul li::before {
-  content: "";
-  position: absolute;
-  top: 0.62em;
-  left: 0;
-  width: 4px;
-  height: 1px;
-  background: var(--muted);
-}
-
-.source-table-state {
-  white-space: nowrap;
-}
-
-.source-table-state > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 17px;
-  font-weight: 600;
-}
-
-.source-table-state .source-state {
-  margin-top: 0;
-}
-
-.source-table-state small {
-  display: block;
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.source-table-note {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-  color: var(--soil-soft);
-  font-size: 16px;
-  line-height: 1.75;
-}
-
-@media (max-width: 560px) {
-  .source-table-section { padding: 20px 14px; }
-  .source-table-heading h3 { font-size: 23px; }
-}
-
-/* ─── LLM 기반 리포트 탭 (예시 문안) ────────────────────────── */
-
-.showcase-section {
-  padding: 28px;
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
-}
-
-.showcase-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--line-dark);
-}
-
-.showcase-heading span {
-  color: var(--leaf);
-  font-family: var(--sans);
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.showcase-heading h3 {
-  margin-top: 4px;
-  font-family: var(--display);
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-}
-
-.showcase-empty {
-  padding: 22px 0;
-  color: var(--muted);
-  font-size: 17px;
-  line-height: 1.75;
-}
-
-.showcase-headline {
-  margin-bottom: 24px;
-  font-family: var(--display);
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.65;
-  letter-spacing: -0.02em;
-}
-
-.showcase-block {
-  padding: 18px 0;
-  border-top: 1px solid var(--line);
-}
-
-.showcase-block h4 {
-  margin-bottom: 8px;
-  font-family: var(--display);
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.showcase-block > p {
-  font-size: 17px;
-  line-height: 1.85;
-}
-
-.showcase-checklist {
-  display: grid;
-  gap: 14px;
-  margin-top: 12px;
-  padding-left: 0;
-  list-style: none;
-  counter-reset: showcase-step;
-}
-
-.showcase-checklist li {
-  padding-left: 34px;
-  position: relative;
-  counter-increment: showcase-step;
-}
-
-.showcase-checklist li::before {
-  content: counter(showcase-step);
-  position: absolute;
-  top: 1px;
-  left: 0;
-  width: 23px;
-  height: 23px;
-  display: grid;
-  place-items: center;
-  color: var(--paper-white);
-  background: var(--leaf);
-  border-radius: 50%;
-  font-family: var(--mono);
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.showcase-checklist strong {
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.showcase-checklist em {
-  margin-left: 9px;
-  padding: 2px 8px;
-  color: var(--muted);
-  background: #eef2ec;
-  font-style: normal;
-  font-size: 15px;
-}
-
-.showcase-checklist p {
-  margin-top: 5px;
-  font-size: 17px;
-  line-height: 1.8;
-}
-
-.showcase-closing {
-  margin-top: 20px;
-  padding: 16px 18px;
-  background: #eef2ec;
-  border-left: 3px solid var(--leaf);
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 1.8;
-}
-
-.showcase-values {
-  margin-top: 22px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-}
-
-.showcase-values strong {
-  color: var(--muted);
-  font-family: var(--sans);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.showcase-values ul {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 9px;
-  list-style: none;
-}
-
-.showcase-values li {
-  padding: 4px 10px;
-  background: #f7f9f6;
-  border: 1px solid var(--line);
-  font-family: var(--mono);
-  font-size: 16px;
-}
-
-@media (max-width: 560px) {
-  .showcase-section { padding: 20px 14px; }
-  .showcase-heading h3 { font-size: 23px; }
-}
-
-/* ─── 페이지 분리: 단계 내비 · 다음 화면 카드 ────────────────── */
-
-.phase-nav {
-  grid-template-columns: repeat(4, 1fr);
-}
-
-.phase-nav button {
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 0 16px;
-  color: inherit;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.phase-nav button + button { border-left: 1px solid var(--line); }
-.phase-nav button:hover:not(:disabled) { background: var(--leaf-pale); }
-
-.phase-nav button[aria-current="page"] {
-  color: var(--paper-white);
-  background: var(--leaf-dark);
-}
-
-.phase-nav button[aria-current="page"] span { color: var(--leaf-pale); }
-
-.phase-nav button:disabled {
-  color: var(--muted);
-  cursor: not-allowed;
-}
-
-.phase-nav button span {
-  color: var(--leaf);
-  font-family: var(--sans);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.page-title {
-  margin-bottom: 24px;
-  font-family: var(--display);
-  font-size: clamp(29px, 2.6vw, 35px);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
-/* 판정서를 버튼으로 바꿨으니 링크처럼 보이게 되돌린다 */
-button.sheet-edit {
-  padding: 0;
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--leaf);
-  cursor: pointer;
-}
-
-.page-jump {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-}
-
-.page-jump button {
-  display: grid;
-  gap: 5px;
-  padding: 20px 22px;
-  text-align: left;
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
-  cursor: pointer;
-}
-
-.page-jump button:hover { background: var(--leaf-pale); border-color: var(--leaf); }
-
-.page-jump span {
-  color: var(--leaf);
-  font-family: var(--mono);
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.page-jump strong {
-  font-family: var(--display);
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.page-jump small {
-  color: var(--muted);
-  font-size: 16px;
-  line-height: 1.6;
-}
-
-/* ─── 01-B 농지 후보: 목록이 길어도 화면이 늘어나지 않게 ──────── */
-
-.parcel-candidate-list {
-  max-height: 268px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-/* 스크롤 영역임을 알 수 있게 얇은 스크롤바를 남긴다 */
-.parcel-candidate-list::-webkit-scrollbar { width: 9px; }
-.parcel-candidate-list::-webkit-scrollbar-track { background: #f0f2ee; }
-.parcel-candidate-list::-webkit-scrollbar-thumb {
-  background: var(--line-dark);
-  border: 2px solid #f0f2ee;
-}
-.parcel-candidate-list::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-.candidate-scroll-hint {
-  margin-top: 8px;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-/* ─── 자세한 근거: 근거·예보 양쪽 패딩으로 안정감 확보 ────────── */
-
-.sheet-detail-body .factor-section {
-  padding: 26px 28px 30px;
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
-  border-right: 1px solid var(--line-dark);
-  border-bottom: 1px solid var(--line-dark);
-}
-
-.sheet-detail-body .weather-section {
-  padding: 26px 28px 30px;
-  margin-top: 18px;
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
-}
-
-/* ─── 사용한 자료: 기준시각 키우고 자료 나이를 함께 적는다 ────── */
-
-.source-table tbody th,
-.source-table tbody td { padding-right: 20px; }
-
-.source-table-state { min-width: 250px; white-space: normal; }
-
-.source-state-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 17px;
-  font-weight: 600;
-}
-
-.source-observed {
-  display: block;
-  margin-top: 6px;
-  font-family: var(--mono);
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.source-observed em {
-  display: block;
-  color: var(--muted);
-  font-family: var(--sans);
-  font-style: normal;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.source-age {
-  display: block;
-  margin-top: 7px;
-  padding-left: 9px;
-  border-left: 2px solid var(--line-dark);
-  color: var(--soil-soft);
-  font-size: 16px;
-  line-height: 1.65;
-}
-
-.source-age.fresh { border-left-color: var(--leaf); }
-.source-age.stable { border-left-color: var(--line-dark); }
-.source-age.aging { border-left-color: var(--crop-gold); }
-
-/* ─── LLM 리포트: 핵심 키워드 강조 ──────────────────────────── */
-
-/* 색은 판정 색 규칙을 따른다. 실제 값=골드, 공식 기준=딥그린, 주의·한계=클레이 레드 */
-.report-mark {
-  padding: 1px 3px;
-  background: transparent;
-  font-weight: 700;
-}
-
-.report-mark.value {
-  color: var(--crop-gold-ink, #7a5310);
-  background: #fdf4e2;
-  box-shadow: inset 0 -2px 0 var(--crop-gold);
-}
-
-.report-mark.official {
-  color: var(--leaf-dark);
-  background: var(--leaf-pale);
-  box-shadow: inset 0 -2px 0 var(--leaf);
-}
-
-.report-mark.caution {
-  color: var(--clay);
-  background: #fbeeea;
-  box-shadow: inset 0 -2px 0 var(--clay);
-}
-
-.showcase-legend {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-top: 22px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-}
-
-.mark-legend {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.mark-legend::before {
-  content: "";
-  width: 15px;
-  height: 4px;
-}
-
-.mark-legend.value::before { background: var(--crop-gold); }
-.mark-legend.official::before { background: var(--leaf); }
-.mark-legend.caution::before { background: var(--clay); }
-
-@media (max-width: 820px) {
-  .phase-nav { grid-template-columns: repeat(2, 1fr); }
-  .phase-nav button:nth-child(3) { border-left: 0; }
-  .phase-nav button:nth-child(n+3) { border-top: 1px solid var(--line); }
-  .page-jump { grid-template-columns: 1fr; }
-  .sheet-detail-body .factor-section,
-  .sheet-detail-body .weather-section { padding: 22px 20px 26px; }
-}
-
-@media (max-width: 560px) {
-  .phase-nav { grid-template-columns: 1fr; }
-  .phase-nav button + button { border-top: 1px solid var(--line); border-left: 0; }
-  .parcel-candidate-list { max-height: 232px; }
-  .sheet-detail-body .factor-section,
-  .sheet-detail-body .weather-section { padding: 18px 14px 22px; }
-  .source-observed { font-size: 18px; }
-}
-
-
-/* 토양·기온 대조 표 한 단계 더 크게 */
-.sheet-detail-body .factor-row.head strong,
-.sheet-detail-body .factor-row.head span { font-size: 17px; }
-.sheet-detail-body .factor-row strong { font-size: 22px; }
-.sheet-detail-body .factor-value { font-size: 22px; }
-.sheet-detail-body .factor-target,
-.sheet-detail-body .factor-impact { font-size: 18px; }
-.sheet-detail-body .factor-row { padding: 18px 4px; }
-.sheet-detail-body .subsection-heading h3 { font-size: 26px; }
-
-/* 판정 색을 멀리서도 읽게 신호 점을 키운다. 자료 없음(unknown)은 테두리만 남긴다 */
-/* 값·기준이 줄바꿈되면 행이 길어진다. 점은 행 중앙이 아니라 항목 첫 줄에 맞춘다 */
-.sheet-detail-body .factor-signal {
-  width: 14px;
-  height: 14px;
-  align-self: start;
-  margin-top: 7px;
-}
-
-.sheet-detail-body .factor-signal.unknown {
-  background: transparent;
-  border: 2px solid var(--line-dark);
-}
-
-/* ─── 선택 기간 예보: 게이지 카드 ──────────────────────────── */
-
-.sheet-detail-body .weather-timeline article {
-  display: grid;
-  gap: 14px;
-  padding: 22px;
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
-}
-
-.sheet-detail-body .weather-timeline article.weather-focus {
-  background: #fdf7e9;
-  border-color: var(--crop-gold);
-}
-
-.weather-day {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.weather-day strong {
-  font-family: var(--display);
-  font-size: 23px;
-  font-weight: 700;
-}
-
-.weather-day time {
-  color: var(--muted);
-  font-size: 17px;
-}
-
-.weather-icon {
-  margin-left: auto;
-  font-size: 29px;
-  line-height: 1;
-}
-
-.sheet-detail-body .weather-watch {
-  justify-self: start;
-  margin: 0;
-  padding: 5px 10px;
-  color: #7a5a12;
-  background: #f4ead3;
-  border-radius: 999px;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.sheet-detail-body .weather-sky {
-  color: var(--soil-soft);
-  font-size: 18px;
-}
-
-.sheet-detail-body .weather-temp {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.sheet-detail-body .weather-temp strong {
-  font-family: var(--display);
-  font-size: 42px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.sheet-detail-body .weather-temp span {
-  color: var(--muted);
-  font-size: 18px;
+  color: var(--ink-soft);
+  font-size: var(--t-label);
 }
 
 .weather-gauges {
   display: grid;
-  gap: 14px;
+  gap: var(--s3);
 }
 
 .weather-gauges > div {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: 6px 10px;
+  gap: var(--s1) var(--s3);
 }
 
 .weather-gauges dt {
-  color: var(--soil-soft);
-  font-size: 17px;
-  font-weight: 600;
+  color: var(--ink-soft);
+  font-size: var(--t-label);
 }
 
 .weather-gauges dd {
-  font-size: 20px;
+  font-size: var(--t-body);
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-.weather-gauges .gauge {
-  grid-column: 1 / -1;
-  height: 10px;
-  background: #e6e9e3;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.weather-gauges .gauge i {
-  display: block;
-  height: 100%;
-  background: var(--rain);
-  border-radius: 999px;
-}
-
-.weather-gauges .gauge.over i {
-  background: var(--crop-gold);
-}
-
-/* 관측소 카드: 값과 단위를 같은 크기로 */
-.sheet-detail-body .climate-observation-grid em {
-  margin-left: 4px;
-  font-size: 30px;
+.weather-gauges dd em {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  font-style: normal;
   font-weight: 400;
 }
 
-.sheet-detail-body .station-docket dd,
-.sheet-detail-body .station-docket dt {
-  font-size: 18px;
-}
-
-/* 게이지 바가 기존 예보 dl 규칙에 눌리지 않게 폭·표시를 고정한다 */
-.sheet-detail-body .weather-gauges > div {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: baseline;
-  gap: 6px 10px;
-  min-height: 0;
-  padding: 0;
-  border: 0;
-}
-
-.sheet-detail-body .weather-gauges .gauge {
-  display: block;
-  width: 100%;
+.gauge {
   grid-column: 1 / -1;
+  display: block;
   height: 10px;
-  padding: 0;
-  border: 0;
+  background: var(--sf);
+  border: 1px solid var(--line);
+  border-radius: var(--pill);
+  overflow: hidden;
 }
 
-.sheet-detail-body .weather-gauges .gauge i {
+.gauge i {
   display: block;
   height: 100%;
-  min-width: 3px;
+  background: var(--cy-lt);
 }
 
-/* 모바일에서 대표 농지 버튼 3개를 한 줄에 */
-@media (max-width: 560px) {
-  .place-shortcuts {
-    flex-wrap: nowrap;
-    gap: 6px;
-  }
-
-  .place-shortcuts button {
-    flex: 1 1 0;
-    justify-content: center;
-    min-width: 0;
-    padding: 10px 8px;
-  }
-
-  .place-shortcuts button span {
-    font-size: 16px;
-    white-space: nowrap;
-  }
-
-  .place-shortcuts button small {
-    display: none;
-  }
+.gauge.over i {
+  background: var(--watch);
 }
 
-/* 예보 카드 글자 한 단계 더 크게 */
-.sheet-detail-body .weather-timeline article { gap: 16px; padding: 26px; }
-.weather-day strong { font-size: 25px; }
-.weather-day time { font-size: 20px; }
-.weather-icon { font-size: 35px; }
-.sheet-detail-body .weather-watch { font-size: 17px; padding: 7px 14px; }
-.sheet-detail-body .weather-sky { font-size: 21px; }
-.sheet-detail-body .weather-temp strong { font-size: 48px; }
-.sheet-detail-body .weather-temp span { font-size: 21px; }
-.weather-gauges dt { font-size: 20px; }
-.weather-gauges dd { font-size: 23px; }
-.sheet-detail-body .weather-gauges .gauge { height: 12px; }
-.sheet-detail-body .weather-section .subsection-heading p { font-size: 18px; }
+/* ── 확정한 필지 ─────────────────────────────────────────────────────────── */
 
-/* 예보 카드: 날짜 좌상단, 상태는 우측 아이콘과 함께 */
-.weather-day {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
+/* 확정한 필지와 최근 관측만 어두운 면을 쓴다. 다른 층에서 온 자료라는 뜻이다. */
+.parcel-sheet-heading,
+.recent-climate-band .station-docket {
+  color: var(--sf);
+  background: var(--deep);
+  border-bottom-color: var(--deep-line);
 }
 
-.weather-date {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.parcel-sheet-heading > div > span,
+.recent-climate-band .station-docket > span {
+  color: var(--cy-lt);
 }
 
-.weather-date strong {
-  font-family: var(--display);
-  font-size: 29px;
+.parcel-sheet-heading p,
+.recent-climate-band .station-docket p {
+  color: var(--deep-soft);
+}
+
+.parcel-status {
+  padding: 4px var(--s3);
+  font-size: var(--t-label);
   font-weight: 700;
-  line-height: 1.15;
+  border-radius: var(--pill);
 }
 
-.weather-date time {
-  color: var(--muted);
-  font-size: 18px;
+.parcel-status.matched {
+  color: var(--good);
+  background: var(--good-bg);
 }
 
-.sheet-detail-body .weather-day .weather-sky {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  padding-top: 4px;
-  color: var(--soil-soft);
-  font-size: 21px;
-  font-weight: 600;
-  text-align: right;
+.parcel-status.needs_confirmation {
+  color: var(--watch);
+  background: var(--watch-bg);
 }
 
-.sheet-detail-body .weather-day .weather-sky span {
-  font-size: 33px;
-  line-height: 1;
+.parcel-status.mock {
+  color: var(--unknown);
+  background: var(--unknown-bg);
 }
 
-.sheet-detail-body .weather-temp {
-  margin-top: 2px;
-  align-items: baseline;
+.parcel-facts,
+.soil-profile-band > dl,
+.climate-observation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
-/* 선택 농지 확인표: 서체·크기 통일 */
-.sheet-detail-body .parcel-facts dt,
-.sheet-detail-body .parcel-facts dd,
-.sheet-detail-body .soil-profile-band dt,
-.sheet-detail-body .soil-profile-band dd,
-.sheet-detail-body .station-docket dt,
-.sheet-detail-body .station-docket dd {
-  font-family: var(--sans);
+.parcel-facts > div,
+.soil-profile-band > dl > div {
+  display: grid;
+  align-content: start;
+  gap: var(--s1);
+  padding: var(--s4) var(--s5);
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
 }
 
-.sheet-detail-body .parcel-facts dt { font-size: 17px; font-weight: 500; letter-spacing: 0; }
-.sheet-detail-body .parcel-facts dd { font-size: 20px; font-weight: 600; }
-.sheet-detail-body .soil-profile-band dt { font-size: 16px; font-weight: 500; }
-.sheet-detail-body .soil-profile-band dd { font-size: 20px; font-weight: 600; }
-.sheet-detail-body .parcel-sheet-heading h3 { font-size: 26px; }
-.sheet-detail-body .parcel-status { font-size: 16px; }
-
-/* 예보 카드 머리 정렬을 기존 규칙보다 우선 적용 */
-.sheet-detail-body .weather-timeline article > .weather-day {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 0;
-  border: 0;
-}
-
-.sheet-detail-body .weather-timeline .weather-date {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.sheet-detail-body .weather-timeline .weather-date strong {
-  font-family: var(--display);
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-}
-
-.sheet-detail-body .weather-timeline .weather-date time {
-  color: var(--muted);
-  font-family: var(--sans);
-  font-size: 18px;
-  letter-spacing: 0;
-}
-
-.sheet-detail-body .weather-timeline .weather-day .weather-sky {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 6px;
-  color: var(--soil-soft);
-  font-size: 21px;
+.parcel-facts dt,
+.soil-profile-band dt {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
   font-weight: 600;
 }
 
-.sheet-detail-body .weather-timeline .weather-day .weather-sky span {
-  font-size: 33px;
-  line-height: 1;
+/* 공식 코드표 용어는 바꾸지 않고 뜻을 아래에 한 줄로 덧붙인다. */
+.soil-profile-band dt em {
+  display: block;
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.5;
 }
 
-/* ─── 지도 좌표 표시를 좌하단 작은 배지로 ──────────────────── */
-
-.map-caption {
-  right: auto;
-  left: 14px;
-  bottom: 14px;
-  min-height: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(23, 37, 31, 0.88);
-}
-
-.map-caption > div {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.map-caption strong { font-size: 16px; }
-.map-caption span { font-size: 15px; }
-.map-caption code { font-size: 14px; }
-
-/* 작물 선택 표시를 크게 */
-.crop-option {
-  grid-template-columns: 40px 1fr 26px;
-}
-
-.crop-option i {
-  width: 22px;
-  height: 22px;
-  border: 2px solid var(--line-dark);
-  border-radius: 50%;
-  background: transparent;
-}
-
-.crop-option[aria-pressed="true"] i {
-  border-color: var(--leaf-dark);
-  background:
-    radial-gradient(circle at center, var(--leaf-dark) 0 5px, transparent 6px);
-}
-
-@media (max-width: 560px) {
-  .map-caption { left: 10px; bottom: 10px; padding: 7px 10px; }
-  .map-caption span { display: none; }
-}
-
-/* 데이터 모드 줄이 좁은 폭에서 잘리지 않도록 */
-.data-mode-row {
-  justify-content: space-between;
-}
-
-.data-mode-row > div,
-.data-mode-row label {
-  min-width: 0;
-  white-space: normal;
-}
-
-.data-mode-row label span {
+/* PNU·팜맵 ID가 셀을 넘기지 않게 한다. */
+.parcel-facts dd,
+.soil-profile-band dd {
+  font-size: var(--t-lead);
+  font-weight: 700;
   overflow-wrap: anywhere;
 }
 
-/* ─── 자세한 근거: 서체·크기 일관화 ────────────────────────── */
-
-.sheet-detail-body,
-.sheet-detail-body p,
-.sheet-detail-body li,
-.sheet-detail-body dd,
-.sheet-detail-body dt,
-.sheet-detail-body span,
-.sheet-detail-body small,
-.sheet-detail-body em {
-  font-family: var(--sans);
-}
-
-.sheet-detail-body h3,
-.sheet-detail-body h4,
-.sheet-detail-body .factor-row strong,
-.sheet-detail-body .weather-date strong,
-.sheet-detail-body .weather-temp strong {
-  font-family: var(--display);
-}
-
-/* 본문 15px, 보조 14px, 값 17px 세 단계로만 쓴다 */
-.sheet-detail-body .score-ledger h4 { font-size: 22px; }
-.sheet-detail-body .score-ledger > code {
+.parcel-facts dd {
   font-family: var(--mono);
-  font-size: 16px;
 }
-.sheet-detail-body .score-ledger li span { font-size: 17px; }
-.sheet-detail-body .score-ledger li strong { font-size: 20px; }
-.sheet-detail-body .score-ledger header > div span,
-.sheet-detail-body .score-ledger .basis-tag { font-size: 15px; }
-.sheet-detail-body .score-ledger header strong { font-size: 29px; }
-.sheet-detail-body .score-ledger > p { font-size: 16px; }
 
-.sheet-detail-body .requirement-coverage li strong { font-size: 20px; }
-.sheet-detail-body .requirement-coverage li em { font-size: 15px; }
-.sheet-detail-body .requirement-coverage li p { font-size: 17px; }
-.sheet-detail-body .coverage-model p { font-size: 17px; }
+.soil-profile-band {
+  display: grid;
+  background: var(--sf-sunk);
+}
 
-.sheet-detail-body .climate-observation-grid span { font-size: 17px; }
-.sheet-detail-body .climate-observation-grid small { font-size: 16px; }
-.sheet-detail-body .climate-caveat { font-size: 16px; }
-.sheet-detail-body .parcel-sheet-note { font-size: 17px; }
-.sheet-detail-body .soil-profile-band > div span { font-size: 16px; letter-spacing: 0.02em; }
-.sheet-detail-body .parcel-status { font-size: 16px; }
+.soil-profile-band > div:first-child {
+  display: grid;
+  gap: var(--s1);
+  padding: var(--s4) var(--s5);
+  border-top: 1px solid var(--line);
+}
 
-/* 설명 생성 과정 블록 */
+.soil-profile-band > div:first-child span {
+  color: var(--cy-ink);
+  font-size: var(--t-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.soil-profile-band > div:first-child strong {
+  font-size: var(--t-lead);
+  font-weight: 700;
+}
+
+.soil-profile-band > div:first-child small,
+.soil-profile-band > p {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.6;
+}
+
+.soil-profile-band > p {
+  max-width: 80ch;
+  padding: var(--s4) var(--s5);
+  border-top: 1px solid var(--line);
+}
+
+.parcel-sheet-note {
+  padding: var(--s3) var(--s5) var(--s4);
+}
+
+/* ── 최근 관측 ───────────────────────────────────────────────────────────── */
+
+.recent-climate-band {
+  display: grid;
+  color: var(--sf);
+  background: var(--deep);
+  border: 1px solid var(--deep);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.station-docket {
+  display: grid;
+  gap: var(--s2);
+  padding: var(--s4) var(--s5);
+}
+
+.station-docket h3 {
+  font-size: var(--t-section);
+  font-weight: 700;
+}
+
+.station-docket dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s5);
+}
+
+.station-docket dl div {
+  display: flex;
+  gap: var(--s2);
+  font-size: var(--t-label);
+}
+
+.station-docket dt {
+  color: var(--deep-soft);
+}
+
+.station-docket dd {
+  font-weight: 700;
+}
+
+/* grid 자식이 내용 길이로 늘어나 부모를 밀지 않게 막는다. */
+.climate-observation-grid > div {
+  display: grid;
+  align-content: start;
+  gap: var(--s1);
+  min-width: 0;
+  padding: var(--s4) var(--s5);
+  border-top: 1px solid var(--deep-line);
+  border-right: 1px solid var(--deep-line);
+}
+
+.climate-observation-grid > div span {
+  color: var(--deep-soft);
+  font-size: var(--t-label);
+  font-weight: 600;
+}
+
+.climate-observation-grid > div strong {
+  font-size: var(--t-figure);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.climate-observation-grid > div strong em {
+  color: var(--deep-soft);
+  font-size: var(--t-label);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.climate-observation-grid > div small {
+  color: var(--deep-soft);
+  font-size: var(--t-label);
+  line-height: 1.55;
+}
+
+.climate-caveat {
+  padding: var(--s3) var(--s5) var(--s4);
+  color: var(--deep-soft);
+  font-size: var(--t-label);
+  line-height: 1.6;
+  border-top: 1px solid var(--deep-line);
+}
+
+/* ── 기준 대조 목록 ──────────────────────────────────────────────────────── */
+
+.requirement-coverage ul {
+  display: grid;
+}
+
+.requirement-coverage li {
+  display: grid;
+  gap: var(--s1);
+  padding: var(--s3) var(--s5);
+}
+
+.requirement-coverage li + li {
+  border-top: 1px solid var(--line);
+}
+
+.requirement-coverage li > div {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--s2);
+}
+
+.requirement-coverage li > div > span {
+  align-self: start;
+  width: 12px;
+  height: 12px;
+  margin-top: 8px;
+  border-radius: 50%;
+}
+
+.requirement-coverage li.ready > div > span {
+  background: var(--good);
+}
+
+.requirement-coverage li.partial > div > span {
+  background: var(--watch);
+}
+
+.requirement-coverage li.blocked > div > span {
+  background: var(--bad);
+}
+
+.requirement-coverage li strong {
+  font-size: var(--t-body);
+  font-weight: 700;
+}
+
+.requirement-coverage li em {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  font-style: normal;
+}
+
+.requirement-coverage li p {
+  padding-left: var(--s5);
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.6;
+}
+
+/* ── 설명 생성 과정 ──────────────────────────────────────────────────────── */
+
+.report-pipeline-block {
+  display: grid;
+  gap: var(--s3);
+  padding: var(--s4) var(--s5);
+}
+
 .report-pipeline-block h3 {
-  font-family: var(--display);
-  font-size: 24px;
+  font-size: var(--t-section);
   font-weight: 700;
 }
 
 .report-pipeline-block > p {
-  max-width: 680px;
-  margin-top: 10px;
-  color: var(--muted);
-  font-size: 17px;
-  line-height: 1.75;
+  color: var(--ink-soft);
+  font-size: var(--t-label);
 }
 
 .report-pipeline-block ol {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-  margin-top: 18px;
-  list-style: none;
-  counter-reset: pipeline;
+  gap: var(--s3);
 }
 
 .report-pipeline-block li {
-  padding: 14px 16px;
-  background: var(--paper-white);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--leaf);
+  display: grid;
+  gap: 2px;
+  padding: var(--s3);
+  background: var(--sf-sunk);
+  border-radius: var(--radius);
 }
 
-.report-pipeline-block li.skipped { border-left-color: var(--crop-gold); }
-.report-pipeline-block li strong { display: block; font-size: 18px; }
-.report-pipeline-block li span {
-  display: block;
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 16px;
-  line-height: 1.65;
+.report-pipeline-block li.done {
+  box-shadow: inset 0 0 0 1px var(--good-line);
 }
 
-/* ─── 공식 용어 옆 쉬운 말 병기 ─────────────────────────────── */
-
-/* 공식 코드표 용어는 바꾸지 않고, 뜻을 아래에 한 줄로 덧붙인다 */
-.soil-profile-band dt em {
-  display: block;
-  margin-top: 3px;
-  color: var(--muted);
-  font-style: normal;
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.5;
+.report-pipeline-block li.skipped {
+  box-shadow: inset 0 0 0 1px var(--watch-line);
 }
 
-/* ─── 판정 문장: 문장마다 줄을 나눈다 ───────────────────────── */
-
-.sheet-lead > p + p {
-  margin-top: 9px;
-}
-
-/* ─── 자세한 근거 대조표: 머리글 키우기 ─────────────────────── */
-
-/* `항목 · 내 농지 값 · 공식 기준 · 판단`.
-   앞쪽 같은 선택자의 15px 규칙보다 뒤에 와야 하므로 파일 끝에 둔다. */
-.sheet-detail-body .factor-row.head strong,
-.sheet-detail-body .factor-row.head span {
-  color: var(--soil-soft);
-  font-size: 20px;
+.report-pipeline-block li strong {
+  font-size: var(--t-label);
   font-weight: 700;
 }
 
-.sheet-detail-body .factor-row.head {
-  padding-bottom: 13px;
-  border-bottom: 1px solid var(--line-dark);
+.report-pipeline-block li span {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.6;
 }
 
-@media (max-width: 560px) {
-  .sheet-detail-body .factor-row.head strong,
-  .sheet-detail-body .factor-row.head span { font-size: 18px; }
+/* ── 계산 과정 ───────────────────────────────────────────────────────────── */
+
+.calculation-legend {
+  display: grid;
+  gap: var(--s1);
+  color: var(--ink-soft);
+  font-size: var(--t-label);
 }
 
-/* ─── 최소 글자 크기 보정 ──────────────────────────────────
-   실제 렌더에서 9~13px로 남아 있던 사용자 노출 텍스트를 올린다.
-   1분 영상은 축소 재생되므로 화면에 읽을 목적으로 나오는 글자는 14px 아래로 두지 않는다. */
-
-.phase-label {
-  font-size: 15px;
-  letter-spacing: 0.02em;
+.calculation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--s3);
+  padding: var(--s4) var(--s5);
 }
 
-.site-footer,
-.site-footer * {
-  font-size: 15px;
+.score-ledger {
+  display: grid;
+  align-content: start;
+  gap: var(--s2);
+  padding: var(--s4);
+  background: var(--sf-sunk);
+  border-radius: var(--radius);
+}
+
+.score-ledger header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s2);
+}
+
+.score-ledger header h4 {
+  font-size: var(--t-lead);
+  font-weight: 700;
+}
+
+.score-ledger header > strong {
+  font-size: var(--t-figure);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 산식 문자열이 셀을 넘기지 않게 한다. */
+.score-ledger > code {
+  display: block;
+  padding: var(--s2) var(--s3);
+  color: var(--cy-ink);
+  font-size: var(--t-label);
   line-height: 1.7;
+  background: var(--sf);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow-wrap: anywhere;
 }
 
-.phase-nav .step,
-.phase-nav span {
-  font-size: 16px;
+.score-ledger ul {
+  display: grid;
 }
 
-.basis-tag {
-  font-size: 16px;
+.score-ledger li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: var(--s2);
+  padding: 6px 0;
+  font-size: var(--t-label);
+  border-bottom: 1px solid var(--line);
+}
+
+.score-ledger li strong {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-ledger > p {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.6;
+}
+
+.calculation-audit {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.6;
+}
+
+.calculation-basis {
+  padding: 0 var(--s5);
+}
+
+.calculation-source-link,
+.showcase-official-link {
+  display: grid;
+  gap: 2px;
+  padding: 0 var(--s5) var(--s4);
+}
+
+.calculation-source-link a,
+.showcase-official-link a {
+  font-size: var(--t-label);
+  font-weight: 700;
+}
+
+.calculation-source-link small,
+.showcase-official-link small {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+}
+
+/* ── 사용한 자료 표 ──────────────────────────────────────────────────────── */
+
+/* 좁은 화면에서 고정폭 표가 부모를 늘려 화면 전체가 밀리는 것을 막는다. */
+.source-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.source-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.source-table th,
+.source-table td {
+  padding: var(--s3) var(--s5);
+  font-size: var(--t-label);
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.source-table thead th {
+  color: var(--ink-soft);
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--sf-sunk);
+}
+
+.source-table tbody th {
+  font-size: var(--t-body);
+  font-weight: 700;
+}
+
+.source-table tbody ul {
+  display: grid;
+  gap: 2px;
+}
+
+.source-state-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.source-state {
+  padding: 2px var(--s2);
+  font-size: var(--t-label);
+  border-radius: 6px;
+}
+
+.source-state.connected {
+  color: var(--good);
+  background: var(--good-bg);
+}
+
+.source-state.cache,
+.source-state.fallback {
+  color: var(--watch);
+  background: var(--watch-bg);
+}
+
+.source-state.mock {
+  color: var(--unknown);
+  background: var(--unknown-bg);
 }
 
 .source-observed {
-  font-size: 16px;
-}
-
-/* 남은 13px 항목 보정 (지도 저작권 표시는 지도 제공자 규격이라 그대로 둔다) */
-.phase-label { font-size: 16px; }
-.phase-nav button,
-.phase-nav button * { font-size: 17px; }
-.step-number { font-size: 16px; }
-.parcel-finder-heading span { font-size: 16px; }
-.section-kicker > span { font-size: 16px; }
-
-/* 단계 번호와 바닥글 (앞선 규칙이 다른 셀렉터에 눌려 적용되지 않아 명시적으로 지정한다) */
-nav.phase-nav button span { font-size: 17px; }
-.panel-heading .step-number,
-span.step-number { font-size: 16px; }
-.site-footer,
-.site-footer p,
-.site-footer span,
-.site-footer strong { font-size: 16px; }
-
-/* ─── 모바일: 근거 표가 잘리지 않도록 ──────────────────────
-   4페이지 분리로 `.sheet-detail-body` 래퍼가 사라져 기존 모바일 규칙이 적용되지 않았다.
-   래퍼 없이도 걸리도록 셀렉터를 다시 지정한다. */
-@media (max-width: 820px) {
-  .evidence-grid {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-
-  .factor-section,
-  .weather-section {
-    min-width: 0;
-    border-right: 0;
-  }
-
-  .factor-row {
-    grid-template-columns: 10px 1fr;
-    gap: 4px 12px;
-    padding: 16px 4px;
-  }
-
-  .factor-row.head { display: none; }
-
-  .factor-value,
-  .factor-target,
-  .factor-impact {
-    grid-column: 2;
-    text-align: left;
-  }
-
-  .weather-timeline {
-    grid-template-columns: 1fr;
-  }
-
-  .parcel-facts,
-  .requirement-coverage ul,
-  .climate-observation-grid,
-  .calculation-grid,
-  .soil-profile-band,
-  .soil-profile-band > dl {
-    grid-template-columns: 1fr;
-  }
-
-  .requirement-coverage,
-  .recent-climate-band {
-    grid-template-columns: 1fr;
-  }
-
-  .parcel-facts > div,
-  .requirement-coverage li,
-  .climate-observation-grid > div,
-  .soil-profile-band > dl div {
-    border-right: 0;
-    min-height: 0;
-  }
-}
-
-/* ─── 타이포 감사 반영 (2026-07-26) ────────────────────────
-   앞선 보정 블록 일부가 더 구체적인 셀렉터에 눌려 적용되지 않았다.
-   같은 구체성 이상으로 다시 지정하고, 실수로 줄어든 값을 되돌린다. */
-
-/* 1. 무효였던 규칙 재지정 */
-.phase-nav button span { font-size: 16px; }
-.page-jump span { font-size: 16px; }
-.calculation-legend .basis-tag,
-.sheet-detail-body .score-ledger .basis-tag { font-size: 16px; }
-.sheet-detail-body .source-observed,
-.source-observed { font-size: 20px; }
-.source-observed em { font-size: 16px; }
-
-/* 2. 01 화면 농지 후보 목록 — 지번 대조가 이 화면의 목적이라 가장 크게 문제였다 */
-.candidate-search-row label > span { font-size: 16px; }
-.candidate-search-row input { font-size: 18px; }
-.parcel-candidate-list strong { font-size: 18px; }
-.parcel-candidate-list small {
-  font-size: 16px;
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-.candidate-index { font-size: 16px; }
-.candidate-scroll-hint { font-size: 16px; }
-.parcel-confirmed span { font-size: 16px; }
-
-/* 3. 자료 출처·경고 고지 */
-.cache-notice strong { font-size: 17px; }
-.cache-notice,
-.data-warning,
-.form-error { font-size: 17px; }
-.header-context { font-size: 16px; }
-.site-footer,
-.site-footer p,
-.site-footer span,
-.site-footer strong { font-size: 16px; }
-.map-caption span,
-.map-caption code { font-size: 16px; }
-.place-shortcuts button small { font-size: 16px; }
-.map-loading,
-.map-network-state,
-.map-network-state.error span { font-size: 16px; }
-.map-network-state.error button { padding: 13px 18px; font-size: 16px; }
-.soil-profile-band dt em { font-size: 16px; }
-.sheet-detail-body .requirement-coverage li em { font-size: 16px; }
-.showcase-checklist em { font-size: 16px; }
-.flow-guide span { font-size: 16px; }
-
-/* 4. 서체 규칙 정정 — 04 리포트 헤드라인은 제목이므로 세리프, 조작 버튼은 산세리프 */
-.sheet-detail-body .showcase-headline,
-.showcase-headline { font-family: var(--display); }
-.crop-option strong,
-.period-options strong,
-.analyze-button span { font-family: var(--sans); }
-
-/* 5. 행동 시각 칩을 오른쪽으로 되돌린다 */
-.sheet-actions li > div > time { margin-left: auto; }
-
-/* 6. 대표 농지 버튼 터치 영역 */
-.place-shortcuts button { min-height: 44px; }
-
-/* 7. 모바일 근거 표 — `.sheet-detail-body` 접두사가 붙은 규칙이 더 구체적이라
-   앞선 모바일 블록이 적용되지 않았다. 같은 접두사로 다시 지정한다. */
-@media (max-width: 820px) {
-  .sheet-detail-body .evidence-grid { grid-template-columns: 1fr; gap: 0; }
-  .sheet-detail-body .factor-section,
-  .sheet-detail-body .weather-section { min-width: 0; border-right: 0; }
-  .sheet-detail-body .factor-row {
-    grid-template-columns: 12px 1fr;
-    gap: 4px 12px;
-  }
-  .sheet-detail-body .factor-row.head { display: none; }
-  .sheet-detail-body .factor-value,
-  .sheet-detail-body .factor-target,
-  .sheet-detail-body .factor-impact {
-    grid-column: 2;
-    text-align: left;
-  }
-  /* 머리글 행을 감추면 값·기준·판단 구분이 사라지므로 각 줄에 라벨을 붙인다 */
-  .sheet-detail-body .factor-value::before { content: "내 농지 값 "; color: var(--muted); font-size: 16px; }
-  .sheet-detail-body .factor-target::before { content: "공식 기준 "; color: var(--muted); }
-  .sheet-detail-body .factor-impact::before { content: "판단 "; color: var(--muted); }
-
-  .sheet-detail-body .weather-timeline,
-  .sheet-detail-body .parcel-facts,
-  .sheet-detail-body .requirement-coverage,
-  .sheet-detail-body .requirement-coverage ul,
-  .sheet-detail-body .climate-observation-grid,
-  .sheet-detail-body .calculation-grid,
-  .sheet-detail-body .soil-profile-band,
-  .sheet-detail-body .soil-profile-band > dl,
-  .sheet-detail-body .recent-climate-band {
-    grid-template-columns: 1fr;
-  }
-  .sheet-detail-body .parcel-facts > div,
-  .sheet-detail-body .requirement-coverage li,
-  .sheet-detail-body .climate-observation-grid > div,
-  .sheet-detail-body .soil-profile-band > dl div {
-    border-right: 0;
-    min-height: 0;
-  }
-  .sheet-detail-body .station-docket { padding-bottom: 24px; }
-}
-
-/* 8. 좁은 화면에서 고정폭 표가 부모를 늘려 화면 전체가 밀리는 것을 막는다.
-   출처 표만 자기 영역 안에서 가로 스크롤한다. */
-@media (max-width: 820px) {
-  .sheet-detail-body,
-  .sheet-detail-body > *,
-  .sheet-detail-body section,
-  .sheet-detail-body .source-table-section,
-  .sheet-detail-body .factor-section,
-  .sheet-detail-body .weather-section {
-    min-width: 0;
-  }
-
-  .sheet-detail-body .source-table-scroll {
-    min-width: 0;
-    max-width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-/* ─── 04 리포트 출처 배지·고지 (2026-07-26 복원) ───────────
-   문서 2건이 요구하는 표기인데 코드에서 빠져 있었다.
-   이 화면 문장은 생성형 AI 출력이 아니므로 그 사실을 화면에서 먼저 밝힌다. */
-.showcase-origin {
-  margin-left: auto;
-  align-self: flex-start;
-  padding: 6px 12px;
-  color: #7a5a12;
-  background: #f7efdc;
-  border: 1px solid var(--crop-gold);
-  border-radius: 999px;
-  font-size: 16px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.showcase-notice {
-  margin: 14px 0 4px;
-  padding: 14px 16px;
-  color: var(--soil-soft);
-  background: #f4f6f1;
-  border-left: 3px solid var(--line-dark);
-  font-size: 17px;
-  line-height: 1.75;
-}
-
-@media (max-width: 560px) {
-  .showcase-origin {
-    margin-left: 0;
-    white-space: normal;
-  }
-}
-
-/* 습도 표시: 평균을 크게, 최고는 옆에 작게 */
-.weather-gauges dd em {
-  margin-left: 6px;
-  color: var(--muted);
-  font-size: 16px;
-  font-style: normal;
-  font-weight: 500;
-}
-
-/* ─── 논으로 판독된 필지 안내 ───────────────────────────────── */
-
-/* 판정을 막는 오류가 아니라 함께 확인할 조건이므로 경고색이 아닌 흙색 계열로 둔다 */
-.paddy-notice {
-  margin-bottom: 18px;
-  padding: 14px 17px;
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
-  border-left: 3px solid var(--soil-soft);
-}
-
-.paddy-notice strong {
   display: block;
-  margin-bottom: 5px;
-  font-family: var(--display);
-  font-size: 17px;
+  font-size: var(--t-body);
   font-weight: 700;
+  line-height: 1.4;
 }
 
-.paddy-notice p {
-  color: var(--soil-soft);
-  font-size: 15px;
-  line-height: 1.65;
+.source-observed em {
+  display: block;
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  font-style: normal;
+  font-weight: 400;
 }
 
-/* ─── 쉬운 말 보고서: AI 문장을 쓰지 못한 경과 ──────────────── */
+/* 자료의 나이가 이 자료에서 문제인지 아닌지를 색으로도 말한다. */
+.source-age {
+  display: block;
+  margin-top: var(--s1);
+  padding-left: var(--s2);
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  line-height: 1.6;
+  border-left: 2px solid var(--line-strong);
+}
 
-/* 오류가 아니라 경과 기록이므로 경고색을 쓰지 않는다 */
+.source-age.fresh {
+  border-color: var(--good);
+}
+
+.source-age.stable {
+  border-color: var(--cy-lt);
+}
+
+.source-age.aging {
+  border-color: var(--watch);
+}
+
+.source-table-note {
+  padding: var(--s3) var(--s5) var(--s4);
+}
+
+/* ══ 9. 04 쉬운 말 보고서 ══════════════════════════════════════════════════ */
+
+.showcase-section {
+  display: grid;
+}
+
 .showcase-trace {
-  margin-bottom: 22px;
-  padding: 14px 17px;
-  background: #f7f9f6;
-  border-left: 3px solid var(--line-dark);
+  display: grid;
+  gap: var(--s2);
+  padding: var(--s4) var(--s5);
+  background: var(--sf-sunk);
+  border-bottom: 1px solid var(--line);
 }
 
 .showcase-trace > strong {
-  display: block;
-  font-size: 15px;
+  font-size: var(--t-label);
   font-weight: 700;
 }
 
 .showcase-trace dl {
   display: flex;
-  gap: 22px;
   flex-wrap: wrap;
-  margin-top: 10px;
+  gap: var(--s2) var(--s5);
 }
 
-.showcase-trace dl div { display: flex; gap: 7px; align-items: baseline; }
-.showcase-trace dt { color: var(--muted); font-size: 13px; }
-.showcase-trace dd { font-family: var(--mono); font-size: 14px; font-weight: 600; }
+.showcase-trace dl div {
+  display: flex;
+  gap: 6px;
+  font-size: var(--t-label);
+}
+
+.showcase-trace dt {
+  color: var(--ink-soft);
+}
+
+.showcase-trace dd {
+  font-weight: 700;
+}
 
 .showcase-trace ul {
-  margin-top: 11px;
-  padding-top: 10px;
+  display: grid;
+  gap: 2px;
+  padding-top: var(--s2);
   border-top: 1px solid var(--line);
-  list-style: none;
 }
 
 .showcase-trace li {
-  padding-left: 11px;
-  color: var(--clay);
-  font-size: 14px;
+  color: var(--bad);
+  font-size: var(--t-label);
   line-height: 1.6;
-  text-indent: -11px;
-  word-break: break-word;
 }
 
-.showcase-trace li::before { content: "· "; }
-
-/* ─── 즐겨찾는 내 농지 ──────────────────────────────────────── */
-
-/*
-  프리셋 알약 줄 위에 같은 문법으로 얹는다. 새 디자인 언어를 만들지 않는다.
-  실제 사용자의 농지와 시연용 프리셋은 성격이 다르므로 줄은 분리하고 이름표를 붙인다.
-*/
-.favorite-shortcuts {
-  margin-top: 16px;
+.showcase-empty {
+  margin: var(--s5);
 }
 
-.favorite-shortcuts-label {
-  display: block;
-  margin-bottom: 9px;
-  color: var(--leaf);
+/* 보고서 첫 문장. 이 화면에서 가장 먼저 읽히는 자리다. */
+.showcase-headline {
+  max-width: 68ch;
+  padding: var(--s5);
+  font-size: var(--t-lead);
+  font-weight: 600;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.showcase-block {
+  display: grid;
+  gap: var(--s2);
+  padding: var(--s4) var(--s5);
+  border-top: 1px solid var(--line);
+}
+
+.showcase-block h4 {
+  font-size: var(--t-section);
+  font-weight: 700;
+}
+
+.showcase-block p {
+  max-width: 70ch;
+  line-height: 1.8;
+  text-wrap: pretty;
+}
+
+.showcase-checklist {
+  display: grid;
+  gap: var(--s3);
+}
+
+.showcase-checklist li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--s1) var(--s3);
+}
+
+.showcase-checklist li::before {
+  content: counter(list-item);
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: var(--cy-ink);
   font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: 0.12em;
-}
-
-.favorite-empty {
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.favorite-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-/* 알약 하나에 열기와 빼기가 함께 들어간다. 테두리는 껍데기가 갖고 안쪽 버튼은 투명하게 둔다 */
-.favorite-item {
-  display: inline-flex;
-  align-items: stretch;
-  background: var(--paper-white);
-  border: 1px solid var(--line-dark);
-  border-radius: 999px;
-  overflow: hidden;
-  transition: background 160ms ease, border-color 160ms ease;
-}
-
-.favorite-item:hover { background: var(--leaf-pale); border-color: var(--leaf); }
-
-.favorite-open {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 18px;
-  color: var(--soil-ink);
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  transition: color 160ms ease;
-}
-
-.favorite-open span { font-size: 17px; font-weight: 600; }
-.favorite-open small { color: var(--muted); font-size: 15px; }
-
-.favorite-item:has(.favorite-open[aria-pressed="true"]) {
-  background: var(--leaf-dark);
-  border-color: var(--leaf-dark);
-}
-
-.favorite-open[aria-pressed="true"] { color: var(--paper-white); }
-.favorite-open[aria-pressed="true"] small { color: rgba(255, 255, 255, 0.78); }
-
-/*
-  빼기 단추는 늘 자리에 있고 흐리게 둔다. 마우스를 올리면 진해진다.
-
-  접었다 펴지 않는다. 손가락에는 hover가 없어 폰에서는 영원히 숨고, 숨은 조작은
-  있는 줄도 모른다. 폭이 고정이라 나타날 때 알약 크기가 흔들리지도 않는다.
-*/
-.favorite-remove {
-  width: 32px;
-  display: grid;
-  place-items: center;
-  flex: none;
-  padding: 0 8px 0 0;
-  color: var(--muted);
-  background: transparent;
-  border: 0;
-  font-size: 15px;
-  line-height: 1;
-  opacity: 0.4;
-  cursor: pointer;
-  transition: opacity 160ms ease, color 160ms ease;
-}
-
-.favorite-item:hover .favorite-remove,
-.favorite-item:focus-within .favorite-remove { opacity: 1; }
-
-.favorite-remove:hover { color: var(--clay); }
-.favorite-remove:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; opacity: 1; }
-
-.favorite-item:has(.favorite-open[aria-pressed="true"]) .favorite-remove {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-/* 후보 한 줄 = 선택 버튼 + 별표. 별표는 폭을 고정해 주소 길이에 흔들리지 않게 둔다 */
-.parcel-candidate-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 46px;
-  align-items: stretch;
-  border-bottom: 1px solid var(--line);
-}
-
-.parcel-candidate-list > .parcel-candidate-row > button:first-child {
-  min-height: 55px;
-  display: grid;
-  grid-template-columns: 42px 1fr;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 8px;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-}
-
-.parcel-candidate-row > button:first-child:hover { background: #f0f5ef; }
-
-.parcel-candidate-row > button:first-child[aria-pressed="true"] {
-  background: var(--leaf-pale);
-  box-shadow: inset 3px 0 0 var(--leaf);
-}
-
-.parcel-candidate-row > button:first-child[aria-pressed="true"] .candidate-index {
-  color: var(--leaf-dark);
-  font-weight: 800;
-}
-
-.parcel-candidate-row > button:first-child > span:last-child { display: grid; gap: 3px; min-width: 0; }
-
-.candidate-favorite {
-  display: grid;
-  place-items: center;
-  color: var(--line-dark);
-  background: transparent;
-  border: 0;
-  border-left: 1px solid var(--line);
-  font-size: 19px;
-  line-height: 1;
-  cursor: pointer;
-  transition: color 160ms ease, background 160ms ease;
-}
-
-.candidate-favorite:hover { color: var(--leaf); background: #f0f5ef; }
-.candidate-favorite[aria-pressed="true"] { color: var(--gold, #b08b3f); }
-
-/* ─── 공식 기관 링크 ───────────────────────────────────────── */
-
-/*
-  설명 문장 안이 아니라 문단 아래 별도 줄에 둔다. 문장은 다섯 항목 검사를 거치는데
-  링크는 검사 대상이 아니다. 섞으면 검사를 통과한 문장과 그렇지 않은 것이 한 덩어리로 보인다.
-*/
-.showcase-official-link,
-.calculation-source-link {
-  display: grid;
-  gap: 4px;
-  margin-top: 14px;
-}
-
-.showcase-official-link a,
-.calculation-source-link a {
-  justify-self: start;
-  color: var(--leaf-dark);
-  font-size: 16px;
+  font-size: var(--t-label);
   font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  background: var(--cy-pale);
+  border-radius: var(--radius);
 }
 
-.showcase-official-link a:hover,
-.calculation-source-link a:hover { color: var(--leaf); }
-
-.showcase-official-link small,
-.calculation-source-link small { color: var(--muted); font-size: 14px; }
-
-@media (max-width: 820px) {
-  .parcel-candidate-row { grid-template-columns: minmax(0, 1fr) 52px; }
+.showcase-checklist li strong {
+  font-size: var(--t-lead);
+  font-weight: 700;
 }
 
-/* ─── 상태 부호: 배지와 칩 ─────────────────────────────────── */
-
-/*
-  `주의`·`자료 없음`·`현장 확인 필요`는 이미 색과 큰 글자로 나왔지만 문장 속 단어라서
-  훑을 때 상태로 잡히지 않았다. 부호와 짧은 이름표를 붙여 눈이 먼저 걸리게 한다.
-
-  카드도 그림자도 쓰지 않는다. 테두리 1픽셀과 옅은 바탕까지만 쓰는 화면 문법을 그대로 따른다.
-  색만으로 뜻을 싣지 않는다. 부호(✓ ! ▲ –)와 이름표가 색 없이도 같은 말을 한다.
-*/
-.status-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 18px 0 4px;
-}
-
-.status-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 9px 16px 9px 12px;
-  border: 1px solid var(--line-dark);
-  border-radius: 999px;
-  font-size: 17px;
-  line-height: 1.3;
-}
-
-.status-chip > span { color: var(--muted); }
-.status-chip > strong { font-weight: 750; }
-
-/* 부호는 원 안에 넣어 이름표와 구분되게 둔다 */
-.status-chip > i,
-.state-badge > i {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  color: var(--paper-white);
-  border-radius: 50%;
-  font-size: 13px;
+.showcase-checklist li em {
+  grid-column: 2;
+  color: var(--watch);
+  font-size: var(--t-label);
   font-style: normal;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.status-chip.good { background: var(--leaf-pale); border-color: #b6d0bf; }
-.status-chip.good > strong { color: var(--leaf-dark); }
-.status-chip.good > i { background: var(--leaf); }
-
-.status-chip.watch { background: #fbf1e2; border-color: #e0c592; }
-.status-chip.watch > strong { color: #8f5415; }
-.status-chip.watch > i { background: #a8641a; }
-
-.status-chip.bad { background: #fbeae5; border-color: #e6b3a5; }
-.status-chip.bad > strong { color: #97381f; }
-.status-chip.bad > i { background: #b3462f; }
-
-.status-chip.info { background: #eff1ef; border-color: var(--line-dark); }
-.status-chip.info > strong { color: var(--soil-soft); }
-.status-chip.info > i { background: var(--muted); }
-
-/* 3열 근거의 큰 숫자 아래에 붙는 작은 배지 */
-.state-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0 0 12px;
-  padding: 5px 13px 5px 6px;
-  border: 1px solid var(--line-dark);
-  border-radius: 999px;
-  font-size: 16px;
   font-weight: 700;
 }
 
-.state-badge > i { width: 20px; height: 20px; font-size: 12px; }
+.showcase-checklist li p {
+  grid-column: 2;
+  max-width: 70ch;
+  color: var(--ink-soft);
+}
 
-.state-badge.good { color: var(--leaf-dark); background: var(--leaf-pale); border-color: #b6d0bf; }
-.state-badge.good > i { background: var(--leaf); }
+.showcase-closing {
+  max-width: 70ch;
+  padding: var(--s4) var(--s5);
+  line-height: 1.8;
+  border-top: 1px solid var(--line);
+  text-wrap: pretty;
+}
 
-.state-badge.watch { color: #8f5415; background: #fbf1e2; border-color: #e0c592; }
-.state-badge.watch > i { background: #a8641a; }
+.showcase-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+  padding: var(--s3) var(--s5);
+  border-top: 1px solid var(--line);
+}
 
-.state-badge.bad { color: #97381f; background: #fbeae5; border-color: #e6b3a5; }
-.state-badge.bad > i { background: #b3462f; }
+.showcase-values {
+  display: grid;
+  gap: var(--s2);
+  padding: var(--s4) var(--s5);
+  border-top: 1px solid var(--line);
+}
 
-.state-badge.info { color: var(--soil-soft); background: #eff1ef; border-color: var(--line-dark); }
-.state-badge.info > i { background: var(--muted); }
+.showcase-values strong {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  font-weight: 600;
+}
 
-/* 큰 숫자와 배지 사이가 붙어 보이지 않게 위 여백을 숫자 쪽에서 줄인다 */
-.sheet-columns strong { margin-bottom: 9px; }
+.showcase-values ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.showcase-values li {
+  padding: 4px var(--s3);
+  font-size: var(--t-label);
+  font-variant-numeric: tabular-nums;
+  background: var(--sf-sunk);
+  border: 1px solid var(--line);
+  border-radius: var(--pill);
+}
+
+/* ══ 10. 반응형 ════════════════════════════════════════════════════════════ */
+
+/*
+  분기점은 셋이다. 규칙 사이에 흩지 않고 여기 모은다.
+  글자 크기를 화면 폭에 연동하지 않는다. 반응형은 구조로만 다룬다.
+*/
+
+@media (max-width: 1100px) {
+  :root {
+    --page: min(100% - 40px, 1040px);
+  }
+
+  .workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .map-panel {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .evidence-grid,
+  .explain-blocks {
+    grid-template-columns: 1fr;
+  }
+}
 
 @media (max-width: 820px) {
-  .status-chip { font-size: 16px; padding: 8px 14px 8px 10px; }
-  .state-badge { font-size: 15px; }
+  :root {
+    --page: min(100% - 28px, 760px);
+    --t-verdict: 34px;
+    --t-figure: 26px;
+    --t-section: 21px;
+  }
+
+  .site-header {
+    min-height: 64px;
+  }
+
+  .header-context {
+    display: none;
+  }
+
+  .flow-guide {
+    grid-template-columns: 1fr;
+  }
+
+  .flow-guide li + li {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .phase-nav {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .phase-nav button:nth-child(3) {
+    border-left: 0;
+  }
+
+  .phase-nav button:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+
+  .verdict-sheet {
+    padding: var(--s5);
+  }
+
+  .sheet-columns,
+  .page-jump {
+    grid-template-columns: 1fr;
+  }
+
+  .factor-row {
+    padding: var(--s3) var(--s4);
+  }
+}
+
+@media (max-width: 560px) {
+  :root {
+    --page: calc(100% - 22px);
+  }
+
+  .site-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--s4) 0;
+  }
+
+  .phase-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .phase-nav button + button {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .map-frame {
+    aspect-ratio: 4 / 3;
+  }
+
+  .map-caption span,
+  .map-caption code {
+    display: none;
+  }
+
+  .place-shortcuts button {
+    flex-basis: 100%;
+  }
+
+  .candidate-search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .parcel-candidate-list {
+    max-height: 240px;
+  }
+
+  /* 큰 숫자와 항목 이름이 한 줄에 들어가지 않는다. 값을 이름 아래로 내린다. */
+  .factor-row {
+    grid-template-areas:
+      "signal name   name"
+      ".      value  value"
+      ".      meter  meter"
+      ".      target target"
+      ".      impact impact";
+  }
+
+  .factor-value {
+    justify-self: start;
+  }
+
+  .score-ledger li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+/* ══ 11. 인쇄 ══════════════════════════════════════════════════════════════ */
+
+/*
+  화면을 그대로 인쇄하면 버튼·탭·지도가 종이에 나온다. 여기서는 조작하는 것을 걷어내고,
+  어두운 면을 반전하고, 한 항목이 쪽 경계에서 끊기지 않게 하고, 링크 주소를 본문에 남긴다.
+
+  한계를 적어 둔다. **이 앱은 한 번에 한 화면만 DOM에 둔다.** `view` 상태가 02·03·04 중
+  하나만 렌더한다. 그래서 아래 `break-before: page` 규칙은 지금 열려 있는 화면 안에서만
+  작동하고, `판정 → 자료 표 → 쉬운 말 보고서` 세 쪽을 한 번에 뽑지는 못한다.
+  세 쪽을 한 문서로 만들려면 셋을 동시에 렌더한 뒤 화면에서만 하나씩 보이게 해야 한다.
+  그 변경은 `[hidden]`과 `display`가 얽힌 자리를 건드리므로 따로 다룬다(DESIGN.md 참고).
+*/
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  :root {
+    --page: 100%;
+    --t-verdict: 30pt;
+    --t-figure: 20pt;
+    --t-section: 15pt;
+    --t-lead: 12pt;
+    --t-body: 11pt;
+    --t-label: 9.5pt;
+    --t-axis: 8pt;
+  }
+
+  html,
+  body {
+    background: #ffffff;
+  }
+
+  body {
+    line-height: 1.55;
+  }
+
+  .app-shell {
+    display: block;
+    overflow: visible;
+  }
+
+  main {
+    display: block;
+    padding: 0;
+  }
+
+  /* 조작하는 것은 종이에 남기지 않는다. */
+  .phase-nav,
+  .page-jump,
+  .sheet-edit,
+  .intro-section,
+  .workbench,
+  .showcase-legend,
+  .site-footer {
+    display: none;
+  }
+
+  .site-header {
+    min-height: 0;
+    margin-bottom: 6mm;
+    padding-bottom: 4mm;
+  }
+
+  .verdict-sheet {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  /* 1쪽 — 판정. 근거 셋은 종이에서 가로로 남긴다. */
+  .sheet-columns {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4mm;
+  }
+
+  .sheet-columns article {
+    padding: 3mm;
+    background: none;
+    border: 1px solid #c8d0d3;
+  }
+
+  /* 2쪽 — 사용한 자료. */
+  .source-table-section {
+    break-before: page;
+  }
+
+  .source-table-scroll {
+    overflow: visible;
+  }
+
+  .source-table {
+    min-width: 0;
+  }
+
+  /* 3쪽 — 쉬운 말 보고서. */
+  .showcase-section {
+    break-before: page;
+  }
+
+  /* 면은 종이에서 테두리만 남긴다. 회색 바탕은 잉크를 먹고 대비를 떨어뜨린다. */
+  .factor-section,
+  .weather-section,
+  .parcel-sheet,
+  .requirement-coverage,
+  .report-pipeline-block,
+  .calculation-section,
+  .source-table-section,
+  .showcase-section,
+  .weather-timeline article,
+  .score-ledger,
+  .report-pipeline-block li,
+  .showcase-trace {
+    background: none;
+    border: 1px solid #c8d0d3;
+    box-shadow: none;
+  }
+
+  /* 어두운 면은 종이에서 반전한다. */
+  .recent-climate-band,
+  .parcel-sheet-heading,
+  .recent-climate-band .station-docket {
+    color: #14181a;
+    background: none;
+    border-color: #c8d0d3;
+  }
+
+  .parcel-sheet-heading > div > span,
+  .recent-climate-band .station-docket > span {
+    color: #0b5a72;
+  }
+
+  .parcel-sheet-heading p,
+  .recent-climate-band .station-docket p,
+  .climate-observation-grid > div span,
+  .climate-observation-grid > div small,
+  .climate-observation-grid > div strong em,
+  .station-docket dt,
+  .climate-caveat {
+    color: #55636a;
+  }
+
+  .climate-observation-grid > div,
+  .climate-caveat {
+    border-color: #dde4e6;
+  }
+
+  /* 한 항목이 쪽 경계에서 끊기지 않게 한다. */
+  .factor-row,
+  .sheet-actions li,
+  .showcase-block,
+  .weather-timeline article,
+  .score-ledger,
+  .source-table tr {
+    break-inside: avoid;
+  }
+
+  a {
+    color: #0b5a72;
+    text-decoration: none;
+  }
+
+  /* 종이에는 주소가 남아야 확인할 수 있다. */
+  .calculation-source-link a::after,
+  .showcase-official-link a::after {
+    content: " (" attr(href) ")";
+    color: #55636a;
+    font-size: var(--t-axis);
+    word-break: break-all;
+  }
+}
+
+/* ══ 12. 동작 축소 ═════════════════════════════════════════════════════════ */
+
+/*
+  프레임이 오지 않는 환경에서도 판정과 표시는 그대로다. 지도 경계 확대가 중간에
+  멈춰도 결과에 영향이 없다. 전역 `*`를 이기려면 `!important`가 필요하다.
+*/
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

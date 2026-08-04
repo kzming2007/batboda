@@ -171,6 +171,40 @@ export type RecentClimateData = {
 
 export type FactorState = "good" | "watch" | "risk" | "unknown" | "info";
 
+/**
+ * 기준 대비 눈금에 쓰는 수치. 화면이 문자열을 파싱하지 않게 엔진이 숫자를 그대로 내보낸다.
+ * 판정에는 쓰지 않는다. 표시 전용이다.
+ */
+export type FactorMeter =
+  | {
+      kind: "range";
+      /** 눈금 축의 양 끝. 기준 띠가 축 안에 넉넉히 들어가야 한다 */
+      axisMin: number;
+      axisMax: number;
+      /** 공식 권장 범위 */
+      bandMin: number;
+      bandMax: number;
+      /** 이 농지의 값. 조회되지 않았으면 null */
+      value: number | null;
+      unit: string;
+      /** 축에 적을 숫자. 보통 [axisMin, bandMin, bandMax, axisMax] */
+      ticks: number[];
+    }
+  | {
+      kind: "grade";
+      /** 칸 수. 적성등급은 5 */
+      total: number;
+      /** 1이 가장 좋다. 조회되지 않았으면 null */
+      value: number | null;
+    }
+  | {
+      kind: "steps";
+      /** 나쁜 쪽으로 갈수록 뒤에 오게 정렬한다 */
+      labels: string[];
+      /** labels 안의 위치. 모르면 null */
+      index: number | null;
+    };
+
 export type AnalysisFactor = {
   id: string;
   label: string;
@@ -178,6 +212,7 @@ export type AnalysisFactor = {
   target: string;
   state: FactorState;
   impact: string;
+  meter?: FactorMeter;
 };
 
 export type RiskLevel = "low" | "moderate" | "high";

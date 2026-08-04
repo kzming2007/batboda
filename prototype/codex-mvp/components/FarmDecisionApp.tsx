@@ -27,6 +27,7 @@ import type {
   AnalysisSelection,
   AnalyzeResponse,
   CropId,
+  FactorMeter,
   FactorState,
   ParcelBoundary,
   ParcelCandidate,
@@ -153,6 +154,91 @@ function StatusChip({ tone, name, value }: { tone: BadgeTone; name?: string; val
       {name && <span>{name}</span>}
       <strong>{value}</strong>
     </span>
+  );
+}
+
+/**
+ * 기준 대비 눈금.
+ *
+ * 값만 적어 두면 그 값이 기준에서 얼마나 벗어났는지 알 수 없다. 문제정의서 요구사항 ④가
+ * 요구하는 `전문 용어를 직관적인 시각 요소로 치환`이 이것이다.
+ *
+ * 숫자는 규칙 엔진이 `factor.meter`로 확정해 넘긴다. 화면이 문자열을 되풀어 읽거나
+ * 값을 다시 계산하지 않는다. 눈금이 없는 항목(EC·유기물, 주야 기준 작물의 기온)은
+ * 아무것도 그리지 않는다.
+ *
+ * 눈금은 이미 글자로 적혀 있는 값을 그림으로 되짚는 장치다. 그래서 보조기기에는
+ * 두 번 읽히지 않게 감춘다. 다만 배수 눈금의 이름표는 행 문구와 낱말이 다르므로
+ * (V3 원문 6단계 대 점수에 반영된 3단계) 그 한 줄은 읽히게 남긴다.
+ */
+function FactorMeterView({ meter, state }: { meter: FactorMeter; state: FactorState }) {
+  const tone = factorBadge[state].tone;
+
+  if (meter.kind === "range") {
+    const span = meter.axisMax - meter.axisMin;
+    if (span <= 0) return null;
+    const at = (value: number) =>
+      `${Math.min(100, Math.max(0, ((value - meter.axisMin) / span) * 100))}%`;
+
+    return (
+      <div className={`meter ${tone}`} aria-hidden="true">
+        <div className="meter-track">
+          <span
+            className="meter-band"
+            style={{ left: at(meter.bandMin), width: `${((meter.bandMax - meter.bandMin) / span) * 100}%` }}
+          />
+          {meter.value !== null && (
+            <span className="meter-mark" style={{ left: at(meter.value) }} />
+          )}
+        </div>
+        <div className="meter-axis">
+          {meter.ticks.map((tick, index) => (
+            <span key={`${tick}-${index}`}>
+              {/*
+                눈금 하나가 소수를 쓰면 축 전체를 같은 자릿수로 맞춘다. `5.5 6 6.5 7`처럼
+                섞이면 6이 6.0보다 작은 값처럼 읽힌다.
+                단위는 마지막 눈금에만 붙인다. 네 번 되풀면 축이 읽히지 않는다.
+              */}
+              {meter.ticks.some((value) => !Number.isInteger(value)) ? tick.toFixed(1) : tick}
+              {index === meter.ticks.length - 1 ? meter.unit : ""}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (meter.kind === "grade") {
+    // 1급지가 가장 좋다. 채운 칸이 적을수록 좋은 땅이라는 뜻이라 이름표로 방향을 밝힌다.
+    return (
+      <div className={`meter ${tone}`}>
+        <div className="meter-cells" aria-hidden="true">
+          {Array.from({ length: meter.total }, (_, index) => (
+            <i key={index} className={meter.value !== null && index < meter.value ? "on" : ""} />
+          ))}
+        </div>
+        <span className="meter-note">
+          {meter.value === null
+            ? `${meter.total}단계 중 어디인지 조회되지 않았습니다`
+            : `${meter.total}단계 중 ${meter.value}단계 · 1급지가 가장 좋음`}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`meter ${tone}`}>
+      <div className="meter-cells" aria-hidden="true">
+        {meter.labels.map((label, index) => (
+          <i key={label} className={meter.index !== null && index <= meter.index ? "on" : ""} />
+        ))}
+      </div>
+      <span className="meter-note">
+        {meter.index === null
+          ? "점수에 반영된 단계가 없습니다"
+          : `점수에 반영된 단계 · ${meter.labels[meter.index]}`}
+      </span>
+    </div>
   );
 }
 
@@ -1006,18 +1092,17 @@ function AnalysisView({
             <p>토양 {result.soil.sampledAt} · {result.soil.sampleType}</p>
           </div>
           <div className="factor-table">
-            <div className="factor-row head" aria-hidden="true">
-              <span />
-              <strong>항목</strong>
-              <span className="factor-value">내 농지 값</span>
-              <span className="factor-target">공식 기준</span>
-              <span className="factor-impact">판단</span>
-            </div>
+            {/*
+              표 머리를 두지 않는다. 각 줄이 값마다 이름표를 달고 있어서 열 제목이
+              하는 일이 없다. 이전에는 열 제목이 있었고 좁은 화면에서는 그것을 감춘 뒤
+              `::before`로 라벨을 다시 만들어야 했다.
+            */}
             {result.factors.map((factor) => (
               <div className="factor-row" key={factor.id}>
                 <span className={`factor-signal ${factor.state}`} aria-label={factor.state} />
                 <strong>{factor.label}</strong>
                 <span className="factor-value">{factor.value}</span>
+                {factor.meter && <FactorMeterView meter={factor.meter} state={factor.state} />}
                 <span className="factor-target">{factor.target}</span>
                 <span className="factor-impact">{factor.impact}</span>
               </div>

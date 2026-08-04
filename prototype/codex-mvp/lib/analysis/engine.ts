@@ -20,6 +20,7 @@ import type {
   AnalysisSelection,
   AnalysisSource,
   DataMode,
+  FactorMeter,
   ParcelData,
   RecentClimateData,
   RiskLevel,
@@ -125,6 +126,66 @@ function average(values: number[]) {
     : values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
+/**
+ * 기준 띠 눈금의 축.
+ *
+ * 축을 기준 띠에만 맞추면 크게 벗어난 값이 축 밖으로 나가 표식이 잘리고,
+ * 축을 값에만 맞추면 띠가 축을 거의 다 덮어 이탈 거리가 보이지 않는다.
+ * 그래서 띠 폭의 절반(최소 한 눈금)을 양쪽에 두고, 값이 그보다 멀면 한 눈금 더 밀어낸다.
+ * 마지막에 눈금 단위로 내림·올림해 같은 입력에 항상 같은 축 숫자가 나오게 한다.
+ * 눈금 단위는 항목마다 다르므로 부르는 쪽이 정한다.
+ */
+function rangeMeter(
+  band: readonly [number, number],
+  value: number | null,
+  unit: string,
+  step: number,
+): FactorMeter {
+  // 눈금 칸 수로 바꾼 뒤 부동소수 잡음만 걷어낸다. 자릿수를 더 줄이면 표식이 축에 걸린다.
+  const cells = (raw: number) => Math.round((raw / step) * 1e9) / 1e9;
+  const tidy = (raw: number) => Math.round(raw * 100) / 100;
+  const pad = Math.max((band[1] - band[0]) / 2, step);
+  const looseMin = value === null ? band[0] - pad : Math.min(band[0] - pad, value - step);
+  const looseMax = value === null ? band[1] + pad : Math.max(band[1] + pad, value + step);
+  const axisMin = tidy(Math.floor(cells(looseMin)) * step);
+  const axisMax = tidy(Math.ceil(cells(looseMax)) * step);
+  return {
+    kind: "range",
+    axisMin,
+    axisMax,
+    bandMin: band[0],
+    bandMax: band[1],
+    value,
+    unit,
+    ticks: [axisMin, band[0], band[1], axisMax],
+  };
+}
+
+/**
+ * 배수 눈금은 위험 산식이 쓰는 3단계 구분을 그대로 옮긴다.
+ *
+ * V3 원문 라벨은 6단계지만 물리성 자료가 없는 경로에는 코드가 없어 6칸 중 어디인지
+ * 정할 근거가 없다. 그래서 행 문구는 계속 V3 원문 라벨(`약간 불량` 등)을 보여주고
+ * 눈금은 점수에 실제로 반영된 칸을 가리킨다. 둘이 다른 낱말인 것은 의도한 것이므로
+ * 화면에서 눈금 옆에 무엇을 가리키는지 적어 준다.
+ */
+const drainageSteps = ["양호", "보통", "불량"] as const;
+
+const drainageStepIndex: Record<SoilData["drainage"], number | null> = {
+  good: 0,
+  moderate: 1,
+  poor: 2,
+  unknown: null,
+};
+
+function drainageMeter(category: SoilData["drainage"]): FactorMeter {
+  return {
+    kind: "steps",
+    labels: [...drainageSteps],
+    index: drainageStepIndex[category],
+  };
+}
+
 function weatherAdvisoryAssessment(
   profile: (typeof cropProfiles)[keyof typeof cropProfiles],
   days: WeatherData["days"],
@@ -216,6 +277,8 @@ function temperatureAssessment(
       target: `낮 ${standard.day[0]}–${standard.day[1]}℃ · 밤 ${standard.night[0]}–${standard.night[1]}℃`,
       missing: daytime === null || nighttime === null,
       outlierCount,
+      // 주야 기준은 축이 둘이라 한 눈금에 담을 수 없다. 낮·밤을 섞은 평균은 어느 기준과도 대조할 수 없다.
+      mean: null,
     };
   }
 
@@ -234,6 +297,8 @@ function temperatureAssessment(
     target: `${standard.range[0]}–${standard.range[1]}℃`,
     missing: mean === null,
     outlierCount,
+    // 눈금이 표시 문구를 되풀어 읽지 않도록 문구를 만들기 전의 평균을 그대로 넘긴다.
+    mean,
   };
 }
 
@@ -467,6 +532,8 @@ export function analyzeFarm(
           : phCheck.state === "unknown"
             ? "현장 측정 필요"
             : "토양 보정 검토",
+      // pH 눈금은 0.5 단위로 읽는다. 이상치로 제외한 값은 행 문구처럼 눈금에서도 비워 둔다.
+      meter: rangeMeter(profile.ph, phCheck.value, "", 0.5),
     },
     {
       // 화면과 설명 계층이 이 id로 토양 적성 칸을 찾는다. 용도가 달라져도 id는 유지하고
@@ -493,6 +560,9 @@ export function analyzeFarm(
               : hasLimitingFactor
                 ? `저해요인 확인 · ${limitLabel}`
                 : "공식 토양도 제한 낮음",
+      // 판정에 쓴 등급 숫자를 그대로 넘긴다. 눈금이 코드를 다시 해석하면 행 문구와 어긋난다.
+      // 사과·배는 과수 등급, 상추·오이·감자는 밭 등급이 여기 들어온다.
+      meter: { kind: "grade", total: 5, value: suitabilityGrade },
     },
     {
       id: "drainage",
@@ -520,6 +590,7 @@ export function analyzeFarm(
           : effectiveDrainage !== "good"
             ? "강수 시 물 고임 주의"
             : "단기 위험 판단에만 반영",
+      meter: drainageMeter(effectiveDrainage),
     },
     {
       id: "temperature",
@@ -533,6 +604,12 @@ export function analyzeFarm(
           : temperatureRisk
             ? "온도 대응 필요"
             : "공식 범위 안",
+      // 기온 눈금은 5℃ 단위로 읽는다. 오이처럼 주야 기준이 따로 있는 작물은 축이 둘이라
+      // 하나의 눈금에 담을 수 없어 붙이지 않는다. 낮·밤을 섞은 평균은 어느 기준과도 대조되지 않는다.
+      meter:
+        profile.temperature.mode === "mean"
+          ? rangeMeter(profile.temperature.range, tempCheck.mean, "℃", 5)
+          : undefined,
     },
     ...(weatherAdvisory
       ? [
