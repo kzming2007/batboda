@@ -293,6 +293,26 @@ export default function FarmDecisionApp({ initialResult }: Props) {
   const [configured, setConfigured] = useState(false);
   const [dataMode, setDataMode] = useState<"mock" | "live">("mock");
   const [loading, setLoading] = useState(false);
+  /*
+    분석을 기다린 실제 초. 진행률이 아니라 경과다.
+
+    한 번의 요청이라 소스별 완료 시점을 알 수 없으므로 퍼센트를 그릴 수 없다.
+    경과 초는 실제로 아는 값이고, 화면에 적으면 멈춘 것이 아니라는 신호가 된다.
+  */
+  const [elapsed, setElapsed] = useState(0);
+  /*
+    분석 중에만 1초마다 센다. 끝나면 0으로 되돌려 다음 분석이 처음부터 세게 한다.
+    분석 상태가 바뀔 때만 타이머를 걸고 걷어내므로 화면을 떠나도 남지 않는다.
+  */
+  useEffect(() => {
+    if (!loading) {
+      setElapsed(0);
+      return;
+    }
+    const tick = setInterval(() => setElapsed((seconds) => seconds + 1), 1000);
+    return () => clearInterval(tick);
+  }, [loading]);
+
   const [parcelLoading, setParcelLoading] = useState(false);
   const [parcelSearch, setParcelSearch] = useState<ParcelSearch | null>(null);
   const [boundary, setBoundary] = useState<ParcelBoundary | null>(null);
@@ -894,6 +914,37 @@ export default function FarmDecisionApp({ initialResult }: Props) {
                 <path d="M5 12h14M14 7l5 5-5 5" />
               </svg>
             </button>
+
+            {/*
+              기다리는 동안 무엇을 부르고 있는지 보여준다.
+
+              퍼센트나 `1/4`을 쓰지 않는다. 분석은 한 번의 요청이고 소스별 완료 시점을
+              화면이 알 수 없다. 모르는 진행률을 그려 넣으면 그 숫자가 거짓이 된다.
+
+              대신 아는 것만 적는다 — 지금 부르는 네 갈래의 이름, 실제 경과 초, 평소 걸리는
+              시간. 그러면 기다리는 4초가 `네 기관을 실제로 부르고 있다`는 증거가 된다.
+              막대는 진행률이 아니라 살아 있다는 표시라 좌우로 흐르게만 한다.
+            */}
+            {loading && (
+              <div className="analyze-progress" role="status" aria-live="polite">
+                <div className="analyze-progress-bar" aria-hidden="true">
+                  <i />
+                </div>
+                <ul>
+                  {[
+                    "농림축산식품부 팜맵 · 농지 형상",
+                    "농촌진흥청 토양특성 · 산도와 적성등급",
+                    "기상청 단기예보 · 기온과 강수",
+                    "농촌진흥청 농업기상 · 최근 관측",
+                  ].map((source) => (
+                    <li key={source}>{source}</li>
+                  ))}
+                </ul>
+                <small>
+                  네 기관을 각각 부르고 있습니다 · {elapsed}초 경과 · 보통 3~5초
+                </small>
+              </div>
+            )}
             {error && <p className="form-error" role="alert">{error}</p>}
           </div>
         </section>

@@ -98,12 +98,12 @@
     7단 고정 척도. 이전 파일은 39종을 썼고 16px·15px·17px이 서로 구분되지 않은 채
     180곳에 흩어져 있었다. 어디를 먼저 볼지 화면이 알려주지 못한 원인이다.
   */
-  --t-verdict: 42px;
-  --t-figure: 29px;
-  --t-section: 24px;
-  --t-lead: 20px;
-  --t-body: 18px;
-  --t-label: 15px;
+  --t-verdict: 44px;
+  --t-figure: 31px;
+  --t-section: 25px;
+  --t-lead: 21px;
+  --t-body: 19px;
+  --t-label: 16px;
   --t-axis: 13px;
 
   /* 공간. 4의 배수로만 오른다. */
@@ -973,9 +973,10 @@ main {
 
 /* ── 지도 ────────────────────────────────────────────────────────────────── */
 
+/* 지도가 세로를 덜 먹게 한다. 오른쪽 조작 칸이 길어 지도만 크면 균형이 깨진다. */
 .map-frame {
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 9;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   overflow: hidden;
@@ -1666,6 +1667,69 @@ main {
 
 .data-mode-row label.disabled {
   opacity: 0.55;
+}
+
+/*
+  분석 대기 표시.
+
+  퍼센트나 `1/4`을 쓰지 않는다. 한 번의 요청이라 소스별 완료 시점을 화면이 알 수 없고,
+  모르는 진행률을 그리면 그 숫자가 거짓이 된다. 막대는 진행률이 아니라 살아 있다는
+  표시라서 좌우로 흐르게만 한다.
+*/
+.analyze-progress {
+  display: grid;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  background: var(--cy-pale);
+  border: 1px solid var(--cy);
+  border-radius: var(--radius);
+}
+
+.analyze-progress-bar {
+  height: 6px;
+  background: var(--sf);
+  border-radius: var(--pill);
+  overflow: hidden;
+}
+
+.analyze-progress-bar i {
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: var(--cy);
+  border-radius: var(--pill);
+  animation: analyze-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes analyze-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+.analyze-progress ul {
+  display: grid;
+  gap: 2px;
+}
+
+.analyze-progress li {
+  color: var(--cy-on-pale);
+  font-size: var(--t-label);
+  line-height: 1.5;
+}
+
+.analyze-progress li::before {
+  content: "· ";
+}
+
+.analyze-progress small {
+  color: var(--cy-ink);
+  font-size: var(--t-label);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .status-dot {
@@ -3058,10 +3122,10 @@ main {
   두면 마침표로 읽힌다. 확인할 것이라는 뜻이 보이는 부호를 쓴다.
 */
 .showcase-checklist.field-checks li::before {
-  content: "?";
+  content: "•";
   color: var(--cy-ink);
-  font-size: var(--t-label);
-  font-weight: 800;
+  font-size: var(--t-lead);
+  font-weight: 700;
 }
 
 /*
@@ -3564,6 +3628,11 @@ main {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  /* 막대가 40% 폭으로 멈추면 진행률처럼 읽힌다. 폭을 채워 대기 표시로만 남긴다. */
+  .analyze-progress-bar i {
+    width: 100%;
   }
 
   *,
