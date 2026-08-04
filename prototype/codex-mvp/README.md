@@ -127,12 +127,13 @@ PUBLIC_DATA_MODE=mock
 DATA_GO_KR_SERVICE_KEY=발급받은_일반_인증키_Decoding
 LLM_PROVIDER=none
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.5-flash
 ```
 
 - 키는 서버에서만 쓴다. 클라이언트에는 키 값이 아니라 **설정 여부만** 전달한다.
 - 화면의 `실제 공공데이터로 조회`를 켜면 실제 API를 호출한다. 순서는 `지도 핀 → 반경 1km 팜맵 후보 → 지번 검색·필지 확정 → PNU 토양 조회 → 단기예보·최근 농업기상`이다.
-- Gemini 무료 한도는 모델마다 다르다. `gemini-2.5-flash`는 분당 5회 수준이고, `gemini-3.x` 계열은 무료 한도가 없어 호출이 거부된다.
+- 모델 선택은 **사고 과정을 끌 수 있는지**로 갈린다. `gemini-3.5-flash`는 `thinkingBudget: 0`이 먹혀 한 번에 1.4초로 끝나지만, `gemini-3.6-flash`와 별칭 `gemini-flash-latest`는 이 값을 거부해 사고 토큰이 항상 붙고 4.6초가 걸린다(2026-08-04 실측). 분석 1회가 호출 2건이라 이 차이가 그대로 화면 대기 시간이 된다.
+- `gemini-2.5-flash`는 2026-08-04부터 **신규 프로젝트에서 404로 거부된다**. 유료 전환하며 프로젝트를 새로 만들면 쓸 수 없다.
 
 ---
 

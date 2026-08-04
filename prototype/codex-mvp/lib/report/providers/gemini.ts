@@ -12,8 +12,10 @@ import { readableModelName } from "@/lib/report/snapshots/llmSnapshot";
  * 판정·수치를 바꾸거나 근거 밖 숫자를 쓰면 규칙 기반 문장으로 대체된다.
  */
 
-// 무료 사용 한도가 붙는 모델을 기본값으로 둔다. 최신 모델은 무료 한도가 없어 호출이 거부된다.
-export const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+// gemini-2.5-flash는 2026-08-04부터 신규 프로젝트에서 404로 거부된다(실측). 유료 전환하며 프로젝트를
+// 새로 만들면 쓸 수 없으므로 기본값을 옮겼다. 3.6 계열은 thinkingBudget:0을 거부해 사고 과정이 항상
+// 붙고 호출이 4초를 넘는다. 3.5-flash는 사고를 끌 수 있어 1.4초로 끝난다(실측).
+export const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-3.5-flash";
 
 type GeminiResponse = {
   candidates?: {
