@@ -1,10 +1,21 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { cropList } from "@/lib/analysis/cropProfiles";
 import { baselineEnginePolicy } from "@/lib/analysis/modelPolicy";
 import { decodedSoilProfile } from "@/lib/analysis/soilCodes";
+import {
+  favoriteId,
+  favoritesServerSnapshot,
+  favoritesSnapshot,
+  isFavorite,
+  subscribeFavorites,
+  toggleFavorite,
+  updateFavorites,
+  type FavoriteFarm,
+} from "@/lib/favorites";
+import { officialLinks } from "@/lib/officialLinks";
 import { highlightsFor } from "@/lib/report/highlight";
 import type {
   AnalysisResult,
@@ -103,6 +114,12 @@ export default function FarmDecisionApp({ initialResult }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>("input");
   const [analyzed, setAnalyzed] = useState(false);
+  // 즐겨찾기는 리액트 바깥(localStorage)에 산다. 서버 렌더에서는 빈 목록이다.
+  const favorites = useSyncExternalStore(
+    subscribeFavorites,
+    favoritesSnapshot,
+    favoritesServerSnapshot,
+  );
 
   useEffect(() => {
     fetch("/api/status")
@@ -189,6 +206,35 @@ export default function FarmDecisionApp({ initialResult }: Props) {
       parcelAddress: candidate.address,
       parcelInterpretation: candidate.interpretation,
     }));
+  }
+
+  function switchFavorite(candidate: ParcelCandidate) {
+    // 저장된 현재 값 위에 얹는다. 렌더 시점 목록을 쓰면 별표를 연달아 누를 때 앞의 것이 사라진다.
+    updateFavorites((current) =>
+      toggleFavorite(
+        current,
+        candidate,
+        { lat: selection.lat, lng: selection.lng },
+        new Date().toISOString(),
+      ),
+    );
+  }
+
+  /**
+   * 저장해 둔 농지로 되돌아간다. 좌표와 필지를 함께 넣어 지번을 다시 검색하지 않아도 되게 한다.
+   * 판정은 담아 두지 않았으므로 분석은 다시 돌린다.
+   */
+  function restoreFavorite(farm: FavoriteFarm) {
+    setSelection((current) => ({
+      ...current,
+      lat: farm.lat,
+      lng: farm.lng,
+      parcelId: farm.parcelId,
+      farmMapId: farm.farmMapId,
+      parcelAddress: farm.address,
+      parcelInterpretation: farm.interpretation,
+    }));
+    clearParcelSearch();
   }
 
   function goToView(next: View) {
@@ -311,6 +357,35 @@ export default function FarmDecisionApp({ initialResult }: Props) {
                 <code>{selection.lat.toFixed(4)} N · {selection.lng.toFixed(4)} E</code>
               </div>
             </div>
+            {/*
+              프리셋 세 곳은 시연용이라 실제 사용자의 농지가 아니다. 한 번 찾은 농지를 다시 부를
+              수단이 없으면 두 번째 방문이 첫 방문과 똑같이 오래 걸린다.
+              저장은 브라우저 안에서만 한다. 농지 위치를 서버로 보내지 않는다.
+            */}
+            <div className="favorite-shortcuts" aria-label="즐겨찾는 내 농지">
+              <span className="favorite-shortcuts-label">내 농지</span>
+              {favorites.length === 0 ? (
+                <p className="favorite-empty">
+                  아래 후보 목록에서 <span aria-hidden="true">★</span>을 누르면 이 자리에 담깁니다.
+                  이 브라우저에만 저장되고 서버로 보내지 않습니다.
+                </p>
+              ) : (
+                <div className="favorite-list">
+                  {favorites.map((farm) => (
+                    <button
+                      key={favoriteId(farm)}
+                      type="button"
+                      aria-pressed={selection.parcelId === farm.parcelId}
+                      onClick={() => restoreFavorite(farm)}
+                    >
+                      <span>{farm.address}</span>
+                      <small>{farm.interpretation}</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="place-shortcuts" aria-label="대표 시연 농지">
               {places.map((place) => (
                 <button
@@ -372,19 +447,39 @@ export default function FarmDecisionApp({ initialResult }: Props) {
                     {visibleCandidates.map((candidate) => {
                       const selected = selection.parcelId === candidate.parcelId &&
                         selection.farmMapId === candidate.farmMapId;
+                      const saved = isFavorite(favorites, candidate);
+                      // 선택과 저장은 다른 동작이라 버튼을 나눈다. 버튼 안에 버튼을 넣을 수도 없다.
                       return (
-                        <button
-                          type="button"
+                        <div
+                          className="parcel-candidate-row"
                           key={`${candidate.parcelId}:${candidate.farmMapId}`}
-                          aria-pressed={selected}
-                          onClick={() => confirmParcel(candidate)}
                         >
-                          <span className="candidate-index">{selected ? "확정" : "후보"}</span>
-                          <span>
-                            <strong>{candidate.address}</strong>
-                            <small>{candidate.interpretation} · PNU {candidate.parcelId}</small>
-                          </span>
-                        </button>
+                          <button
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() => confirmParcel(candidate)}
+                          >
+                            <span className="candidate-index">{selected ? "확정" : "후보"}</span>
+                            <span>
+                              <strong>{candidate.address}</strong>
+                              <small>{candidate.interpretation} · PNU {candidate.parcelId}</small>
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            className="candidate-favorite"
+                            aria-pressed={saved}
+                            aria-label={
+                              saved
+                                ? `${candidate.address} 즐겨찾기 해제`
+                                : `${candidate.address} 즐겨찾기에 담기`
+                            }
+                            title={saved ? "즐겨찾기 해제" : "즐겨찾기에 담기"}
+                            onClick={() => switchFavorite(candidate)}
+                          >
+                            <span aria-hidden="true">{saved ? "★" : "☆"}</span>
+                          </button>
+                        </div>
                       );
                     })}
                     {visibleCandidates.length === 0 && (
@@ -977,6 +1072,16 @@ function AnalysisView({
           <ScoreLedger explanation={result.scoreExplanations.confidence} score={result.confidence} />
         </div>
         <p className="calculation-basis">{result.basisNote}</p>
+        {/*
+          위 문장이 농업기술길잡이의 판과 쪽수를 대고 있다. 원문을 확인할 길을 여기서 잇는다.
+          04는 초보자용 쉬운 말 화면이라 링크를 늘리지 않고, 근거를 다루는 이 화면에 둔다.
+        */}
+        <p className="calculation-source-link">
+          <a href={officialLinks.cropGuide.href} target="_blank" rel="noreferrer noopener">
+            {officialLinks.cropGuide.label}
+          </a>
+          <small>{officialLinks.cropGuide.note}</small>
+        </p>
       </section>
 
       <section className="source-table-section" aria-labelledby="source-table-title">
@@ -1151,6 +1256,22 @@ function ShowcaseReportView({
 
           <p className="showcase-closing">
             <Emphasized text={report.closing} highlights={report.highlights} />
+          </p>
+
+          {/*
+            설명 문장은 `지역 농업기술센터 확인`을 권하는데 어디로 가야 하는지는 말하지 않는다.
+            문장 안에 링크를 넣지 않고 아래 별도 줄로 둔다. 강조는 규칙이 고르고 문장은 검사를
+            거치는데, 그 안에 외부 링크가 섞이면 검사 대상이 아닌 것이 문장에 붙는다.
+          */}
+          <p className="showcase-official-link">
+            <a
+              href={officialLinks.extensionCenters.href}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              {officialLinks.extensionCenters.label}
+            </a>
+            <small>{officialLinks.extensionCenters.note}</small>
           </p>
 
           <div className="showcase-legend" aria-label="강조 색 뜻">

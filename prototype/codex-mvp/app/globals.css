@@ -3792,3 +3792,144 @@ span.step-number { font-size: 16px; }
 }
 
 .showcase-trace li::before { content: "· "; }
+
+/* ─── 즐겨찾는 내 농지 ──────────────────────────────────────── */
+
+/*
+  프리셋 알약 줄 위에 같은 문법으로 얹는다. 새 디자인 언어를 만들지 않는다.
+  실제 사용자의 농지와 시연용 프리셋은 성격이 다르므로 줄은 분리하고 이름표를 붙인다.
+*/
+.favorite-shortcuts {
+  margin-top: 16px;
+}
+
+.favorite-shortcuts-label {
+  display: block;
+  margin-bottom: 9px;
+  color: var(--leaf);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.favorite-empty {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.favorite-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.favorite-list button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  color: var(--soil-ink);
+  background: var(--paper-white);
+  border: 1px solid var(--line-dark);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.favorite-list button span { font-size: 17px; font-weight: 600; }
+.favorite-list button small { color: var(--muted); font-size: 15px; }
+.favorite-list button:hover { background: var(--leaf-pale); border-color: var(--leaf); }
+
+.favorite-list button[aria-pressed="true"] {
+  color: var(--paper-white);
+  background: var(--leaf-dark);
+  border-color: var(--leaf-dark);
+}
+
+.favorite-list button[aria-pressed="true"] small { color: rgba(255, 255, 255, 0.78); }
+
+/* 후보 한 줄 = 선택 버튼 + 별표. 별표는 폭을 고정해 주소 길이에 흔들리지 않게 둔다 */
+.parcel-candidate-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+}
+
+.parcel-candidate-list > .parcel-candidate-row > button:first-child {
+  min-height: 55px;
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 8px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.parcel-candidate-row > button:first-child:hover { background: #f0f5ef; }
+
+.parcel-candidate-row > button:first-child[aria-pressed="true"] {
+  background: var(--leaf-pale);
+  box-shadow: inset 3px 0 0 var(--leaf);
+}
+
+.parcel-candidate-row > button:first-child[aria-pressed="true"] .candidate-index {
+  color: var(--leaf-dark);
+  font-weight: 800;
+}
+
+.parcel-candidate-row > button:first-child > span:last-child { display: grid; gap: 3px; min-width: 0; }
+
+.candidate-favorite {
+  display: grid;
+  place-items: center;
+  color: var(--line-dark);
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--line);
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.candidate-favorite:hover { color: var(--leaf); background: #f0f5ef; }
+.candidate-favorite[aria-pressed="true"] { color: var(--gold, #b08b3f); }
+
+/* ─── 공식 기관 링크 ───────────────────────────────────────── */
+
+/*
+  설명 문장 안이 아니라 문단 아래 별도 줄에 둔다. 문장은 다섯 항목 검사를 거치는데
+  링크는 검사 대상이 아니다. 섞으면 검사를 통과한 문장과 그렇지 않은 것이 한 덩어리로 보인다.
+*/
+.showcase-official-link,
+.calculation-source-link {
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
+}
+
+.showcase-official-link a,
+.calculation-source-link a {
+  justify-self: start;
+  color: var(--leaf-dark);
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.showcase-official-link a:hover,
+.calculation-source-link a:hover { color: var(--leaf); }
+
+.showcase-official-link small,
+.calculation-source-link small { color: var(--muted); font-size: 14px; }
+
+@media (max-width: 820px) {
+  .parcel-candidate-row { grid-template-columns: minmax(0, 1fr) 52px; }
+}

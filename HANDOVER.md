@@ -63,7 +63,7 @@ npm.cmd run dev
 ### 0-5. 검증 명령
 
 ```bash
-npm run test    # 65개 통과해야 정상
+npm run test    # 74개 통과해야 정상
 npm run lint
 npm run build
 ```
@@ -98,7 +98,7 @@ npm run build
 - **토양검정 커버리지 7.0%** — 반경 1km 고유 PNU 258건 중 pH 조회 가능 18건
 - **지역 확장 실증** — 김제 757건(밭 591·논 114·시설 49·과수 3), 나주 281건. **둘 다 실시간 성공.** 대관령 전용이 아님
 - **시연 조합** — `대관령면 85-61전 + 상추 + 3일` → `조건부 적합`, pH 6.9, 2급지, 신뢰 100
-- **테스트 65개** 통과, production build 통과
+- **테스트 74개** 통과, production build 통과
 - **민감도 감사** — 560 합성 시나리오에서 감점 폭 ±20% 변화 시 주판정 변동 **0%**. 위험 라벨은 완화 60%·보수 10% 변동(안정성 주장은 주판정에만 해당)
 
 ---
@@ -354,7 +354,7 @@ prototype/codex-mvp/
 │                      snapshots/ (실호출 응답 저장본)
 ├─ lib/cache/          verifiedSnapshot.ts + snapshots/verified.json (공공데이터 스냅샷)
 ├─ components/         FarmDecisionApp.tsx(4페이지) · FarmMap.tsx
-└─ tests/              10개 파일 65개
+└─ tests/              11개 파일 74개
 ```
 
 ### `LLM_PROVIDER` 값
