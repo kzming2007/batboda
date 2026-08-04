@@ -1970,6 +1970,93 @@ main {
   letter-spacing: -0.025em;
 }
 
+/*
+  03 제목 줄. 제목 · 판정 · 펼치기가 한 줄에 온다.
+  판정이 여기 있어야 아래로 내려가는 동안 무엇을 보는 중인지 잊지 않는다.
+*/
+.evidence-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3) var(--s4);
+}
+
+.evidence-title-row .page-title {
+  margin-right: auto;
+}
+
+.evidence-expand {
+  min-height: var(--touch);
+  padding: 0 var(--s4);
+  color: var(--cy-ink);
+  font-size: var(--t-label);
+  font-weight: 700;
+  background: var(--cy-pale);
+  border: 1px solid var(--cy);
+  border-radius: var(--pill);
+  transition: background var(--dur) var(--ease);
+}
+
+.evidence-expand:hover {
+  color: var(--sf);
+  background: var(--cy);
+}
+
+/*
+  03 아래층. 방법론을 변호하는 네 구역을 접는다. 지우지 않는다 — 접혀 있어도 화면에 있고
+  한 번 누르면 펼쳐진다. 심사 피드백이 처방한 `아코디언 또는 PDF` 중 아코디언 쪽이다.
+*/
+.evidence-more {
+  display: grid;
+  gap: var(--s6);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.evidence-more > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2) var(--s3);
+  min-height: var(--touch);
+  padding: var(--s3) var(--s5);
+  color: var(--cy-ink);
+  font-size: var(--t-lead);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+  transition: background var(--dur) var(--ease);
+}
+
+.evidence-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* 펼침 여부를 부호로도 알린다. 색만으로 판단하게 하지 않는다. */
+.evidence-more > summary::before {
+  content: "＋";
+  font-weight: 800;
+}
+
+.evidence-more[open] > summary::before {
+  content: "－";
+}
+
+.evidence-more > summary:hover {
+  background: var(--cy-pale);
+}
+
+.evidence-more > summary small {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  font-weight: 400;
+}
+
+/* 접힌 안쪽 구역은 바깥 테두리와 겹치지 않게 좌우 여백을 준다. */
+.evidence-more > section {
+  margin: 0 var(--s4) var(--s4);
+}
+
 .sheet-detail-body {
   display: grid;
   gap: var(--s6);
@@ -3256,11 +3343,32 @@ main {
   .phase-nav,
   .page-jump,
   .sheet-edit,
+  .evidence-expand,
   .intro-section,
   .workbench,
   .showcase-legend,
   .site-footer {
     display: none;
+  }
+
+  /*
+    접기는 인쇄 직전에 `beforeprint`로 펼친다(FarmDecisionApp의 `openBeforePrint`).
+    CSS로는 열 수 없다 — 닫힌 `<details>`의 내용은 `display`가 아니라 브라우저 내부
+    규칙으로 숨겨져 있다. 여기서는 펼쳐진 뒤의 군더더기만 지운다.
+  */
+  .evidence-more,
+  .showcase-prose {
+    display: block;
+    border: 0;
+  }
+
+  .evidence-more > summary,
+  .showcase-prose > summary {
+    display: none;
+  }
+
+  .evidence-more > section {
+    margin: 0 0 4mm;
   }
 
   .site-header {

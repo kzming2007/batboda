@@ -868,6 +868,27 @@ function AnalysisView({
   view: View;
   onNavigate: (next: View) => void;
 }) {
+  /*
+    03 아래층을 접어 두었는지. 기본은 접힘이다.
+    시연에서 한 번에 펼칠 수 있게 상태로 들고, `전부 펼치기` 버튼과 `<details>` 양쪽을
+    같은 값에 묶는다. 사용자가 `<details>`를 직접 눌러 열어도 상태가 따라온다.
+  */
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  /*
+    인쇄 전에 접힌 것을 펼친다.
+
+    CSS로는 되지 않는다. 닫힌 `<details>`의 내용은 `display`가 아니라 브라우저 내부
+    규칙으로 숨겨져 있어서 `@media print`에서 `display: block`을 줘도 열리지 않는다.
+    종이에는 누를 수가 없으므로 인쇄 시점에 상태를 열어 둔다. 되돌리지는 않는다 —
+    인쇄한 사람은 그 내용을 보려던 것이다.
+  */
+  useEffect(() => {
+    const openBeforePrint = () => setDetailsOpen(true);
+    window.addEventListener("beforeprint", openBeforePrint);
+    return () => window.removeEventListener("beforeprint", openBeforePrint);
+  }, []);
+
   const parcelStatusLabel =
     result.parcel.selectionStatus === "matched"
       ? "농지 확인 완료"
@@ -1097,7 +1118,32 @@ function AnalysisView({
         </button>
       </div>
       <div className="sheet-rule strong" />
-      <h2 id="evidence-title" className="page-title">무엇을 보고 이렇게 판정했는지</h2>
+      {/*
+        03 전체에 `조건부 적합`이라는 낱말이 한 번도 나오지 않았다. 사용자는 열네 화면
+        분량을 내려가는 동안 판정을 머리로 들고 있어야 했다. 제목 옆에 판정을 붙인다.
+      */}
+      <div className="evidence-title-row">
+        <h2 id="evidence-title" className="page-title">무엇을 보고 이렇게 판정했는지</h2>
+        <StatusChip
+          tone={
+            result.suitabilityLabel === "적합"
+              ? "good"
+              : result.suitabilityLabel === "조건부 적합"
+                ? "watch"
+                : "bad"
+          }
+          name="판정"
+          value={result.suitabilityLabel}
+        />
+        <button
+          type="button"
+          className="evidence-expand"
+          aria-expanded={detailsOpen}
+          onClick={() => setDetailsOpen((open) => !open)}
+        >
+          {detailsOpen ? "아래층 접기" : "전부 펼치기"}
+        </button>
+      </div>
         <div className="sheet-detail-body">
       <div className="evidence-grid">
         <section className="factor-section" aria-labelledby="factor-title">
@@ -1288,6 +1334,29 @@ function AnalysisView({
         </p>
       </section>
 
+      {/*
+        03을 두 층으로 나눈다.
+
+        1층은 사용자가 판단하는 데 필요한 것 — 근거 대조, 선택 기간 예보, 확정한 농지,
+        사용한 자료 표. 2층은 우리가 어떻게 만들었는지를 변호하는 것이다.
+        측정하면 03이 4,726자였고 그중 계산 근거 하나가 1,470자(31%)였다. 화면 제목이
+        약속한 `토양·기온 근거`는 360자(8%)뿐이었다. 심사 피드백의 `텍스트 과다`가
+        이것이다.
+
+        지우지 않고 접는다. 접혀 있어도 화면에 있고, 한 번 누르면 5분 안에 펼쳐진다.
+        `전부 펼치기`를 위에 두어 시연에서 한 번에 열 수 있게 한다.
+        인쇄에서는 강제로 펼친다 — 종이에는 접기가 없다.
+      */}
+      <details
+        className="evidence-more"
+        open={detailsOpen}
+        onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
+      >
+        <summary>
+          <span>판정 방식과 계산 근거</span>
+          <small>최근 관측 · 판정 방식 · 설명 생성 과정 · 계산 근거 네 가지</small>
+        </summary>
+
       <section className="recent-climate-band" aria-labelledby="recent-climate-title">
         <div className="station-docket">
           <span>최근 관측 기록</span>
@@ -1398,6 +1467,8 @@ function AnalysisView({
           <small>{officialLinks.cropGuide.note}</small>
         </p>
       </section>
+
+      </details>
 
       <section className="source-table-section" aria-labelledby="source-table-title">
         <div className="source-table-heading">
