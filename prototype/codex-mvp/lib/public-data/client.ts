@@ -323,6 +323,12 @@ export async function fetchSoil(selection: AnalysisSelection): Promise<SoilData>
   };
 }
 
+/**
+ * 토양특성 V3 응답의 용도별 적성등급을 그대로 읽어 담는다.
+ *
+ * 응답에는 밭·논·과수 등급이 각각 들어 있다(2026-08-04 실측 확인). 어느 등급을 판정에 쓸지는
+ * 작물 종류가 정하므로 여기서는 고르지 않고 세 항목을 모두 보관한다.
+ */
 function physicalProfileFrom(item: LooseObject | undefined): SoilPhysicalProfile | null {
   if (!item) return null;
   const code = (key: string) => text(item[key]) || null;
@@ -337,8 +343,14 @@ function physicalProfileFrom(item: LooseObject | undefined): SoilPhysicalProfile
     uplandLimitingFactorCode: code("Upland_Factor_Cd"),
     orchardGradeCode: code("Fruit_Grd_Cd"),
     orchardLimitingFactorCode: code("Fruit_Factor_Cd"),
+    // 논 등급은 지금 판정에 쓰지 않는다. 값만 읽어 두고 화면에서 쓸 때 판단한다.
+    paddyGradeCode: code("Rfld_Grd_Cd"),
+    paddyLimitingFactorCode: code("Paddy_Factor_Cd"),
   };
 }
+
+/** 응답 항목 해석을 테스트에서 직접 대조하기 위한 공개 창구. 네트워크를 타지 않는다. */
+export const parseSoilPhysicalProfile = physicalProfileFrom;
 
 /** 한 소스의 실패가 다른 소스를 끌어내리지 않도록 항목 추출을 개별로 감싼다. */
 function settledItems(result: PromiseSettledResult<unknown>) {

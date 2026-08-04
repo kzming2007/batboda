@@ -69,6 +69,14 @@ export type ParcelSearch = {
   liveFailure?: string | null;
 };
 
+/**
+ * 토양특성 V3가 주는 용도별 적성등급의 구분.
+ *
+ * 같은 필지에도 밭·논·과수 등급이 따로 매겨져 있다(2026-08-04 실측: 85-61전 밭 02·논 03·과수 02,
+ * 유방동 870답 밭 03·논 03·과수 04). 작물 종류에 맞는 등급을 판정에 써야 근거가 어긋나지 않는다.
+ */
+export type SoilUseKind = "upland" | "paddy" | "orchard";
+
 export type SoilPhysicalProfile = {
   drainageCode: string | null;
   effectiveDepthCode: string | null;
@@ -80,6 +88,15 @@ export type SoilPhysicalProfile = {
   uplandLimitingFactorCode: string | null;
   orchardGradeCode: string | null;
   orchardLimitingFactorCode: string | null;
+  /**
+   * 논 적성등급(`Rfld_Grd_Cd`)과 논 저해요인(`Paddy_Factor_Cd`).
+   *
+   * 지금은 판정에 쓰지 않고 값만 읽어 보관한다. 화면에서 쓸 때 판정 근거로 승격할지는 따로 정한다.
+   * 이 항목이 없던 시점에 만들어 둔 시연 자료·검증 스냅샷이 있어 선택 항목으로 둔다.
+   * 값이 없으면 `확인되지 않음`으로 표시되고, 없는 값을 짐작해 채우지 않는다.
+   */
+  paddyGradeCode?: string | null;
+  paddyLimitingFactorCode?: string | null;
 };
 
 export type SoilData = {

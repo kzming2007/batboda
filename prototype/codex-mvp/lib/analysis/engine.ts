@@ -7,8 +7,11 @@ import {
 import {
   decodedSoilProfile,
   drainageCategoryFromProfile,
-  hasMaterialUplandLimit,
-  uplandGradeNumber,
+  hasMaterialLimitingFactor,
+  limitingFactorLabel,
+  soilUseKindLabel,
+  suitabilityGradeLabel,
+  suitabilityGradeNumber,
 } from "@/lib/analysis/soilCodes";
 import type {
   ActionItem,
@@ -21,6 +24,7 @@ import type {
   RecentClimateData,
   RiskLevel,
   SoilData,
+  SoilUseKind,
   WeatherData,
 } from "@/types/domain";
 
@@ -245,19 +249,20 @@ function levelLabel(level: RiskLevel) {
 
 function suitabilityStage(
   phState: "good" | "watch" | "risk" | "unknown",
-  uplandGrade: number | null,
-  hasUplandLimit: boolean,
+  suitabilityGrade: number | null,
+  hasLimitingFactor: boolean,
 ) {
-  // 단계 판정은 점수 경계가 아니라 공식 밭 적성등급과 작물별 pH 상태로 결정한다.
+  // 단계 판정은 점수 경계가 아니라 공식 적성등급과 작물별 pH 상태로 결정한다.
+  // 어느 용도의 적성등급을 넣을지는 작물이 정한다. 과수는 과수 등급, 밭작물은 밭 등급이다.
   if (
     phState === "risk" ||
     phState === "unknown" ||
-    uplandGrade === null ||
-    uplandGrade >= 4
+    suitabilityGrade === null ||
+    suitabilityGrade >= 4
   ) {
     return "현장 확인 필요";
   }
-  if (phState === "watch" || uplandGrade === 3 || hasUplandLimit) {
+  if (phState === "watch" || suitabilityGrade === 3 || hasLimitingFactor) {
     return "조건부 적합";
   }
   return "적합";
@@ -342,15 +347,26 @@ export function analyzeFarm(
   });
   const physicalProfile = input.soil.physicalProfile;
   const decodedProfile = physicalProfile ? decodedSoilProfile(physicalProfile) : null;
-  const uplandGrade = uplandGradeNumber(physicalProfile);
-  const hasUplandLimit = hasMaterialUplandLimit(physicalProfile);
-  const uplandGradePenalty = uplandGrade === null
+  // 작물 종류가 어느 적성등급을 볼지 정한다. 사과·배는 과수 등급, 상추·오이·감자는 밭 등급이다.
+  // 논 등급은 값만 읽어 두고 판정에는 넣지 않는다.
+  const soilUseKind: SoilUseKind = profile.soilUseKind;
+  const soilUseLabel = soilUseKindLabel(soilUseKind);
+  const suitabilityGrade = suitabilityGradeNumber(physicalProfile, soilUseKind);
+  const hasLimitingFactor = hasMaterialLimitingFactor(physicalProfile, soilUseKind);
+  const gradeLabel = physicalProfile
+    ? suitabilityGradeLabel(physicalProfile, soilUseKind)
+    : null;
+  const limitLabel = physicalProfile
+    ? limitingFactorLabel(physicalProfile, soilUseKind)
+    : null;
+  // 감점 표는 등급 숫자에만 걸리므로 용도가 달라도 같은 표를 쓴다.
+  const suitabilityGradePenalty = suitabilityGrade === null
     ? policy.uplandGradePenalty.unknown
-    : policy.uplandGradePenalty[uplandGrade as 1 | 2 | 3 | 4 | 5];
+    : policy.uplandGradePenalty[suitabilityGrade as 1 | 2 | 3 | 4 | 5];
   const effectiveDrainage = physicalProfile
     ? drainageCategoryFromProfile(physicalProfile)
     : input.soil.drainage;
-  const stage = suitabilityStage(phCheck.state, uplandGrade, hasUplandLimit);
+  const stage = suitabilityStage(phCheck.state, suitabilityGrade, hasLimitingFactor);
 
   const tempCheck = temperatureAssessment(
     profile.temperature,
@@ -422,7 +438,7 @@ export function analyzeFarm(
         ? Math.round(policy.riskContribution.drainageModerate * moistureSensitivity)
         : 0;
   const suitabilityScore = clamp(
-    suitabilityBase - phCheck.penalty - uplandGradePenalty,
+    suitabilityBase - phCheck.penalty - suitabilityGradePenalty,
   );
   const riskScore = clamp(
     rainContribution +
@@ -453,27 +469,29 @@ export function analyzeFarm(
             : "토양 보정 검토",
     },
     {
+      // 화면과 설명 계층이 이 id로 토양 적성 칸을 찾는다. 용도가 달라져도 id는 유지하고
+      // 어느 등급을 본 것인지는 label로 밝힌다.
       id: "upland-suitability",
-      label: "밭 적성등급",
-      value: decodedProfile?.uplandGrade ?? "자료 없음",
+      label: `${soilUseLabel} 적성등급`,
+      value: gradeLabel ?? "자료 없음",
       target: "1–2급지",
       state:
-        uplandGrade === null
+        suitabilityGrade === null
           ? "unknown"
-          : uplandGrade <= 2 && !hasUplandLimit
+          : suitabilityGrade <= 2 && !hasLimitingFactor
             ? "good"
-            : uplandGrade === 3 || (uplandGrade <= 2 && hasUplandLimit)
+            : suitabilityGrade === 3 || (suitabilityGrade <= 2 && hasLimitingFactor)
               ? "watch"
               : "risk",
       impact:
-        uplandGrade === null
+        suitabilityGrade === null
           ? "공식 적성등급 확인 필요"
-          : uplandGrade === 5
-            ? "공식상 밭 이용 부적합"
-            : uplandGrade === 4
-              ? `이용 가능하나 제한이 매우 큼${hasUplandLimit ? ` · ${decodedProfile?.uplandLimitingFactor}` : ""}`
-              : hasUplandLimit
-                ? `저해요인 확인 · ${decodedProfile?.uplandLimitingFactor}`
+          : suitabilityGrade === 5
+            ? `공식상 ${soilUseLabel} 이용 부적합`
+            : suitabilityGrade === 4
+              ? `이용 가능하나 제한이 매우 큼${hasLimitingFactor ? ` · ${limitLabel}` : ""}`
+              : hasLimitingFactor
+                ? `저해요인 확인 · ${limitLabel}`
                 : "공식 토양도 제한 낮음",
     },
     {
@@ -585,7 +603,7 @@ export function analyzeFarm(
     Number(input.soil.ph === null) +
     Number(electricalConductivity === null || !ecUnitResolved) +
     Number(tempCheck.missing) +
-    Number(uplandGrade === null) +
+    Number(suitabilityGrade === null) +
     Number(effectiveDrainage === "unknown") +
     Number(maxRain === null && rainOutlierCount === 0) +
     Number(maxHumidity === null && humidityOutlierCount === 0) +
@@ -672,7 +690,7 @@ export function analyzeFarm(
       version: policy.version,
       label: "공식 등급·pH 우선 판정",
       calibrationStatus: "prototype",
-      note: "판정 단계는 공식 밭 적성등급과 작물별 pH 기준으로 정합니다. 아래 점수는 공식 범위 이탈 거리·작물 민감도·결측을 반영하도록 팀이 설계한 가중치 산식으로 계산합니다. 현장 수확 자료로 보정한 계수는 아닙니다.",
+      note: `판정 단계는 작물 종류에 맞는 공식 ${soilUseLabel} 적성등급과 작물별 pH 기준으로 정합니다. 아래 점수는 공식 범위 이탈 거리·작물 민감도·결측을 반영하도록 팀이 설계한 가중치 산식으로 계산합니다. 현장 수확 자료로 보정한 계수는 아닙니다.`,
     },
     requirementCoverage: [
       {
@@ -681,17 +699,17 @@ export function analyzeFarm(
         status:
           input.soil.status === "connected" &&
           input.soil.ph !== null &&
-          uplandGrade !== null &&
+          suitabilityGrade !== null &&
           electricalConductivity !== null &&
           ecUnitResolved
             ? "ready"
             : "partial",
         detail:
-          uplandGrade === null
-            ? "pH는 사용하고 공식 밭 적성등급은 확인되지 않았습니다."
+          suitabilityGrade === null
+            ? `pH는 사용하고 공식 ${soilUseLabel} 적성등급은 확인되지 않았습니다.`
             : ecUnitResolved
-              ? `pH와 공식 밭 ${decodedProfile?.uplandGrade}를 판정에 사용합니다. EC는 dS/m로 해석하되 작물 기준 확정 전 점수에서 제외합니다.`
-              : `pH와 공식 밭 ${decodedProfile?.uplandGrade}를 판정에 사용합니다. EC는 단위 확인 전 참고값입니다.`,
+              ? `pH와 공식 ${soilUseLabel} ${gradeLabel}를 판정에 사용합니다. EC는 dS/m로 해석하되 작물 기준 확정 전 점수에서 제외합니다.`
+              : `pH와 공식 ${soilUseLabel} ${gradeLabel}를 판정에 사용합니다. EC는 단위 확인 전 참고값입니다.`,
       },
       {
         id: "recent-climate",
@@ -739,7 +757,11 @@ export function analyzeFarm(
         id: "soil",
         name: input.soil.source,
         provider: providerFromSource(input.soil.source, "농촌진흥청"),
-        usedFields: soilUsedFields(input.soil, input.parcel.selectionStatus === "matched"),
+        usedFields: soilUsedFields(
+          input.soil,
+          input.parcel.selectionStatus === "matched",
+          soilUseKind,
+        ),
         status: input.soil.status,
         observedAt: input.soil.observedAt,
         observedAtLabel: soilHasChemical ? "검정 시점" : "",
@@ -779,7 +801,7 @@ export function analyzeFarm(
     scoreExplanations: {
       suitability: {
         label: "토양 조건 점수(보조)",
-        formula: `${suitabilityBase} - pH ${phCheck.penalty} - 밭 등급 ${uplandGradePenalty} = ${suitabilityScore}`,
+        formula: `${suitabilityBase} - pH ${phCheck.penalty} - ${soilUseLabel} 등급 ${suitabilityGradePenalty} = ${suitabilityScore}`,
         terms: [
           {
             id: "suitability-base",
@@ -803,14 +825,14 @@ export function analyzeFarm(
           },
           {
             id: "upland-grade-penalty",
-            label: `밭 적성 ${decodedProfile?.uplandGrade ?? "자료 없음"}`,
-            value: uplandGradePenalty,
-            display: `-${uplandGradePenalty}`,
+            label: `${soilUseLabel} 적성 ${gradeLabel ?? "자료 없음"}`,
+            value: suitabilityGradePenalty,
+            display: `-${suitabilityGradePenalty}`,
             effect: "deduct",
-            basis: uplandGrade === null ? "missing" : "mixed",
+            basis: suitabilityGrade === null ? "missing" : "mixed",
           },
         ],
-        caveat: `판정 단계는 공식 밭 적성등급 정의와 작물별 pH 상태를 우선합니다. 등급·pH 감점 폭은 공식 범위 이탈 거리와 작물 민감도를 반영하도록 팀이 설계한 가중치이며, 배수는 밭 등급과 중복 감점하지 않습니다. 수확량이나 성공 확률을 예측하지 않습니다.`,
+        caveat: `판정 단계는 공식 ${soilUseLabel} 적성등급 정의와 작물별 pH 상태를 우선합니다. 등급·pH 감점 폭은 공식 범위 이탈 거리와 작물 민감도를 반영하도록 팀이 설계한 가중치이며, 배수는 ${soilUseLabel} 등급과 중복 감점하지 않습니다. 수확량이나 성공 확률을 예측하지 않습니다.`,
       },
       risk: {
         label: `가까운 ${input.selection.horizonDays}일 위험 점수(보조)`,
@@ -915,7 +937,7 @@ export function analyzeFarm(
     showcaseTrace: null,
     analyzedAt,
     basisNote:
-      `주결론은 공식 밭 적성등급과 작물별 pH 상태로 정하고, 숫자는 계산 근거를 비교하기 위한 보조 점수로만 사용합니다. 밭 적성등급은 여러 물리 조건을 종합하므로 배수 상태를 적합 지수에 다시 감점하지 않습니다. EC는 흙토람 공식 화면과 교차해 dS/m로 해석하되 작물별 기준이 확인되기 전까지, 유기물은 토지이용별 기준이 확인되기 전까지 점수에서 제외합니다. 민감도는 ${policy.sensitivityMultipliers.standard.toFixed(2)}·${policy.sensitivityMultipliers.sensitive.toFixed(2)}·${policy.sensitivityMultipliers["very-sensitive"].toFixed(2)}의 자체 설계 계수입니다. 기온 기준은 ${profile.references.temperature}에 따르며, 강수확률 ${policy.rainProbabilityWatch}%·습도 ${policy.humidityWatch}%는 자체 설계 임계값입니다.${weatherAdvisory ? ` ${weatherAdvisory.advisory.label}는 ${weatherAdvisory.advisory.reference}를 근거로 예찰 필요 여부만 표시하고 발병 확률로 해석하지 않습니다.` : ""}`,
+      `주결론은 ${profile.name}에 맞는 공식 ${soilUseLabel} 적성등급과 작물별 pH 상태로 정하고, 숫자는 계산 근거를 비교하기 위한 보조 점수로만 사용합니다. ${soilUseLabel} 적성등급은 여러 물리 조건을 종합하므로 배수 상태를 적합 지수에 다시 감점하지 않습니다. EC는 흙토람 공식 화면과 교차해 dS/m로 해석하되 작물별 기준이 확인되기 전까지, 유기물은 토지이용별 기준이 확인되기 전까지 점수에서 제외합니다. 민감도는 ${policy.sensitivityMultipliers.standard.toFixed(2)}·${policy.sensitivityMultipliers.sensitive.toFixed(2)}·${policy.sensitivityMultipliers["very-sensitive"].toFixed(2)}의 자체 설계 계수입니다. 기온 기준은 ${profile.references.temperature}에 따르며, 강수확률 ${policy.rainProbabilityWatch}%·습도 ${policy.humidityWatch}%는 자체 설계 임계값입니다.${weatherAdvisory ? ` ${weatherAdvisory.advisory.label}는 ${weatherAdvisory.advisory.reference}를 근거로 예찰 필요 여부만 표시하고 발병 확률로 해석하지 않습니다.` : ""}`,
   };
 }
 
@@ -1027,7 +1049,18 @@ function hasChemicalSoil(soil: EngineInput["soil"]) {
   );
 }
 
-function soilUsedFields(soil: EngineInput["soil"], parcelMatched: boolean): string[] {
+/**
+ * 출처 표에 적을 토양 항목.
+ *
+ * 적성등급은 작물이 보는 용도의 등급을 적는다. 사과·배에 밭 등급을 적어 두면
+ * 실제로 판정에 쓴 값과 출처 표가 어긋난다.
+ */
+function soilUsedFields(
+  soil: EngineInput["soil"],
+  parcelMatched: boolean,
+  soilUseKind: SoilUseKind,
+): string[] {
+  const useLabel = soilUseKindLabel(soilUseKind);
   const chemical = hasChemicalSoil(soil)
     ? [
         `pH ${soil.ph ?? "미확인"}`,
@@ -1044,7 +1077,7 @@ function soilUsedFields(soil: EngineInput["soil"], parcelMatched: boolean): stri
   if (!soil.physicalProfile) {
     return [
       ...chemical,
-      "토양특성 V3 물리 항목 없음 — 밭 적성등급·저해요인·배수·유효토심·표토 토성 미조회",
+      `토양특성 V3 물리 항목 없음 — ${useLabel} 적성등급·저해요인·배수·유효토심·표토 토성 미조회`,
       parcelMatched
         ? "확정한 필지가 토양특성 V3 제공 범위에 없어 좌표 기준 자료로 대체했습니다"
         : "필지를 확정하면 물리 항목까지 조회됩니다",
@@ -1053,8 +1086,8 @@ function soilUsedFields(soil: EngineInput["soil"], parcelMatched: boolean): stri
 
   const decoded = decodedSoilProfile(soil.physicalProfile);
   return [
-    `밭 적성등급 ${decoded.uplandGrade}`,
-    `저해요인 ${decoded.uplandLimitingFactor}`,
+    `${useLabel} 적성등급 ${suitabilityGradeLabel(soil.physicalProfile, soilUseKind)}`,
+    `저해요인 ${limitingFactorLabel(soil.physicalProfile, soilUseKind)}`,
     `배수 ${decoded.drainage}`,
     `유효토심 ${decoded.effectiveDepth}`,
     `표토 토성 ${decoded.topsoilTexture}`,

@@ -1,4 +1,4 @@
-import type { CropId } from "@/types/domain";
+import type { CropId, SoilUseKind } from "@/types/domain";
 
 type MeanTemperatureStandard = {
   mode: "mean";
@@ -19,6 +19,14 @@ export type CropProfile = {
   shortName: string;
   emoji: string;
   description: string;
+  /**
+   * 이 작물의 판정에 쓸 토양 적성등급의 종류.
+   *
+   * 토양특성 V3는 같은 필지에 밭·논·과수 등급을 따로 준다. 사과·배는 과수이므로 밭 등급이 아니라
+   * 과수 등급으로 대조해야 근거와 작물이 어긋나지 않는다. 논 등급은 아직 판정에 쓰지 않으므로
+   * 여기에 `paddy`를 두는 작물은 없다.
+   */
+  soilUseKind: SoilUseKind;
   ph: [number, number];
   temperature: MeanTemperatureStandard | DayNightTemperatureStandard;
   sensitivity: {
@@ -65,6 +73,7 @@ export const cropProfiles: Record<CropId, CropProfile> = {
     shortName: "사과",
     emoji: "🍎",
     description: "과수 · 서늘한 기후",
+    soilUseKind: "orchard",
     ph: [6.0, 6.5],
     temperature: {
       mode: "mean",
@@ -92,6 +101,7 @@ export const cropProfiles: Record<CropId, CropProfile> = {
     shortName: "배",
     emoji: "🍐",
     description: "과수 · 배수 관리",
+    soilUseKind: "orchard",
     ph: [5.5, 6.5],
     temperature: {
       mode: "mean",
@@ -119,6 +129,7 @@ export const cropProfiles: Record<CropId, CropProfile> = {
     shortName: "오이",
     emoji: "🥒",
     description: "시설채소 · 주야 온도 민감",
+    soilUseKind: "upland",
     ph: [6.0, 6.5],
     temperature: {
       mode: "day-night",
@@ -147,6 +158,7 @@ export const cropProfiles: Record<CropId, CropProfile> = {
     shortName: "감자",
     emoji: "🥔",
     description: "밭작물 · 서늘한 기후",
+    soilUseKind: "upland",
     ph: [5.0, 6.0],
     temperature: {
       mode: "mean",
@@ -192,6 +204,7 @@ export const cropProfiles: Record<CropId, CropProfile> = {
     shortName: "상추",
     emoji: "🥬",
     description: "엽채류 · 고온 주의",
+    soilUseKind: "upland",
     ph: [6.5, 7.0],
     temperature: {
       mode: "mean",
