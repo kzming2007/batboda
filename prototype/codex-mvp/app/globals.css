@@ -107,17 +107,21 @@
   --t-axis: 13px;
 
   /* 공간. 4의 배수로만 오른다. */
-  --s1: 4px;
-  --s2: 8px;
-  --s3: 12px;
-  --s4: 16px;
-  --s5: 20px;
-  --s6: 28px;
-  --s7: 36px;
-  --s8: 48px;
+  /*
+    2026-08-05 글자와 함께 한 단계 올렸다. 글자만 키우면 여백이 상대적으로 좁아져
+    오히려 더 빽빽해 보인다. 글자·여백·누를 자리는 같이 움직여야 한다.
+  */
+  --s1: 5px;
+  --s2: 10px;
+  --s3: 14px;
+  --s4: 18px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 40px;
+  --s8: 52px;
 
   /* 누를 수 있는 것의 최소 크기. 고령층이 사용자에 포함된다. */
-  --touch: 44px;
+  --touch: 50px;
 
   --radius: 10px;
   --pill: 999px;
@@ -255,19 +259,39 @@ time {
 
 /* 작은 번호. 01·02·03은 실제 진행 순서라서 번호가 정보를 담는다. */
 .step-number,
-.candidate-index,
 .action-no {
   display: grid;
   place-items: center;
-  min-width: 26px;
-  height: 26px;
-  padding: 0 var(--s1);
+  min-width: 30px;
+  height: 30px;
+  padding: 0 var(--s2);
   color: var(--cy-ink);
   font-family: var(--mono);
   font-size: var(--t-label);
   font-weight: 700;
   background: var(--cy-pale);
   border-radius: var(--radius);
+}
+
+/*
+  `후보`·`확정` 칩. 숫자가 아니라 한글이 들어간다.
+
+  위 번호 칩과 같은 규칙을 쓰다가 `--mono`(IBM Plex Mono)가 걸렸는데 그 서체에 한글이
+  없어 대체 서체로 떨어졌다. 옆 글자와 다른 얼굴이 되어 어색해 보였다. 본문 서체를 쓴다.
+*/
+.candidate-index {
+  display: grid;
+  place-items: center;
+  min-width: 46px;
+  height: 30px;
+  padding: 0 var(--s2);
+  color: var(--cy-ink);
+  font-size: var(--t-label);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  background: var(--cy-pale);
+  border-radius: var(--pill);
 }
 
 /* 이름표. 구역이 무엇인지 한 낱말로 알린다. */
@@ -750,7 +774,7 @@ time {
   justify-content: space-between;
   gap: var(--s5);
   width: var(--page);
-  min-height: 76px;
+  min-height: 88px;
   margin: 0 auto;
   border-bottom: 1px solid var(--ink);
 }
@@ -770,8 +794,8 @@ time {
 .brand-mark {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   color: var(--sf);
   font-size: var(--t-label);
   font-weight: 800;
@@ -1748,7 +1772,7 @@ main {
   align-items: center;
   justify-content: center;
   gap: var(--s2);
-  min-height: 52px;
+  min-height: 62px;
   padding: 0 var(--s5);
   color: var(--sf);
   font-size: var(--t-lead);
