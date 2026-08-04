@@ -105,7 +105,7 @@
     7단 고정 척도. 이전 파일은 39종을 썼고 16px·15px·17px이 서로 구분되지 않은 채
     180곳에 흩어져 있었다. 어디를 먼저 볼지 화면이 알려주지 못한 원인이다.
   */
-  --t-hero: 58px;
+  --t-hero: 66px;
   --t-verdict: 48px;
   --t-figure: 34px;
   --t-section: 27px;
@@ -2167,6 +2167,31 @@ main {
   04 머리. 판정이 가장 크고 화면 이름은 라벨로 내린다.
   이전에는 화면 이름이 31px, AI 결론 문장이 21px이어서 먼저 읽히는 것이 화면 이름이었다.
 */
+.report-head-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3) var(--s4);
+}
+
+.report-print {
+  min-height: var(--touch);
+  padding: 0 var(--s5);
+  color: var(--cy-ink);
+  font-size: var(--t-label);
+  font-weight: 700;
+  background: var(--cy-pale);
+  border: 1px solid var(--cy);
+  border-radius: var(--pill);
+  transition: background var(--dur) var(--ease);
+}
+
+.report-print:hover {
+  color: var(--sf);
+  background: var(--cy);
+}
+
 .report-head {
   display: grid;
   gap: var(--s1);
@@ -2868,12 +2893,19 @@ main {
   gap: var(--s2);
 }
 
+/*
+  원을 옆 굵은 글자의 가운데에 맞춘다. 고정 `margin-top`으로 맞췄더니 글자를 키울 때마다
+  어긋났다. 글자 높이를 따라가는 상자를 주고 그 안에서 가운데 맞춘다.
+*/
 .requirement-coverage li > div > span {
   align-self: start;
-  width: 12px;
-  height: 12px;
-  margin-top: 8px;
+  display: block;
+  width: 14px;
+  height: calc(var(--t-body) * 1.25);
   border-radius: 50%;
+  background-clip: content-box;
+  border: calc((var(--t-body) * 1.25 - 14px) / 2) solid transparent;
+  box-sizing: content-box;
 }
 
 .requirement-coverage li.ready > div > span {
@@ -2907,9 +2939,10 @@ main {
   border-radius: var(--pill);
 }
 
+/* 초록으로 둔다. 시안은 브랜드 색이라 `잘 됨`이라는 뜻을 담지 않는다. */
 .requirement-coverage li.ready em {
-  color: var(--cy-ink);
-  background: var(--cy-pale);
+  color: var(--good);
+  background: var(--good-bg);
 }
 
 .requirement-coverage li.partial em {
@@ -3025,11 +3058,16 @@ main {
 }
 
 /* 산식 문자열이 셀을 넘기지 않게 한다. */
+/*
+  산식. 라텍스 조판을 쓰지 않는다 — 라이브러리가 늘고, 이 식은 `100 - pH 18 - 등급 25`처럼
+  분수나 첨자가 없는 한 줄 뺄셈이라 조판이 줄 것이 없다. 대신 고정폭으로 자리를 맞추고
+  크기를 본문에 맞춰 읽히게 한다.
+*/
 .score-ledger > code {
   display: block;
-  padding: var(--s2) var(--s3);
+  padding: var(--s3);
   color: var(--cy-ink);
-  font-size: var(--t-label);
+  font-size: var(--t-body);
   line-height: 1.7;
   background: var(--sf);
   border: 1px solid var(--line);
@@ -3138,26 +3176,42 @@ main {
   font-weight: 700;
 }
 
+/*
+  `.source-state`는 낱말을 담지 않는 빈 span이다. 낱말(`실시간`)은 그 밖에 있어서
+  배경색을 줘도 글자에는 붙지 않았다. 점으로 만들고 낱말 색은 줄 전체에 준다.
+*/
 .source-state {
-  padding: 2px var(--s2);
-  font-size: var(--t-label);
-  border-radius: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: none;
 }
 
 .source-state.connected {
-  color: var(--good);
-  background: var(--good-bg);
+  background: var(--good);
 }
 
 .source-state.cache,
 .source-state.fallback {
-  color: var(--watch);
-  background: var(--watch-bg);
+  background: var(--watch);
 }
 
 .source-state.mock {
+  background: var(--unknown);
+}
+
+/* 낱말에도 같은 색을 준다. 점만 칠하면 색으로만 판단하게 된다. */
+.source-state-row:has(.connected) {
+  color: var(--good);
+}
+
+.source-state-row:has(.cache),
+.source-state-row:has(.fallback) {
+  color: var(--watch);
+}
+
+.source-state-row:has(.mock) {
   color: var(--unknown);
-  background: var(--unknown-bg);
 }
 
 .source-observed {
@@ -3733,6 +3787,7 @@ main {
   .page-jump,
   .sheet-edit,
   .evidence-expand,
+  .report-print,
   .intro-section,
   .workbench,
   .showcase-legend,

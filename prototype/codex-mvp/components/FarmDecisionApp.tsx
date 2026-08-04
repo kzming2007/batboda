@@ -440,6 +440,12 @@ export default function FarmDecisionApp({ initialResult }: Props) {
       parcelInterpretation: candidate.interpretation,
     }));
     void loadBoundary(candidate.parcelId);
+    /*
+      지도로 되돌아간다. 후보 목록은 지도 아래에 있어서 경계가 그려지는 순간 지도가
+      화면 밖일 수 있다. 경계를 보여주는 것이 이 동작의 목적이므로 그 자리로 옮긴다.
+      `prefers-reduced-motion`이 걸린 환경에서는 브라우저가 `smooth`를 알아서 끈다.
+    */
+    document.querySelector(".map-frame")?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   /**
@@ -737,7 +743,7 @@ export default function FarmDecisionApp({ initialResult }: Props) {
             <section className="parcel-finder" aria-labelledby="parcel-finder-title">
               <div className="parcel-finder-heading">
                 <div>
-                  <span>01-B 농지 확인</span>
+                  {/* `01-B 농지 확인`과 `실제 농지 확인`이 같은 말을 두 번 했다. 이름표를 뗀다. */}
                   <h3 id="parcel-finder-title">실제 농지 확인</h3>
                   <p>핀 주변 후보에서 내 지번을 찾아야 같은 땅의 토양 자료를 가져올 수 있습니다.</p>
                 </div>
@@ -1616,7 +1622,10 @@ function AnalysisView({
             {result.report.pipeline.map((step) => (
               <li key={step.id} className={step.state}>
                 <strong>{step.label}</strong>
-                <span>{step.detail}</span>
+                {/* 강조 목록은 규칙이 고른다. 화면이 스스로 중요한 말을 정하지 않는다. */}
+                <span>
+                  <Emphasized text={step.detail} highlights={highlightsFor(step.detail, result)} />
+                </span>
               </li>
             ))}
           </ol>
@@ -1752,12 +1761,26 @@ function AnalysisView({
         AI 문장은 그대로 둔다. 판정 낱말은 규칙이 확정한 값이라 앞세워도 AI가 결론을 낸 것으로
         읽히지 않는다. 화면 이름은 라벨 자리로 내린다.
       */}
-      <h2 id="report-page-title" className="report-head">
-        <span className="report-head-kind">이 결과를 초보자 말로 옮기면</span>
-        <strong className={`report-head-verdict ${stageToneOf(result.suitabilityLabel)}`}>
-          {result.suitabilityLabel}
-        </strong>
-      </h2>
+      <div className="report-head-row">
+        <h2 id="report-page-title" className="report-head">
+          <span className="report-head-kind">이 결과를 초보자 말로 옮기면</span>
+          <strong className={`report-head-verdict ${stageToneOf(result.suitabilityLabel)}`}>
+            {result.suitabilityLabel}
+          </strong>
+        </h2>
+        {/*
+          이 화면만 인쇄한다. 04는 들고 나갈 내용이라 종이로 뽑는 것이 맞는 자리다.
+          인쇄 규칙이 조작하는 것을 걷어내고 접힌 것을 펼친 뒤 종이용으로 정돈한다.
+          다른 화면까지 한 문서로 묶지는 못한다 — 이 앱은 한 번에 한 화면만 DOM에 둔다.
+        */}
+        <button
+          type="button"
+          className="report-print"
+          onClick={() => window.print()}
+        >
+          이 보고서 인쇄
+        </button>
+      </div>
       <div className="sheet-detail-body">
         <ShowcaseReportView
           result={result}
