@@ -22,6 +22,7 @@ import type {
   AnalysisSelection,
   AnalyzeResponse,
   CropId,
+  FactorState,
   ParcelBoundary,
   ParcelCandidate,
   ParcelSearch,
@@ -93,6 +94,61 @@ function skyIcon(sky: string) {
   if (sky.includes("흐림") || sky.includes("흐리")) return "☁️";
   if (sky.includes("구름")) return "⛅";
   return "☀️";
+}
+
+/**
+ * 상태를 글자 대신 표로 먼저 읽히게 한다.
+ *
+ * `주의`·`자료 없음`·`현장 확인 필요`는 이미 색과 큰 글자로 나오지만, 문장 안의 단어라서
+ * 훑을 때 상태로 잡히지 않는다는 지적을 받았다. 부호와 짧은 이름표를 붙여 눈이 먼저 걸리게 한다.
+ *
+ * 이모지를 쓰지 않는다. 운영체제마다 그림이 달라 판정서 인상이 기기마다 바뀌고, 크기를 맞추기도
+ * 어렵다. 기하 부호는 어디서나 같은 모양으로 나오고 색·굵기를 화면 문법에 맞출 수 있다.
+ *
+ * 상태 판단은 규칙 엔진이 준 `state`를 그대로 옮긴다. 화면이 다시 판단하지 않는다.
+ */
+type BadgeTone = "good" | "watch" | "bad" | "info";
+
+const badgeGlyph: Record<BadgeTone, string> = {
+  good: "✓",
+  watch: "!",
+  bad: "▲",
+  info: "–",
+};
+
+const factorBadge: Record<FactorState, { tone: BadgeTone; label: string }> = {
+  good: { tone: "good", label: "기준 안" },
+  watch: { tone: "watch", label: "확인 필요" },
+  risk: { tone: "bad", label: "기준 밖" },
+  // 값이 없으면 기준과 견줄 수가 없다. `자료 없음`이라고 또 적으면 큰 글자와 같은 말을 두 번 한다.
+  unknown: { tone: "info", label: "기준 대조 못 함" },
+  info: { tone: "info", label: "참고" },
+};
+
+function StateBadge({ state }: { state: FactorState | undefined }) {
+  const badge = factorBadge[state ?? "unknown"];
+  return (
+    <span className={`state-badge ${badge.tone}`}>
+      <i aria-hidden="true">{badgeGlyph[badge.tone]}</i>
+      {badge.label}
+    </span>
+  );
+}
+
+/**
+ * 판정서 머리 아래에 상태를 한 줄로 모아 둔다. 훑기만 해도 무엇이 걸리는지 보이게 한다.
+ *
+ * 값 자체가 무엇에 대한 것인지 말하고 있으면 이름표를 붙이지 않는다.
+ * `근거 · 근거 충분`처럼 같은 말이 두 번 나오면 읽는 눈이 한 번 멈춘다.
+ */
+function StatusChip({ tone, name, value }: { tone: BadgeTone; name?: string; value: string }) {
+  return (
+    <span className={`status-chip ${tone}`}>
+      <i aria-hidden="true">{badgeGlyph[tone]}</i>
+      {name && <span>{name}</span>}
+      <strong>{value}</strong>
+    </span>
+  );
 }
 
 function basisLabel(basis: ScoreExplanation["terms"][number]["basis"]) {
@@ -724,8 +780,14 @@ function AnalysisView({
   const factor = (id: string) => result.factors.find((item) => item.id === id);
   const uplandFactor = factor("upland-suitability");
   const phFactor = factor("ph");
-  const riskTone =
+  const riskTone: BadgeTone =
     result.riskLevel === "low" ? "good" : result.riskLevel === "high" ? "bad" : "watch";
+  const evidenceTone: BadgeTone =
+    result.evidenceQuality.level === "strong"
+      ? "good"
+      : result.evidenceQuality.level === "weak"
+        ? "bad"
+        : "watch";
   const stageTone =
     result.suitabilityLabel === "적합"
       ? "good"
@@ -756,6 +818,21 @@ function AnalysisView({
         {result.parcel.address} · {result.cropName} · 가까운 {result.selection.horizonDays}일
       </p>
       <h2 id="result-title" className={`sheet-verdict ${stageTone}`}>{result.suitabilityLabel}</h2>
+      {/*
+        판정 아래에 상태를 한 줄로 모은다. 판정은 위에 크게 있으니 여기서 되풀이하지 않고,
+        문장 속에 묻혀 있던 위험 등급·근거 수준·자료 공백만 부호와 함께 꺼낸다.
+      */}
+      <div className="status-strip" aria-label="상태 요약">
+        <StatusChip tone={riskTone} name={`가까운 ${result.selection.horizonDays}일 위험`} value={result.riskLabel} />
+        <StatusChip
+          tone={evidenceTone}
+          value={`${result.evidenceQuality.label} · 실시간 ${result.evidenceQuality.connectedSources}/${result.evidenceQuality.totalSources}`}
+        />
+        {result.evidenceQuality.missingCount > 0 && (
+          <StatusChip tone="info" name="빠진 자료" value={`${result.evidenceQuality.missingCount}건`} />
+        )}
+      </div>
+
       <div className="sheet-lead">
         {leadLines.map((line) => (
           <p key={line}>{line}</p>
@@ -788,23 +865,38 @@ function AnalysisView({
 
       <div className="sheet-rule" />
       <div className="sheet-columns">
+        {/*
+          각 숫자 옆에 그 값이 기준 안인지 밖인지를 부호로 붙인다. 색만으로는 색을 구분하기 어려운
+          사람에게 상태가 전달되지 않고, 훑을 때도 색보다 부호가 먼저 걸린다.
+        */}
         <article>
           <span>토양 적성</span>
           <strong className={uplandFactor?.state === "good" ? "good" : "watch"}>
             {uplandFactor?.value ?? "자료 없음"}
           </strong>
+          <StateBadge state={uplandFactor?.state} />
           <p>공식 {uplandFactor?.target ?? "1–2급지"} 기준 · {uplandFactor?.impact ?? "확인 필요"}</p>
         </article>
         <article>
           <span>토양 산도</span>
-          <strong className={phFactor?.state === "good" ? "good" : "watch"}>
+          {/*
+            자료가 없는 것과 기준을 벗어난 것은 다르다. 없는 값을 주의색으로 칠하면 흙에 문제가
+            있는 것처럼 읽힌다. 회색으로 두어 `아직 모른다`로 보이게 한다.
+          */}
+          <strong
+            className={
+              phFactor?.value === "자료 없음" ? "info" : phFactor?.state === "good" ? "good" : "watch"
+            }
+          >
             {phFactor?.value === "자료 없음" ? "자료 없음" : `pH ${phFactor?.value ?? "–"}`}
           </strong>
+          <StateBadge state={phFactor?.value === "자료 없음" ? "unknown" : phFactor?.state} />
           <p>{result.cropName} 공식 범위 {phFactor?.target ?? "–"} 기준</p>
         </article>
         <article>
           <span>가까운 {result.selection.horizonDays}일 위험</span>
           <strong className={riskTone}>{result.riskLabel}</strong>
+          <StateBadge state={riskTone === "good" ? "good" : riskTone === "bad" ? "risk" : "watch"} />
           <p>{result.weather.days
             .map((day) => `${day.label} 비 ${day.rainProbability ?? "–"}%`)
             .join(" · ")}</p>
