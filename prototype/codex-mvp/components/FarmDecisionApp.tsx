@@ -743,7 +743,7 @@ export default function FarmDecisionApp({ initialResult }: Props) {
                   {selection.parcelId && (
                     <p className="parcel-confirmed">
                       <span aria-hidden="true">✓</span>
-                      분석 필지 확인 완료 · {selection.parcelAddress}
+                      분석 농지 확인 완료 · {selection.parcelAddress}
                       {parcelSearch.status !== "connected" &&
                         ` · ${sourceStatusLabel(parcelSearch.status)}`}
                     </p>
@@ -977,7 +977,7 @@ function AnalysisView({
       */}
       {isPaddyParcel(result.parcel.interpretation) && (
         <div className="paddy-notice" role="status">
-          <strong>논으로 판독된 필지입니다</strong>
+          <strong>논으로 판독된 농지입니다</strong>
           <p>
             판정 근거인 {gradeName}은 {soilUseKindLabel(soilUseKind)}을 기준으로 매겨진 값입니다.
             논에 {soilUseKind === "orchard" ? "과수를" : "밭작물을"} 심으시려면 물빠짐과
@@ -1100,7 +1100,7 @@ function AnalysisView({
           <small>
             {result.showcaseReport
               ? "초보 귀농인 눈높이 자연어 설명"
-              : `pH와 ${gradeName}이 함께 나온 필지에서만 열립니다`}
+              : `pH와 ${gradeName}이 함께 나온 농지에서만 열립니다`}
           </small>
         </button>
       </nav>
@@ -1534,7 +1534,7 @@ function AnalysisView({
           <small>
             {result.showcaseReport
               ? "초보 귀농인 눈높이 자연어 설명"
-              : `pH와 ${gradeName}이 함께 나온 필지에서만 열립니다`}
+              : `pH와 ${gradeName}이 함께 나온 농지에서만 열립니다`}
           </small>
         </button>
       </nav>
@@ -1612,7 +1612,7 @@ function fieldChecks(result: AnalysisResult) {
   const station = result.recentClimate.station;
   if (station.distanceKm !== null && station.distanceKm !== undefined) {
     checks.push({
-      title: "이 필지의 실제 기온",
+      title: "이 농지의 실제 기온",
       body: `최근 기후는 ${station.name}(${station.distanceKm}km) 관측 기록입니다. 골짜기와 능선은 같은 지역에서도 온도가 달라, 심을 자리의 값은 현장 온도계로 확인하시는 편이 정확합니다.`,
     });
   }
@@ -1621,7 +1621,7 @@ function fieldChecks(result: AnalysisResult) {
   if (result.soil.ph === null) {
     checks.push({
       title: "토양 산도(pH)",
-      body: "이 필지는 토양검정 기록이 없어 산도를 조회하지 못했습니다. 짐작해 채우지 않았으므로, 심기 전 간이 검정으로 실제 값을 확인하셔야 합니다.",
+      body: "이 농지는 토양검정 기록이 없어 산도를 조회하지 못했습니다. 짐작해 채우지 않았으므로, 심기 전 간이 검정으로 실제 값을 확인하셔야 합니다.",
     });
   }
 
