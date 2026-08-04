@@ -152,7 +152,9 @@ export async function createFarmReport(result: AnalysisResult): Promise<FarmRepo
     pipeline.push({
       id: "generate",
       label: "설명 생성",
-      detail: `${resolution.provider.name}이 정리된 근거만 받아 설명을 작성했습니다.`,
+      detail:
+        `${resolution.provider.resolveName?.({ system, user, bundle }) ?? resolution.provider.name}` +
+        `이 정리된 근거만 받아 설명을 작성했습니다.`,
       state: "done",
     });
 

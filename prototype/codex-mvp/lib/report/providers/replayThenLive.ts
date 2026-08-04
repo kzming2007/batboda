@@ -37,12 +37,17 @@ export function registerReplayThenLiveProvider() {
   // 저장본도 없고 키도 없으면 이 제공자로 할 수 있는 일이 없다.
   if (!summary && !hasKey) return false;
 
-  const snapshotLabel = summary ? summary.models.map(readableModelName).join(", ") : null;
   const liveLabel = readableModelName(GEMINI_MODEL);
 
   registerReportProvider({
-    name: snapshotLabel && snapshotLabel !== liveLabel ? `${liveLabel} · 저장본 ${snapshotLabel}` : liveLabel,
+    name: liveLabel,
     successLabel: `AI 설명 · ${liveLabel} · 검사 통과`,
+    // 가진 저장본을 전부 나열하면 이 조합과 상관없는 모델까지 `설명 생성` 단계에 붙는다.
+    // 이 문장을 실제로 만든 모델 하나만 적는다.
+    resolveName({ bundle }) {
+      const record = usableRecord(bundle);
+      return record ? readableModelName(record.model) : liveLabel;
+    },
     resolveSuccessLabel({ bundle }) {
       const record = usableRecord(bundle);
       if (!record) return `AI 설명 · ${liveLabel} · 실시간 생성 · 검사 통과`;

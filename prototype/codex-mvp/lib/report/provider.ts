@@ -29,6 +29,12 @@ export type ReportProvider = {
    */
   resolveSuccessLabel?: (input: ReportProviderInput) => string | null;
   /**
+   * 요청마다 달라지는 제공자 이름. 저장본을 재생하는 제공자는 이 조합의 문장을 실제로 만든
+   * 모델이 이름이다. 가진 저장본을 모두 나열하면 이 요청과 상관없는 모델까지 화면에 붙는다.
+   * null을 돌려주면 `name`으로 되돌아간다.
+   */
+  resolveName?: (input: ReportProviderInput) => string | null;
+  /**
    * 검증에 쓸 근거 묶음을 바꿔 준다.
    *
    * 저장된 응답을 재생하는 제공자는 그 문장이 수집 시점의 예보 수치를 담고 있다. 예보는 하루에도
