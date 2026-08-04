@@ -1,20 +1,28 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans_KR, Noto_Serif_KR } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-// 판정·제목은 세리프, 본문·조작은 산세리프로 나눈다. 시안 A의 판정서 문법을 따른다.
-const serif = Noto_Serif_KR({
-  subsets: ["latin"],
-  weight: ["400", "700", "900"],
-  variable: "--serif",
+/**
+ * 본문·판정·제목을 한 얼굴로 쓴다.
+ *
+ * 세리프 제목(Noto Serif KR)은 명조 인상이 강해 초보 귀농인 대상에 무겁게 읽혔다.
+ * 판정서 문법은 글꼴 대비가 아니라 크기·굵기·괘선으로 만든다.
+ *
+ * Pretendard는 Google Fonts에 없어 파일을 저장소에 두고 자체 호스팅한다. 같은 출처에서
+ * 내려오므로 시연 중 외부 CDN이 막혀도 글꼴이 바뀌지 않는다.
+ *
+ * 가변 글꼴을 쓴다. 화면 곳곳이 `font-weight: 750`처럼 표준 굵기 사이 값을 쓰고 있어
+ * 고정 굵기 파일로는 그 무게가 나오지 않는다. 세 굵기를 따로 받으면 용량도 더 크다.
+ */
+const pretendard = localFont({
+  src: "./fonts/PretendardVariable.woff2",
+  weight: "45 920",
+  style: "normal",
+  variable: "--pretendard",
   display: "swap",
-});
-
-const sans = IBM_Plex_Sans_KR({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--sans-kr",
-  display: "swap",
+  // 파일을 받는 동안 대체 글꼴로 먼저 그린다. 자리 크기를 맞춰 두면 글꼴이 바뀔 때 글이 밀리지 않는다.
+  adjustFontFallback: "Arial",
+  fallback: ["Apple SD Gothic Neo", "Malgun Gothic", "sans-serif"],
 });
 
 export const metadata: Metadata = {
@@ -29,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className={`${serif.variable} ${sans.variable}`}>
+    <html lang="ko" className={pretendard.variable}>
       <body>{children}</body>
     </html>
   );
