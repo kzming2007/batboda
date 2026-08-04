@@ -216,7 +216,7 @@ function FactorMeterView({
     왼쪽이 좋은지 오른쪽이 좋은지 알 수 없어서, 그 축에만 방향을 낱말로 적는다.
     색은 리트머스지 관례를 따르되 낱말이 먼저다 — 색을 못 봐도 방향이 남아야 한다.
   */
-  axis?: "acid-base";
+  axis?: "acid-base" | "cold-hot";
 }) {
   const tone = factorBadge[state].tone;
 
@@ -228,7 +228,7 @@ function FactorMeterView({
 
     return (
       <div
-        className={`meter ${tone}${axis === "acid-base" ? " meter--acid-base" : ""}`}
+        className={`meter ${tone}${axis ? ` meter--${axis}` : ""}`}
         aria-hidden="true"
       >
         <div className="meter-track">
@@ -253,10 +253,12 @@ function FactorMeterView({
             </span>
           ))}
         </div>
-        {axis === "acid-base" && (
+        {axis && (
           <div className="meter-poles">
-            <span className="meter-pole acid">산성</span>
-            <span className="meter-pole base">알칼리</span>
+            <span className="meter-pole low">{axis === "acid-base" ? "산성" : "낮음"}</span>
+            <span className="meter-pole high">
+              {axis === "acid-base" ? "알칼리성" : "높음"}
+            </span>
           </div>
         )}
       </div>
@@ -1298,7 +1300,7 @@ function AnalysisView({
                   <FactorMeterView
                     meter={factor.meter}
                     state={factor.state}
-                    axis={factor.id === "ph" ? "acid-base" : undefined}
+                    axis={factor.id === "ph" ? "acid-base" : factor.id === "temperature" ? "cold-hot" : undefined}
                   />
                 )}
                 <span className="factor-target">{factor.target}</span>
@@ -1862,7 +1864,7 @@ function ShowcaseReportView({
                     <FactorMeterView
                       meter={factor.meter}
                       state={factor.state}
-                      axis={factor.id === "ph" ? "acid-base" : undefined}
+                      axis={factor.id === "ph" ? "acid-base" : factor.id === "temperature" ? "cold-hot" : undefined}
                     />
                   )}
                   <span className="showcase-basis-note">
