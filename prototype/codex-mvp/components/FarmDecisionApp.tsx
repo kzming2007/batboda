@@ -1014,7 +1014,7 @@ export default function FarmDecisionApp({ initialResult }: Props) {
                   ))}
                 </ul>
                 <small>
-                  네 기관을 각각 부르고 있습니다 · {elapsed}초 경과
+                  정보를 모으고 있습니다 · {elapsed}초 경과
                 </small>
               </div>
             )}
