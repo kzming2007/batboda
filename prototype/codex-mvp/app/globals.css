@@ -2340,13 +2340,42 @@ main {
   padding: var(--s4);
 }
 
+/*
+  카드 하나에 날짜·주의·기온·강수·습도가 들어간다.
+
+  이전에는 다 세로로 쌓여 있어서, 값이 각 줄 오른쪽 끝에 작게 붙고 라벨과 멀었다.
+  기온·강수·습도를 한 줄에 나란히 두고 값을 크게 키운다. 세 수치가 같은 크기로
+  나란히 있으면 훑는 것만으로 그날의 상태가 읽힌다.
+*/
 .weather-timeline article {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "day    day"
+    "watch  watch"
+    "temp   gauges";
   align-content: start;
-  gap: var(--s3);
+  align-items: start;
+  gap: var(--s3) var(--s5);
   padding: var(--s4);
   background: var(--sf-sunk);
   border-radius: var(--radius);
+}
+
+.weather-timeline .weather-day {
+  grid-area: day;
+}
+
+.weather-timeline .weather-watch {
+  grid-area: watch;
+}
+
+.weather-timeline .weather-temp {
+  grid-area: temp;
+}
+
+.weather-timeline .weather-gauges {
+  grid-area: gauges;
 }
 
 /* 선택 기간에서 가장 주의할 날. 색이 아니라 테두리로 표시해 색을 못 봐도 남는다. */
@@ -2422,32 +2451,41 @@ main {
 
 .weather-gauges {
   display: grid;
-  gap: var(--s3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s3) var(--s5);
 }
 
+/* 라벨과 값을 한 줄에 붙이고 막대는 그 아래에서 폭을 다 쓴다. */
 .weather-gauges > div {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: baseline;
-  gap: var(--s1) var(--s3);
+  gap: var(--s1) var(--s2);
 }
 
 .weather-gauges dt {
   color: var(--ink-soft);
   font-size: var(--t-label);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
+/* 기온과 같은 크기로 둔다. 세 수치가 같은 무게여야 훑을 때 나란히 읽힌다. */
 .weather-gauges dd {
-  font-size: var(--t-body);
-  font-weight: 700;
+  font-size: var(--t-figure);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 
 .weather-gauges dd em {
+  display: block;
   color: var(--ink-soft);
   font-size: var(--t-label);
   font-style: normal;
   font-weight: 400;
+  letter-spacing: 0;
 }
 
 .gauge {
