@@ -1116,7 +1116,13 @@ function AnalysisView({
             */}
             {result.factors.map((factor) => (
               <div className="factor-row" key={factor.id}>
-                <span className={`factor-signal ${factor.state}`} aria-label={factor.state} />
+                {/*
+                  색 점 하나에 `aria-label="good"`이 붙어 있었다. 한국어 화면에서
+                  스크린리더가 `good`이라고 읽었고, 색을 못 보는 사람에게는 상태가
+                  전달되지 않았다. 02에서 쓰는 배지를 그대로 쓴다 — 색 + 부호 + 낱말
+                  셋이 겹치므로 색맹 환경과 야외 양쪽에서 살아남는다.
+                */}
+                <StateBadge state={factor.state} />
                 <strong>{factor.label}</strong>
                 <span className="factor-value">{factor.value}</span>
                 {factor.meter && <FactorMeterView meter={factor.meter} state={factor.state} />}
@@ -1141,7 +1147,12 @@ function AnalysisView({
                 (day.rainProbability ?? 0) >= baselineEnginePolicy.rainProbabilityWatch
                   ? "비 가능성"
                   : null,
-                (day.humidity ?? 0) >= baselineEnginePolicy.humidityWatch ? "높은 습도" : null,
+                // 최고 습도는 하루 중 최댓값이라 거의 매일 임계를 넘는다. 41줄 아래
+                // 게이지는 이미 평균으로 고쳤는데 이 배지만 최고값을 보고 있었다.
+                // 같은 값을 두 자리에서 다르게 판단하면 화면이 자기모순이 된다.
+                (day.humidityAverage ?? day.humidity ?? 0) >= baselineEnginePolicy.humidityWatch
+                  ? "높은 습도"
+                  : null,
               ].filter((reason): reason is string => reason !== null);
               return (
               <article key={day.date} className={watchReasons.length > 0 ? "weather-focus" : ""}>

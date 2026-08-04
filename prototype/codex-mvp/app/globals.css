@@ -1944,10 +1944,11 @@ main {
   border-color: var(--cy);
 }
 
+/* 13px은 눈금 축에만 쓴다. 단계 번호는 읽는 글자다. */
 .page-jump button > span {
   color: var(--cy-ink);
   font-family: var(--mono);
-  font-size: var(--t-axis);
+  font-size: var(--t-label);
   font-weight: 700;
 }
 
@@ -1994,49 +1995,31 @@ main {
            공식 기준 · …
            판단 · …
 */
+/*
+  배지를 이름과 값 사이에 놓는다. 이전에는 첫 열이 22px 색 점이었고 아래 줄들이
+  그만큼 들여쓰였다. 배지는 낱말이 들어가 폭이 달라지므로 들여쓰기 열로 쓰면
+  줄마다 왼쪽 끝이 어긋난다. 들여쓰기를 없애고 배지를 첫 줄 안에 둔다.
+  줄 수가 늘지 않아 03의 길이도 그대로다.
+*/
 .factor-row {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   grid-template-areas:
-    "signal name   value"
-    ".      meter  meter"
-    ".      target target"
-    ".      impact impact";
+    "name   badge  value"
+    "meter  meter  meter"
+    "target target target"
+    "impact impact impact";
   align-items: baseline;
   gap: var(--s2) var(--s3);
   padding: var(--s4) var(--s5);
 }
 
+.factor-row > .state-badge {
+  grid-area: badge;
+}
+
 .factor-row + .factor-row {
   border-top: 1px solid var(--line);
-}
-
-/* 값과 기준이 여러 줄이 되어도 부호는 행 중앙이 아니라 첫 줄에 맞춘다. */
-.factor-signal {
-  grid-area: signal;
-  align-self: start;
-  width: 14px;
-  height: 14px;
-  margin-top: 7px;
-  border-radius: 50%;
-}
-
-.factor-signal.good {
-  background: var(--good);
-}
-
-.factor-signal.watch {
-  background: var(--watch);
-}
-
-.factor-signal.risk {
-  background: var(--bad);
-}
-
-.factor-signal.info,
-.factor-signal.unknown {
-  background: transparent;
-  box-shadow: inset 0 0 0 2px var(--line-strong);
 }
 
 .factor-row > strong {
@@ -2228,21 +2211,25 @@ main {
 
 /* ── 확정한 필지 ─────────────────────────────────────────────────────────── */
 
-/* 확정한 필지와 최근 관측만 어두운 면을 쓴다. 다른 층에서 온 자료라는 뜻이다. */
-.parcel-sheet-heading,
-.recent-climate-band .station-docket {
+/*
+  어두운 면은 `확정한 필지` 하나에만 쓴다.
+
+  이전에는 최근 관측에도 썼는데, 밝은 화면에 검은 섬이 둘 놓인 것처럼 보였고 무엇보다
+  **점수에 반영하지 않는 구역**(캡션이 직접 그렇게 적는다)이 화면에서 가장 강한 처리를
+  가져갔다. 확정한 필지는 `이게 당신 땅이다`는 순간이라 무게가 필요하고, 최근 관측은
+  참고 자료다. 강조는 중요도 순서를 따라간다.
+*/
+.parcel-sheet-heading {
   color: var(--sf);
   background: var(--deep);
   border-bottom-color: var(--deep-line);
 }
 
-.parcel-sheet-heading > div > span,
-.recent-climate-band .station-docket > span {
+.parcel-sheet-heading > div > span {
   color: var(--cy-lt);
 }
 
-.parcel-sheet-heading p,
-.recent-climate-band .station-docket p {
+.parcel-sheet-heading p {
   color: var(--deep-soft);
 }
 
@@ -2357,11 +2344,11 @@ main {
 
 /* ── 최근 관측 ───────────────────────────────────────────────────────────── */
 
+/* 최근 관측은 참고 자료다. 다른 면과 같은 밝은 문법을 쓴다. */
 .recent-climate-band {
   display: grid;
-  color: var(--sf);
-  background: var(--deep);
-  border: 1px solid var(--deep);
+  background: var(--sf);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   overflow: hidden;
 }
@@ -2390,7 +2377,7 @@ main {
 }
 
 .station-docket dt {
-  color: var(--deep-soft);
+  color: var(--ink-soft);
 }
 
 .station-docket dd {
@@ -2404,12 +2391,12 @@ main {
   gap: var(--s1);
   min-width: 0;
   padding: var(--s4) var(--s5);
-  border-top: 1px solid var(--deep-line);
-  border-right: 1px solid var(--deep-line);
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
 }
 
 .climate-observation-grid > div span {
-  color: var(--deep-soft);
+  color: var(--ink-soft);
   font-size: var(--t-label);
   font-weight: 600;
 }
@@ -2422,24 +2409,24 @@ main {
 }
 
 .climate-observation-grid > div strong em {
-  color: var(--deep-soft);
+  color: var(--ink-soft);
   font-size: var(--t-label);
   font-style: normal;
   font-weight: 400;
 }
 
 .climate-observation-grid > div small {
-  color: var(--deep-soft);
+  color: var(--ink-soft);
   font-size: var(--t-label);
   line-height: 1.55;
 }
 
 .climate-caveat {
   padding: var(--s3) var(--s5) var(--s4);
-  color: var(--deep-soft);
+  color: var(--ink-soft);
   font-size: var(--t-label);
   line-height: 1.6;
-  border-top: 1px solid var(--deep-line);
+  border-top: 1px solid var(--line);
 }
 
 /* ── 기준 대조 목록 ──────────────────────────────────────────────────────── */
@@ -2910,11 +2897,15 @@ main {
   line-height: 1.65;
 }
 
-/* 현장 확인 항목은 순서가 정보를 담지 않는다. 번호 대신 부호를 쓴다. */
+/*
+  현장 확인 항목은 순서가 정보를 담지 않으므로 번호를 쓰지 않는다. 다만 가운뎃점 하나만
+  두면 마침표로 읽힌다. 확인할 것이라는 뜻이 보이는 부호를 쓴다.
+*/
 .showcase-checklist.field-checks li::before {
-  content: "·";
+  content: "?";
   color: var(--cy-ink);
-  font-size: var(--t-lead);
+  font-size: var(--t-label);
+  font-weight: 800;
 }
 
 /*
@@ -2980,9 +2971,19 @@ main {
   text-wrap: pretty;
 }
 
+/*
+  번호는 `counter(list-item)`을 쓸 수 없다. 위 리셋에서 `li { list-style: none }`을
+  두었고, 표식을 끄면 브라우저가 그 카운터를 올리지 않아 전부 `0`으로 렌더된다.
+  이름을 가진 카운터를 직접 센다.
+*/
 .showcase-checklist {
   display: grid;
   gap: var(--s3);
+  counter-reset: showcase-step;
+}
+
+.showcase-checklist > li {
+  counter-increment: showcase-step;
 }
 
 .showcase-checklist li {
@@ -2993,7 +2994,7 @@ main {
 }
 
 .showcase-checklist li::before {
-  content: counter(list-item);
+  content: counter(showcase-step);
   display: grid;
   place-items: center;
   width: 26px;
@@ -3188,11 +3189,11 @@ main {
   /* 큰 숫자와 항목 이름이 한 줄에 들어가지 않는다. 값을 이름 아래로 내린다. */
   .factor-row {
     grid-template-areas:
-      "signal name   name"
-      ".      value  value"
-      ".      meter  meter"
-      ".      target target"
-      ".      impact impact";
+      "name   name   badge"
+      "value  value  value"
+      "meter  meter  meter"
+      "target target target"
+      "impact impact impact";
   }
 
   .factor-value {
@@ -3322,33 +3323,19 @@ main {
     box-shadow: none;
   }
 
-  /* 어두운 면은 종이에서 반전한다. */
-  .recent-climate-band,
-  .parcel-sheet-heading,
-  .recent-climate-band .station-docket {
+  /* 어두운 면은 확정한 필지 하나뿐이다. 종이에서 반전한다. */
+  .parcel-sheet-heading {
     color: #14181a;
     background: none;
     border-color: #c8d0d3;
   }
 
-  .parcel-sheet-heading > div > span,
-  .recent-climate-band .station-docket > span {
+  .parcel-sheet-heading > div > span {
     color: #0b5a72;
   }
 
-  .parcel-sheet-heading p,
-  .recent-climate-band .station-docket p,
-  .climate-observation-grid > div span,
-  .climate-observation-grid > div small,
-  .climate-observation-grid > div strong em,
-  .station-docket dt,
-  .climate-caveat {
+  .parcel-sheet-heading p {
     color: #55636a;
-  }
-
-  .climate-observation-grid > div,
-  .climate-caveat {
-    border-color: #dde4e6;
   }
 
   /* 한 항목이 쪽 경계에서 끊기지 않게 한다. */
