@@ -1175,7 +1175,9 @@ function AnalysisView({
                 </p>
                 <dl className="weather-gauges">
                   <div>
-                    <dt>💧 강수 가능성</dt>
+                    {/* 13줄 위 하늘 아이콘처럼 그림은 읽지 않게 한다. 낱말이 바로 뒤에 있어서
+                        읽으면 `물방울 강수 가능성`이 된다. */}
+                    <dt><span aria-hidden="true">💧</span> 강수 가능성</dt>
                     <dd>{day.rainProbability ?? "–"}%</dd>
                     <div
                       className={`gauge ${
@@ -1188,7 +1190,7 @@ function AnalysisView({
                     </div>
                   </div>
                   <div>
-                    <dt>🌫 습도</dt>
+                    <dt><span aria-hidden="true">🌫</span> 습도</dt>
                     <dd>
                       {day.humidityAverage != null ? `평균 ${day.humidityAverage}%` : "평균 –"}
                       <em> · 최고 {day.humidity ?? "–"}%</em>
