@@ -274,7 +274,8 @@ main {
 .map-parcel-card {
   position: absolute;
   left: 12px;
-  bottom: 12px;
+  /* 좌표 칩이 왼쪽 아래에 있다. 겹치면 마지막 줄이 가려지므로 그 위로 올린다. */
+  bottom: 56px;
   z-index: 500;
   max-width: min(340px, calc(100% - 24px));
   padding: 11px 13px;
@@ -308,7 +309,7 @@ main {
 .map-parcel-card__note { margin: 7px 0 0; color: var(--clay); font-size: 12px; }
 
 @media (max-width: 720px) {
-  .map-parcel-card { left: 8px; right: 8px; bottom: 8px; max-width: none; font-size: 12px; }
+  .map-parcel-card { left: 8px; right: 8px; bottom: 52px; max-width: none; font-size: 12px; }
   .map-parcel-card dt { width: 56px; }
 }
 
