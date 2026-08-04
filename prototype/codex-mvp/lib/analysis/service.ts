@@ -27,6 +27,7 @@ import type {
   AnalysisResult,
   AnalysisSelection,
   DataMode,
+  FarmReport,
 } from "@/types/domain";
 
 /**
@@ -109,11 +110,46 @@ async function withReport(result: AnalysisResult): Promise<AnalysisResult> {
   ]);
   return {
     ...result,
+    requirementCoverage: withExplanationCoverage(result.requirementCoverage, report.origin),
     report,
     showcaseReport: showcase.report,
     showcaseNote: showcase.note,
     showcaseTrace: showcase.trace,
   };
+}
+
+/**
+ * `초보자 설명` 요구상태를 실제 설명 출처로 맞춘다.
+ *
+ * 엔진은 설명 계층을 모른다. 판정은 규칙만으로 끝나야 해서 일부러 그렇게 뒀고, 그래서 엔진의
+ * 기본값은 `아직 제공자를 연결하지 않았다`는 문장이었다. 제공자를 붙인 뒤에도 그 문장이 남아
+ * 03 화면은 `설명 생성 제공자만 연결하면`이라 말하는데 02·04 배지는 `Gemini · 검사 통과`였다.
+ * 같은 결과 안에서 화면이 서로 다른 말을 했다.
+ *
+ * 연결 여부는 설명이 만들어진 뒤에야 알 수 있으므로 여기서 덮는다. 엔진은 그대로 둔다.
+ */
+function withExplanationCoverage(
+  coverage: AnalysisResult["requirementCoverage"],
+  origin: FarmReport["origin"],
+) {
+  return coverage.map((item) => {
+    if (item.id !== "explanation") return item;
+    if (origin !== "llm") {
+      return {
+        ...item,
+        detail:
+          "근거 묶음·금지 표현·출력 검증·규칙 기반 대체까지 구현했습니다. " +
+          "이번 결과는 AI 문장을 쓰지 못해 같은 근거의 규칙 문장으로 답했습니다.",
+      };
+    }
+    return {
+      ...item,
+      status: "ready" as const,
+      detail:
+        "근거 묶음만 넘기고 생성된 문장을 다섯 항목으로 검사했습니다. " +
+        "검사를 통과한 문장만 화면에 나가고, 걸리면 같은 근거의 규칙 문장으로 되돌아갑니다.",
+    };
+  });
 }
 
 function errorMessage(reason: unknown) {
