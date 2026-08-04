@@ -1358,7 +1358,7 @@ function AnalysisView({
                   <div>
                     {/* 13줄 위 하늘 아이콘처럼 그림은 읽지 않게 한다. 낱말이 바로 뒤에 있어서
                         읽으면 `물방울 강수 가능성`이 된다. */}
-                    <dt><span aria-hidden="true">💧</span> 강수 가능성</dt>
+                    <dt><span aria-hidden="true">💧</span> 강수</dt>
                     <dd>{day.rainProbability ?? "–"}%</dd>
                     <div
                       className={`gauge ${
@@ -1373,8 +1373,8 @@ function AnalysisView({
                   <div>
                     <dt><span aria-hidden="true">🌫</span> 습도</dt>
                     <dd>
-                      {day.humidityAverage != null ? `평균 ${day.humidityAverage}%` : "평균 –"}
-                      <em> · 최고 {day.humidity ?? "–"}%</em>
+                      {day.humidityAverage != null ? `${day.humidityAverage}%` : "–"}
+                      <em>최고 {day.humidity ?? "–"}%</em>
                     </dd>
                     {/* 막대와 색을 모두 평균 기준으로 둔다.
                         최고 습도는 하루 중 최댓값이라 거의 매일 임계를 넘어, 색으로 쓰면 경고가 상시 점등된다.
