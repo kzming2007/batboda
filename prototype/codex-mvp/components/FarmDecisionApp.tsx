@@ -527,9 +527,20 @@ export default function FarmDecisionApp({ initialResult }: Props) {
       return;
     }
     // 경과 초는 시작할 때 비운다. 끝난 뒤 효과에서 비우면 화면을 두 번 그린다.
+    const startedAt = Date.now();
     setElapsed(0);
     setLoading(true);
     setError(null);
+    /*
+      대기 표시가 있는 자리로 내려간다. 분석 버튼이 오른쪽 칸 맨 아래에 있어서, 누른
+      직후 나타나는 표시가 화면 밖일 수 있다. 무엇을 기다리는지 보여주는 것이 목적이라
+      그 자리로 옮긴다. 한 프레임 뒤에 하는 이유는 표시가 아직 DOM에 없기 때문이다.
+    */
+    window.requestAnimationFrame(() => {
+      document
+        .querySelector(".analyze-progress")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
     try {
       const response = await fetch("/api/analyze", {
         method: "POST",
@@ -538,6 +549,13 @@ export default function FarmDecisionApp({ initialResult }: Props) {
       });
       const body = (await response.json()) as AnalyzeResponse;
       if (!body.ok) throw new Error(body.error);
+      /*
+        대기 표시가 깜빡이고 사라지면 무엇을 기다렸는지 읽을 수 없다. 최소 600ms만
+        붙든다. 시간을 늘려 오래 걸린 것처럼 보이게 하는 것이 아니라, 사람이 한 줄을
+        읽을 수 있는 최소치다. 실제 소요는 판정서 머리의 발행 시각으로 남는다.
+      */
+      const held = Math.max(0, 600 - (Date.now() - startedAt));
+      if (held > 0) await new Promise((resolve) => setTimeout(resolve, held));
       setResult(body.result);
       setAnalyzed(true);
       goToView("verdict");
@@ -1410,13 +1428,20 @@ function AnalysisView({
                       </div>
                     );
                   })()}
-                  {tempAxis && (
-                    <div className="weather-temp-axis" aria-hidden="true">
-                      <span>{tempAxis.axisMin}°</span>
-                      <span className="mid">적온</span>
-                      <span>{tempAxis.axisMax}°</span>
-                    </div>
-                  )}
+                  {tempAxis && (() => {
+                    const span = tempAxis.axisMax - tempAxis.axisMin;
+                    if (span <= 0) return null;
+                    // `적온`은 띠 가운데에 놓는다. 균등 배치로 두면 띠와 상관없는 자리에 떴다.
+                    const mid =
+                      (((tempAxis.bandMin + tempAxis.bandMax) / 2 - tempAxis.axisMin) / span) * 100;
+                    return (
+                      <div className="weather-temp-axis" aria-hidden="true">
+                        <span className="end">{tempAxis.axisMin}°</span>
+                        <span className="mid" style={{ left: `${mid}%` }}>적온</span>
+                        <span className="end">{tempAxis.axisMax}°</span>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <dl className="weather-gauges">
                   <div>
@@ -1820,6 +1845,17 @@ function AnalysisView({
  * 항목은 짐작이 아니라 이 판정에 실제로 쓰인 자료의 한계에서 뽑는다.
  * 그래서 필지마다 다르고, 해당 없으면 나오지 않는다.
  */
+/**
+ * 받침에 따라 `이`와 `가`를 고른다. `경사이 실제로`처럼 적히지 않게 한다.
+ * 한글 음절이 아니면(숫자·라틴) `가`로 둔다 — 화면에 그런 값이 오면 대부분 그쪽이 맞다.
+ */
+function withIga(word: string) {
+  const last = word.trim().at(-1) ?? "";
+  const code = last.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) return `${word}가`;
+  return (code - 0xac00) % 28 === 0 ? `${word}가` : `${word}이`;
+}
+
 function fieldChecks(result: AnalysisResult) {
   const checks: { title: string; body: string }[] = [];
   const soilUseKind = cropProfiles[result.selection.cropId].soilUseKind;
@@ -1831,7 +1867,7 @@ function fieldChecks(result: AnalysisResult) {
   // 문제인지는 걸어 봐야 안다. `제외`·`없음`으로 읽히는 값은 확인할 것이 없다는 뜻이다.
   if (limiting && !["확인되지 않음", "제외", "없음"].includes(limiting.trim())) {
     checks.push({
-      title: `${limiting}이 실제로 어느 구역인지`,
+      title: `${withIga(limiting)} 실제로 어느 구역인지`,
       body: `공식 토양도는 이 필지 전체를 한 값으로 적습니다. ${limiting}으로 적힌 조건이 필지 안 어디에 몰려 있는지는 비가 온 뒤 직접 걸어 보셔야 알 수 있습니다.`,
     });
   }
@@ -1848,8 +1884,8 @@ function fieldChecks(result: AnalysisResult) {
   // pH가 없으면 산도 없이 판정한 것이다. 그 사실을 확인 항목으로 남긴다.
   if (result.soil.ph === null) {
     checks.push({
-      title: "토양 산도(pH)",
-      body: "이 농지는 토양검정 기록이 없어 산도를 조회하지 못했습니다. 짐작해 채우지 않았으므로, 심기 전 간이 검정으로 실제 값을 확인하셔야 합니다.",
+      title: "토양 산도",
+      body: "이 농지는 토양검정 기록이 없어 산도(pH)를 조회하지 못했습니다. 짐작해 채우지 않았으므로, 심기 전 간이 검정으로 실제 값을 확인하셔야 합니다.",
     });
   }
 

@@ -2464,17 +2464,19 @@ main {
   font-size: var(--t-label);
 }
 
+/* 하늘 상태는 그날을 한 낱말로 말하는 값이다. 라벨 크기로는 작았다. */
 .weather-sky {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: var(--ink-soft);
-  font-size: var(--t-label);
-  font-weight: 600;
+  gap: var(--s2);
+  color: var(--ink);
+  font-size: var(--t-lead);
+  font-weight: 700;
 }
 
 .weather-sky span {
-  font-size: var(--t-lead);
+  font-size: var(--t-figure);
+  line-height: 1;
 }
 
 .weather-watch {
@@ -2571,6 +2573,7 @@ main {
 }
 
 .weather-temp-axis {
+  position: relative;
   display: flex;
   justify-content: space-between;
   color: var(--ink-soft);
@@ -2579,10 +2582,15 @@ main {
   font-variant-numeric: tabular-nums;
 }
 
+/* `적온`을 띠 가운데에 띄운다. 균등 배치로 두면 띠와 상관없는 자리에 떴다. */
 .weather-temp-axis .mid {
+  position: absolute;
+  transform: translateX(-50%);
   color: var(--good);
   font-family: var(--sans);
+  font-size: var(--t-label);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 
