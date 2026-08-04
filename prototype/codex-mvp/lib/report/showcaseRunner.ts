@@ -7,7 +7,7 @@ import {
   showcaseUserPrompt,
   validateShowcaseDraft,
 } from "@/lib/report/showcaseAi";
-import { geminiGenerate, GEMINI_MODEL } from "@/lib/report/providers/gemini";
+import { geminiGenerate } from "@/lib/report/providers/gemini";
 import {
   bundleForReplay,
   findShowcaseResponse,
@@ -96,12 +96,14 @@ export async function buildShowcaseOutcome(result: AnalysisResult): Promise<Show
         source: replayable?.reason ? "저장본 판정 불일치" : "저장된 AI 리포트 없음",
       });
     } else {
-      draft = await geminiGenerate({
+      // 예비 모델로 넘어갈 수 있으므로 실제로 답한 모델을 이름표에 쓴다.
+      const live = await geminiGenerate({
         system: showcaseSystemPrompt(),
         user: showcaseUserPrompt(bundle),
       });
+      draft = live.text;
       originLabel =
-        `AI 설명 · ${readableModelName(GEMINI_MODEL)}` +
+        `AI 설명 · ${readableModelName(live.model)}` +
         `${provider === "replay-live" ? " · 실시간 생성" : ""} · 검사 통과`;
     }
 

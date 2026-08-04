@@ -8,7 +8,7 @@ import {
   reportUserPrompt,
   validateReport,
 } from "@/lib/report/contract";
-import { geminiGenerate, GEMINI_MODEL } from "@/lib/report/providers/gemini";
+import { geminiGenerate } from "@/lib/report/providers/gemini";
 import {
   bundleKey,
   showcaseKey,
@@ -52,14 +52,17 @@ export async function GET(request: Request) {
     const system = reportSystemPrompt();
     const user = reportUserPrompt(bundle);
 
-    const draft = await geminiGenerate({ system, user });
+    // 두 호출이 서로 다른 모델로 끝날 수 있다. 저장본에는 그 문장을 실제로 만든 모델을 적는다.
+    const live = await geminiGenerate({ system, user });
+    const draft = live.text;
     const validation = validateReport(draft, bundle);
 
     // 04 쉬운 말 리포트도 같은 호출 경로로 함께 수집한다.
-    const showcaseDraft = await geminiGenerate({
+    const showcaseLive = await geminiGenerate({
       system: showcaseSystemPrompt(),
       user: showcaseUserPrompt(bundle),
     });
+    const showcaseDraft = showcaseLive.text;
     const showcaseValidation = validateShowcaseDraft(showcaseDraft, bundle);
 
     const file = path.join(process.cwd(), "lib", "report", "snapshots", "llmResponses.json");
@@ -80,14 +83,14 @@ export async function GET(request: Request) {
 
     const record: LlmResponseRecord = {
       key: bundleKey(bundle),
-      model: GEMINI_MODEL,
+      model: live.model,
       collectedAt,
       draft,
       capturedAt,
     };
     const showcaseRecord: LlmResponseRecord = {
       key: showcaseKey(bundle),
-      model: GEMINI_MODEL,
+      model: showcaseLive.model,
       collectedAt,
       draft: showcaseDraft,
       capturedAt,

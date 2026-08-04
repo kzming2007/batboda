@@ -1,3 +1,4 @@
+import type { ReportBundle } from "@/lib/report/bundle";
 import { registerReportProvider } from "@/lib/report/provider";
 import { geminiGenerate, GEMINI_MODEL } from "@/lib/report/providers/gemini";
 import {
@@ -39,6 +40,15 @@ export function registerReplayThenLiveProvider() {
 
   const liveLabel = readableModelName(GEMINI_MODEL);
 
+  /*
+    실시간 호출이 어느 모델로 끝났는지 기억한다.
+
+    이름표를 만드는 함수와 문장을 만드는 함수가 따로 있고, 예비 모델로 넘어갔는지는 문장을
+    만들어 본 뒤에야 안다. 모듈 변수에 담으면 두 요청이 겹칠 때 서로의 모델을 가져간다.
+    근거 묶음은 요청마다 새로 만들어지는 객체라 그것을 열쇠로 쓰면 요청끼리 섞이지 않는다.
+  */
+  const liveModelByBundle = new WeakMap<ReportBundle, string>();
+
   registerReportProvider({
     name: liveLabel,
     successLabel: `AI 설명 · ${liveLabel} · 검사 통과`,
@@ -46,11 +56,16 @@ export function registerReplayThenLiveProvider() {
     // 이 문장을 실제로 만든 모델 하나만 적는다.
     resolveName({ bundle }) {
       const record = usableRecord(bundle);
-      return record ? readableModelName(record.model) : liveLabel;
+      if (record) return readableModelName(record.model);
+      const used = liveModelByBundle.get(bundle);
+      return readableModelName(used ?? GEMINI_MODEL);
     },
     resolveSuccessLabel({ bundle }) {
       const record = usableRecord(bundle);
-      if (!record) return `AI 설명 · ${liveLabel} · 실시간 생성 · 검사 통과`;
+      if (!record) {
+        const used = liveModelByBundle.get(bundle);
+        return `AI 설명 · ${readableModelName(used ?? GEMINI_MODEL)} · 실시간 생성 · 검사 통과`;
+      }
       return (
         `AI 설명 · ${readableModelName(record.model)} · ` +
         `${readableDate(record.collectedAt.slice(0, 10))} 작성 · 검사 통과`
@@ -72,7 +87,9 @@ export function registerReplayThenLiveProvider() {
             : "저장해 둔 AI 설명이 없고 실시간 호출 키도 설정되지 않았습니다.",
         );
       }
-      return geminiGenerate({ system, user });
+      const live = await geminiGenerate({ system, user });
+      liveModelByBundle.set(bundle, live.model);
+      return live.text;
     },
   });
   return true;
