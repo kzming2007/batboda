@@ -3747,3 +3747,48 @@ span.step-number { font-size: 16px; }
   font-size: 15px;
   line-height: 1.65;
 }
+
+/* ─── 쉬운 말 보고서: AI 문장을 쓰지 못한 경과 ──────────────── */
+
+/* 오류가 아니라 경과 기록이므로 경고색을 쓰지 않는다 */
+.showcase-trace {
+  margin-bottom: 22px;
+  padding: 14px 17px;
+  background: #f7f9f6;
+  border-left: 3px solid var(--line-dark);
+}
+
+.showcase-trace > strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.showcase-trace dl {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.showcase-trace dl div { display: flex; gap: 7px; align-items: baseline; }
+.showcase-trace dt { color: var(--muted); font-size: 13px; }
+.showcase-trace dd { font-family: var(--mono); font-size: 14px; font-weight: 600; }
+
+.showcase-trace ul {
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.showcase-trace li {
+  padding-left: 11px;
+  color: var(--clay);
+  font-size: 14px;
+  line-height: 1.6;
+  text-indent: -11px;
+  word-break: break-word;
+}
+
+.showcase-trace li::before { content: "· "; }

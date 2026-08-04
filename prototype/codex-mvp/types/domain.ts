@@ -297,6 +297,23 @@ export type AnalysisResult = {
   showcaseReport: ShowcaseReport | null;
   /** 예시 문안을 만들지 못한 이유. 화면에서 조건을 설명하는 데 쓴다. */
   showcaseNote: string | null;
+  /**
+   * 04 리포트가 AI 문장 대신 규칙 문장을 쓰게 된 경과.
+   * 02 판정서는 생성 5단계를 화면에 보여주는데 04에는 그게 없어서, 왜 `AI 생성 아님`이
+   * 되었는지 사용자가 알 수 없었다. 실패를 숨기지 않는 것이 이 서비스의 원칙이다.
+   */
+  showcaseTrace: ShowcaseTrace | null;
+};
+
+export type ShowcaseTrace = {
+  /** AI를 실제로 불렀는지 */
+  attempted: boolean;
+  /** 불렀다면 검사를 통과했는지 */
+  passed: boolean;
+  /** 검사에 걸린 항목 또는 호출 실패 사유 */
+  failures: string[];
+  /** 어느 경로로 문장을 만들었는지 (`replay-live`, `저장본 판정 불일치` 등) */
+  source: string;
 };
 
 export type VerifiedSnapshotProvenance = {

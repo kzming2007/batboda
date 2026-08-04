@@ -911,6 +911,8 @@ export function analyzeFarm(
     // 설명 계층은 규칙 판정이 확정된 뒤 `withReport`에서 채운다.
     showcaseReport: null,
     showcaseNote: null,
+    // 설명 계층은 엔진 밖에서 붙인다. 판정은 규칙만으로 끝난다.
+    showcaseTrace: null,
     analyzedAt,
     basisNote:
       `주결론은 공식 밭 적성등급과 작물별 pH 상태로 정하고, 숫자는 계산 근거를 비교하기 위한 보조 점수로만 사용합니다. 밭 적성등급은 여러 물리 조건을 종합하므로 배수 상태를 적합 지수에 다시 감점하지 않습니다. EC는 흙토람 공식 화면과 교차해 dS/m로 해석하되 작물별 기준이 확인되기 전까지, 유기물은 토지이용별 기준이 확인되기 전까지 점수에서 제외합니다. 민감도는 ${policy.sensitivityMultipliers.standard.toFixed(2)}·${policy.sensitivityMultipliers.sensitive.toFixed(2)}·${policy.sensitivityMultipliers["very-sensitive"].toFixed(2)}의 자체 설계 계수입니다. 기온 기준은 ${profile.references.temperature}에 따르며, 강수확률 ${policy.rainProbabilityWatch}%·습도 ${policy.humidityWatch}%는 자체 설계 임계값입니다.${weatherAdvisory ? ` ${weatherAdvisory.advisory.label}는 ${weatherAdvisory.advisory.reference}를 근거로 예찰 필요 여부만 표시하고 발병 확률로 해석하지 않습니다.` : ""}`,

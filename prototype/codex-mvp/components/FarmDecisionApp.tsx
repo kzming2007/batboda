@@ -16,6 +16,7 @@ import type {
   ScoreExplanation,
   ShowcaseHighlight,
   ShowcaseReport,
+  ShowcaseTrace,
   SourceStatus,
 } from "@/types/domain";
 
@@ -1062,7 +1063,11 @@ function AnalysisView({
       <div className="sheet-rule strong" />
       <h2 id="report-page-title" className="page-title">이 결과를 초보자 말로 옮기면</h2>
       <div className="sheet-detail-body">
-        <ShowcaseReportView report={result.showcaseReport} note={result.showcaseNote} />
+        <ShowcaseReportView
+          report={result.showcaseReport}
+          note={result.showcaseNote}
+          trace={result.showcaseTrace}
+        />
       </div>
       <div className="sheet-rule strong" />
       <nav className="page-jump" aria-label="다음으로 볼 화면">
@@ -1088,9 +1093,11 @@ function AnalysisView({
 function ShowcaseReportView({
   report,
   note,
+  trace,
 }: {
   report: ShowcaseReport | null;
   note: string | null;
+  trace: ShowcaseTrace | null;
 }) {
   return (
     <section className="showcase-section" aria-labelledby="showcase-title">
@@ -1103,6 +1110,14 @@ function ShowcaseReportView({
           {report?.originLabel ?? "규칙이 조립한 안내문 · AI 생성 아님"}
         </strong>
       </div>
+
+      {/*
+        02 판정서는 생성 5단계를 화면에 보여주는데 04에는 그게 없어서, 왜 `AI 생성 아님`이
+        되었는지 알 수 없었다. AI 문장을 실제로 쓴 경우는 배지가 이미 말해 주므로,
+        쓰지 못한 경우에만 경과를 적는다.
+        `report.curated`는 손으로 쓴 도입부를 썼는지를 뜻하는 별개 값이라 여기 쓰지 않는다.
+      */}
+      {trace && !(trace.attempted && trace.passed) && <ShowcaseTraceNote trace={trace} />}
 
       {!report ? (
         <p className="showcase-empty">{note ?? "이 보고서를 만들 수 있는 조건이 아닙니다."}</p>
@@ -1155,6 +1170,45 @@ function ShowcaseReportView({
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * AI 문장을 쓰지 못한 경과를 적는다.
+ *
+ * `호출했는가 → 통과했는가 → 왜 걸렸는가`를 그대로 보여준다. 실패를 숨기지 않는 것이
+ * 이 서비스의 원칙이고, 외부 API가 흔들려도 서비스가 멈추지 않는다는 근거도 여기서 나온다.
+ */
+function ShowcaseTraceNote({ trace }: { trace: ShowcaseTrace }) {
+  const headline = trace.attempted
+    ? "AI를 불렀지만 문장이 검사를 통과하지 못해 규칙 문장으로 바꿨습니다."
+    : "AI를 부르지 않고 규칙으로 문장을 만들었습니다.";
+
+  return (
+    <div className="showcase-trace">
+      <strong>{headline}</strong>
+      <dl>
+        <div>
+          <dt>AI 호출</dt>
+          <dd>{trace.attempted ? "했음" : "안 함"}</dd>
+        </div>
+        <div>
+          <dt>문장 검사</dt>
+          <dd>{!trace.attempted ? "해당 없음" : trace.passed ? "통과" : "불통과"}</dd>
+        </div>
+        <div>
+          <dt>경로</dt>
+          <dd>{trace.source}</dd>
+        </div>
+      </dl>
+      {trace.failures.length > 0 && (
+        <ul>
+          {trace.failures.map((failure) => (
+            <li key={failure}>{failure}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

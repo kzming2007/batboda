@@ -112,6 +112,7 @@ async function withReport(result: AnalysisResult): Promise<AnalysisResult> {
     report,
     showcaseReport: showcase.report,
     showcaseNote: showcase.note,
+    showcaseTrace: showcase.trace,
   };
 }
 
