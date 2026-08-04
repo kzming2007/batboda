@@ -301,14 +301,16 @@ export default function FarmDecisionApp({ initialResult }: Props) {
   */
   const [elapsed, setElapsed] = useState(0);
   /*
-    분석 중에만 1초마다 센다. 끝나면 0으로 되돌려 다음 분석이 처음부터 세게 한다.
-    분석 상태가 바뀔 때만 타이머를 걸고 걷어내므로 화면을 떠나도 남지 않는다.
+    분석 중에만 1초마다 센다. 분석 상태가 바뀔 때만 타이머를 걸고 걷어내므로 화면을 떠나도
+    남지 않는다.
+
+    **0으로 되돌리는 일은 효과 안에서 하지 않는다.** 효과 안에서 곧바로 상태를 세우면 화면을
+    한 번 그린 뒤 다시 그리게 되고, 리액트 규칙 검사도 이것을 막는다. 시작할 때 세는 값을
+    비우는 편이 뜻에도 더 맞다 — 다음 분석이 0부터 세는 것은 `끝났으니 지운다`가 아니라
+    `새로 시작한다`는 뜻이다. 비우는 자리는 `analyze()`다.
   */
   useEffect(() => {
-    if (!loading) {
-      setElapsed(0);
-      return;
-    }
+    if (!loading) return;
     const tick = setInterval(() => setElapsed((seconds) => seconds + 1), 1000);
     return () => clearInterval(tick);
   }, [loading]);
@@ -498,6 +500,8 @@ export default function FarmDecisionApp({ initialResult }: Props) {
       setError("실제 공공데이터로 분석하기 전에 주변 농지를 찾아 내 농지를 골라 주세요.");
       return;
     }
+    // 경과 초는 시작할 때 비운다. 끝난 뒤 효과에서 비우면 화면을 두 번 그린다.
+    setElapsed(0);
     setLoading(true);
     setError(null);
     try {
