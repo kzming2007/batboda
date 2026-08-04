@@ -171,7 +171,20 @@ function StatusChip({ tone, name, value }: { tone: BadgeTone; name?: string; val
  * 두 번 읽히지 않게 감춘다. 다만 배수 눈금의 이름표는 행 문구와 낱말이 다르므로
  * (V3 원문 6단계 대 점수에 반영된 3단계) 그 한 줄은 읽히게 남긴다.
  */
-function FactorMeterView({ meter, state }: { meter: FactorMeter; state: FactorState }) {
+function FactorMeterView({
+  meter,
+  state,
+  axis,
+}: {
+  meter: FactorMeter;
+  state: FactorState;
+  /*
+    축이 무엇을 재는지. pH는 산성↔알칼리 축이라 양 끝의 뜻이 다르다. 눈금만 보면
+    왼쪽이 좋은지 오른쪽이 좋은지 알 수 없어서, 그 축에만 방향을 낱말로 적는다.
+    색은 리트머스지 관례를 따르되 낱말이 먼저다 — 색을 못 봐도 방향이 남아야 한다.
+  */
+  axis?: "acid-base";
+}) {
   const tone = factorBadge[state].tone;
 
   if (meter.kind === "range") {
@@ -181,7 +194,10 @@ function FactorMeterView({ meter, state }: { meter: FactorMeter; state: FactorSt
       `${Math.min(100, Math.max(0, ((value - meter.axisMin) / span) * 100))}%`;
 
     return (
-      <div className={`meter ${tone}`} aria-hidden="true">
+      <div
+        className={`meter ${tone}${axis === "acid-base" ? " meter--acid-base" : ""}`}
+        aria-hidden="true"
+      >
         <div className="meter-track">
           <span
             className="meter-band"
@@ -204,6 +220,12 @@ function FactorMeterView({ meter, state }: { meter: FactorMeter; state: FactorSt
             </span>
           ))}
         </div>
+        {axis === "acid-base" && (
+          <div className="meter-poles">
+            <span className="meter-pole acid">산성</span>
+            <span className="meter-pole base">알칼리</span>
+          </div>
+        )}
       </div>
     );
   }
@@ -1045,7 +1067,9 @@ function AnalysisView({
           >
             {phFactor?.value === "자료 없음" ? "자료 없음" : `pH ${phFactor?.value ?? "–"}`}
           </strong>
-          {phFactor?.meter && <FactorMeterView meter={phFactor.meter} state={phFactor.state} />}
+          {phFactor?.meter && (
+            <FactorMeterView meter={phFactor.meter} state={phFactor.state} axis="acid-base" />
+          )}
           <StateBadge state={phFactor?.value === "자료 없음" ? "unknown" : phFactor?.state} />
           <p>{result.cropName} 공식 범위 {phFactor?.target ?? "–"} 이내</p>
         </article>
@@ -1187,7 +1211,13 @@ function AnalysisView({
                 <StateBadge state={factor.state} />
                 <strong>{factor.label}</strong>
                 <span className="factor-value">{factor.value}</span>
-                {factor.meter && <FactorMeterView meter={factor.meter} state={factor.state} />}
+                {factor.meter && (
+                  <FactorMeterView
+                    meter={factor.meter}
+                    state={factor.state}
+                    axis={factor.id === "ph" ? "acid-base" : undefined}
+                  />
+                )}
                 <span className="factor-target">{factor.target}</span>
                 <span className="factor-impact">{factor.impact}</span>
               </div>
@@ -1688,9 +1718,13 @@ function ShowcaseReportView({
             규칙이라고 적는다. 문장만 두면 `AI가 결론까지 낸다`로 읽히고, 규칙 문장으로
             바꾸면 이 화면에서 AI가 한 일이 보이지 않는다. 둘을 병기해 둘 다 지킨다.
           */}
-          <p className="showcase-headline">
-            <Emphasized text={report.headline} highlights={report.highlights} />
-          </p>
+          <div className="showcase-headline">
+            {splitSentences(report.headline).map((sentence) => (
+              <p key={sentence}>
+                <Emphasized text={sentence} highlights={report.highlights} />
+              </p>
+            ))}
+          </div>
           <p className="showcase-origin-note">
             판정 <strong>{result.suitabilityLabel}</strong>은 공식 기준으로 규칙이 확정했습니다.
             AI는 그 결과를 옮겨 쓰기만 합니다.
@@ -1709,7 +1743,11 @@ function ShowcaseReportView({
                   <strong>{factor.label}</strong>
                   <span className="showcase-basis-value">{factor.value}</span>
                   {factor.meter && (
-                    <FactorMeterView meter={factor.meter} state={factor.state} />
+                    <FactorMeterView
+                      meter={factor.meter}
+                      state={factor.state}
+                      axis={factor.id === "ph" ? "acid-base" : undefined}
+                    />
                   )}
                   <span className="showcase-basis-note">
                     공식 기준 {factor.target} · {factor.impact}
@@ -1764,9 +1802,13 @@ function ShowcaseReportView({
                 </p>
               </div>
             ))}
-            <p className="showcase-closing">
-              <Emphasized text={report.closing} highlights={report.highlights} />
-            </p>
+            <div className="showcase-closing">
+              {splitSentences(report.closing).map((sentence) => (
+                <p key={sentence}>
+                  <Emphasized text={sentence} highlights={report.highlights} />
+                </p>
+              ))}
+            </div>
           </details>
 
           {/*
@@ -1851,6 +1893,25 @@ function ShowcaseTraceNote({ trace }: { trace: ShowcaseTrace }) {
       )}
     </div>
   );
+}
+
+/**
+ * 생성된 문장을 문장 단위로 나눈다. **표시 단계에서만** 한다.
+ *
+ * AI가 만든 헤드라인은 두세 문장이 한 덩어리로 온다. 그대로 두면 줄이 어디서 끊길지
+ * 화면 폭이 정하고, `…분석을 진행했습니다. 이 땅은 배수가` 뒤에서 끊겨 읽는 흐름이 깨졌다.
+ *
+ * 문장을 고치지 않는다. 자르는 자리만 정한다. 그래서 검사를 통과한 문장이 그대로 나가고,
+ * 근거에 없는 말이 끼어들 여지도 없다.
+ *
+ * 자르는 기준은 `다.` 또는 `요.` 뒤의 공백이다. 마침표만 보면 `6.5`나 `2.0 dS/m` 같은
+ * 수치에서 잘린다. 한국어 서술문은 거의 이 둘로 끝나므로 이 조건이 안전하다.
+ */
+function splitSentences(text: string) {
+  return text
+    .split(/(?<=[다요]\.)\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 /**

@@ -71,7 +71,12 @@
   --good-bg: #dcecdf;
   --good-line: #a9cdb4;
   --watch: #8a5806;
-  --watch-bg: #f7ead2;
+  /*
+    주의 배경만 채도를 올렸다. `#f7ead2`는 거의 흰색에 가까워 배지가 눈에 들어오지 않았다.
+    글자색(`--watch`)은 그대로 둔다 — 글자를 노랗게 하면 흰 바탕에서 대비가 무너진다.
+    배경은 어두운 글자를 받으므로 채도를 올려도 대비가 유지된다(#8a5806 위에서 4.5:1 초과).
+  */
+  --watch-bg: #fbe7ab;
   --watch-line: #e0c592;
   --bad: #b13327;
   --bad-bg: #f8e2de;
@@ -493,6 +498,51 @@ time {
   font-size: var(--t-axis);
   font-variant-numeric: tabular-nums;
   line-height: 1;
+}
+
+/*
+  pH만 붙는 산성↔알칼리 축.
+
+  눈금만 보면 왼쪽이 좋은지 오른쪽이 좋은지 알 수 없다. pH는 방향에 뜻이 있는 축이라
+  양 끝을 밝힌다. 색은 리트머스지 관례(산성 적 · 알칼리 청)를 쓰되 **낱말을 먼저 둔다** —
+  색을 못 보는 사람에게도 방향이 남아야 한다.
+
+  트랙 안쪽을 그라데이션으로 칠하지 않는다. 상태색 적(`기준 밖`)과 겹쳐, 기준 띠 안에
+  있는 값이 나쁜 것처럼 읽힌다. 양 끝에만 옅게 둔다.
+*/
+.meter--acid-base .meter-track::before,
+.meter--acid-base .meter-track::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14%;
+  border-radius: var(--pill);
+}
+
+.meter--acid-base .meter-track::before {
+  left: 0;
+  background: #f3d3cc;
+}
+
+.meter--acid-base .meter-track::after {
+  right: 0;
+  background: #cfdcef;
+}
+
+.meter-poles {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--t-label);
+  font-weight: 700;
+}
+
+.meter-pole.acid {
+  color: #9c4a3a;
+}
+
+.meter-pole.base {
+  color: #37567f;
 }
 
 .meter-cells {
@@ -2159,9 +2209,16 @@ main {
 
 /* ── 예보 ────────────────────────────────────────────────────────────────── */
 
+/*
+  예보 세 장을 세로로 쌓는다.
+
+  `auto-fit`은 03의 좁은 오른쪽 칸에서 두 열을 만들고, 세 장이라 마지막 줄에 빈칸이
+  하나 남았다. 세로로 두면 빈칸이 없고 각 장이 폭을 다 써서 값이 크게 읽힌다.
+  날짜는 위에서 아래로 흐르는 것이 시간 순서와도 맞다.
+*/
 .weather-timeline {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--s3);
   padding: var(--s4);
 }
@@ -2908,6 +2965,8 @@ main {
 
 /* 보고서 첫 문장. 이 화면에서 가장 먼저 읽히는 자리다. */
 .showcase-headline {
+  display: grid;
+  gap: var(--s2);
   max-width: 68ch;
   padding: var(--s5);
   font-size: var(--t-lead);
@@ -3114,6 +3173,8 @@ main {
 }
 
 .showcase-closing {
+  display: grid;
+  gap: var(--s2);
   max-width: 70ch;
   padding: var(--s4) var(--s5);
   line-height: 1.8;
