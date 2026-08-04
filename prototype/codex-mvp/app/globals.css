@@ -2395,33 +2395,11 @@ main {
 */
 .weather-timeline article {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas:
-    "day    day"
-    "watch  watch"
-    "temp   gauges";
   align-content: start;
-  align-items: start;
-  gap: var(--s3) var(--s5);
+  gap: var(--s4);
   padding: var(--s4);
   background: var(--sf-sunk);
   border-radius: var(--radius);
-}
-
-.weather-timeline .weather-day {
-  grid-area: day;
-}
-
-.weather-timeline .weather-watch {
-  grid-area: watch;
-}
-
-.weather-timeline .weather-temp {
-  grid-area: temp;
-}
-
-.weather-timeline .weather-gauges {
-  grid-area: gauges;
 }
 
 /* 선택 기간에서 가장 주의할 날. 색이 아니라 테두리로 표시해 색을 못 봐도 남는다. */
@@ -2477,28 +2455,109 @@ main {
   border-radius: var(--pill);
 }
 
+/*
+  기온은 하루 안의 범위다. 한 점으로 그리면 그 사실이 사라진다.
+  최저–최고를 구간으로 그리고 작물 적온 띠를 겹친다. 막대가 띠를 벗어난 것이 보이면
+  `기준 밖`이라는 판정이 왜 나왔는지 숫자를 읽기 전에 알 수 있다.
+
+  띠 색은 초록이다. 상태 어휘에서 `기준 안`이 초록이므로 같은 뜻을 같은 색으로 둔다.
+  구간 막대는 찬쪽 청 · 더운쪽 적이다. 그라데이션이지만 장식이 아니라 방향을 담는다.
+*/
 .weather-temp {
+  display: grid;
+  gap: 6px;
+}
+
+.weather-temp-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
+  justify-content: space-between;
   gap: var(--s2);
 }
 
-.weather-temp strong {
+.weather-temp-label {
+  color: var(--ink-soft);
+  font-size: var(--t-label);
+  font-weight: 600;
+}
+
+.weather-temp-target {
+  color: var(--good);
+  font-size: var(--t-label);
+  font-weight: 700;
+}
+
+.weather-temp-value {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  color: var(--ink-soft);
+  font-size: var(--t-lead);
+}
+
+.weather-temp-value strong {
   font-size: var(--t-figure);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
+  line-height: 1.05;
 }
 
-.weather-temp span {
-  color: var(--ink-soft);
-  font-size: var(--t-label);
+.weather-temp-value strong.cold {
+  color: #37567f;
 }
+
+.weather-temp-value strong.hot {
+  color: #9c4a3a;
+}
+
+.weather-temp-track {
+  position: relative;
+  height: 22px;
+  background: var(--sf);
+  border: 1px solid var(--line);
+  border-radius: var(--pill);
+  overflow: hidden;
+}
+
+.weather-temp-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--good-bg);
+  border-left: 2px solid var(--good);
+  border-right: 2px solid var(--good);
+}
+
+.weather-temp-span {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  background: linear-gradient(90deg, #5a7fb0, #c06a55);
+  border-radius: var(--pill);
+}
+
+.weather-temp-axis {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: var(--t-axis);
+  font-variant-numeric: tabular-nums;
+}
+
+.weather-temp-axis .mid {
+  color: var(--good);
+  font-family: var(--sans);
+  font-weight: 700;
+}
+
+
 
 .weather-gauges {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s3) var(--s5);
+  gap: var(--s4);
 }
 
 /* 라벨과 값을 한 줄에 붙이고 막대는 그 아래에서 폭을 다 쓴다. */
@@ -2828,15 +2887,32 @@ main {
 }
 
 /* `연결됨`·`일부만`이 오른쪽 끝에 낱말만 떠 있어 무엇에 붙는 말인지 흐렸다. */
+/*
+  `연결됨`·`일부만`·`안 됨`을 상태색으로 나눈다. 낱말만 있으면 셋이 같은 무게로 읽혀
+  무엇이 덜 됐는지 훑어서 알 수 없었다. 화면 다른 곳의 상태 어휘와 같은 색을 쓴다.
+*/
 .requirement-coverage li em {
   padding: 3px var(--s3);
-  color: var(--cy-ink);
   font-size: var(--t-label);
   font-style: normal;
   font-weight: 700;
   white-space: nowrap;
-  background: var(--cy-pale);
   border-radius: var(--pill);
+}
+
+.requirement-coverage li.ready em {
+  color: var(--cy-ink);
+  background: var(--cy-pale);
+}
+
+.requirement-coverage li.partial em {
+  color: var(--watch);
+  background: var(--watch-bg);
+}
+
+.requirement-coverage li.blocked em {
+  color: var(--unknown);
+  background: var(--unknown-bg);
 }
 
 .requirement-coverage li p {

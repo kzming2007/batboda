@@ -1038,6 +1038,12 @@ function AnalysisView({
   const factor = (id: string) => result.factors.find((item) => item.id === id);
   const uplandFactor = factor("upland-suitability");
   const phFactor = factor("ph");
+  /*
+    예보 카드의 기온 막대는 판정 근거의 기온 눈금과 같은 축을 쓴다. 날짜마다 축이
+    달라지면 세 카드를 나란히 비교할 수 없다. 띠(작물 적온)도 같은 값이다.
+  */
+  const tempMeter = factor("temperature")?.meter;
+  const tempAxis = tempMeter?.kind === "range" ? tempMeter : null;
   const riskTone: BadgeTone =
     result.riskLevel === "low" ? "good" : result.riskLevel === "high" ? "bad" : "watch";
   const evidenceTone: BadgeTone =
@@ -1203,12 +1209,15 @@ function AnalysisView({
               {result.report.sections.map((section) => (
                 <article key={section.heading}>
                   <h4>{section.heading}</h4>
-                  <p>
-                    <Emphasized
-                      text={section.body}
-                      highlights={highlightsFor(section.body, result)}
-                    />
-                  </p>
+                  {/*
+                    04 헤드라인과 같은 이유로 문장마다 줄을 나눈다. AI가 만든 여러 문장이
+                    한 덩어리로 와서 줄이 어디서 끊길지 폭이 정했다. 문장은 고치지 않는다.
+                  */}
+                  {splitSentences(section.body).map((sentence) => (
+                    <p key={sentence}>
+                      <Emphasized text={sentence} highlights={highlightsFor(section.body, result)} />
+                    </p>
+                  ))}
                 </article>
               ))}
             </div>
@@ -1350,10 +1359,51 @@ function AnalysisView({
                 {watchReasons.length > 0 && (
                   <p className="weather-watch">주의 시점 · {watchReasons.join(" · ")}</p>
                 )}
-                <p className="weather-temp">
-                  <strong>{day.maxTemp ?? "–"}°</strong>
-                  <span>최저 {day.minTemp ?? "–"}°</span>
-                </p>
+                <div className="weather-temp">
+                  <div className="weather-temp-head">
+                    <span className="weather-temp-label">기온</span>
+                    {tempAxis && (
+                      <span className="weather-temp-target">
+                        {result.cropName} 적온 {tempAxis.bandMin}–{tempAxis.bandMax}°
+                      </span>
+                    )}
+                  </div>
+                  <p className="weather-temp-value">
+                    <strong className="cold">{day.minTemp ?? "–"}°</strong>
+                    <span aria-hidden="true">–</span>
+                    <strong className="hot">{day.maxTemp ?? "–"}°</strong>
+                  </p>
+                  {tempAxis && day.minTemp != null && day.maxTemp != null && (() => {
+                    const span = tempAxis.axisMax - tempAxis.axisMin;
+                    if (span <= 0) return null;
+                    const pct = (value: number) =>
+                      Math.min(100, Math.max(0, ((value - tempAxis.axisMin) / span) * 100));
+                    const low = pct(day.minTemp);
+                    const high = pct(day.maxTemp);
+                    return (
+                      <div className="weather-temp-track" aria-hidden="true">
+                        <span
+                          className="weather-temp-band"
+                          style={{
+                            left: `${pct(tempAxis.bandMin)}%`,
+                            width: `${pct(tempAxis.bandMax) - pct(tempAxis.bandMin)}%`,
+                          }}
+                        />
+                        <span
+                          className="weather-temp-span"
+                          style={{ left: `${low}%`, width: `${Math.max(2, high - low)}%` }}
+                        />
+                      </div>
+                    );
+                  })()}
+                  {tempAxis && (
+                    <div className="weather-temp-axis" aria-hidden="true">
+                      <span>{tempAxis.axisMin}°</span>
+                      <span className="mid">적온</span>
+                      <span>{tempAxis.axisMax}°</span>
+                    </div>
+                  )}
+                </div>
                 <dl className="weather-gauges">
                   <div>
                     {/* 13줄 위 하늘 아이콘처럼 그림은 읽지 않게 한다. 낱말이 바로 뒤에 있어서
