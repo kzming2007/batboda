@@ -1180,9 +1180,12 @@ function ShowcaseReportView({
  * 이 서비스의 원칙이고, 외부 API가 흔들려도 서비스가 멈추지 않는다는 근거도 여기서 나온다.
  */
 function ShowcaseTraceNote({ trace }: { trace: ShowcaseTrace }) {
-  const headline = trace.attempted
-    ? "AI를 불렀지만 문장이 검사를 통과하지 못해 규칙 문장으로 바꿨습니다."
-    : "AI를 부르지 않고 규칙으로 문장을 만들었습니다.";
+  const headline =
+    trace.failedAt === "call"
+      ? "AI를 불렀지만 응답을 받지 못해 규칙 문장으로 바꿨습니다."
+      : trace.failedAt === "validation"
+        ? "AI 문장을 받았지만 검사를 통과하지 못해 규칙 문장으로 바꿨습니다."
+        : "AI를 부르지 않고 규칙으로 문장을 만들었습니다.";
 
   return (
     <div className="showcase-trace">
@@ -1194,7 +1197,13 @@ function ShowcaseTraceNote({ trace }: { trace: ShowcaseTrace }) {
         </div>
         <div>
           <dt>문장 검사</dt>
-          <dd>{!trace.attempted ? "해당 없음" : trace.passed ? "통과" : "불통과"}</dd>
+          <dd>
+            {trace.failedAt === "call"
+              ? "받은 문장 없음"
+              : trace.failedAt === "validation"
+                ? "불통과"
+                : "해당 없음"}
+          </dd>
         </div>
         <div>
           <dt>경로</dt>

@@ -310,6 +310,12 @@ export type ShowcaseTrace = {
   attempted: boolean;
   /** 불렀다면 검사를 통과했는지 */
   passed: boolean;
+  /**
+   * 어디서 멈췄는지.
+   * `call`은 호출 자체가 실패해 문장이 만들어지지 않은 경우다. 한도 초과가 여기 해당한다.
+   * `validation`은 문장은 받았지만 검사에서 걸린 경우다. 둘을 뭉치면 화면이 사실과 달라진다.
+   */
+  failedAt: "call" | "validation" | null;
   /** 검사에 걸린 항목 또는 호출 실패 사유 */
   failures: string[];
   /** 어느 경로로 문장을 만들었는지 (`replay-live`, `저장본 판정 불일치` 등) */

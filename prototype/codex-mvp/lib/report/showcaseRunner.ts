@@ -15,7 +15,7 @@ import {
   readableModelName,
   replayableFor,
 } from "@/lib/report/snapshots/llmSnapshot";
-import type { AnalysisResult, ShowcaseReport } from "@/types/domain";
+import type { AnalysisResult, ShowcaseReport, ShowcaseTrace } from "@/types/domain";
 
 /**
  * 04 쉬운 말 리포트를 만드는 경로를 고른다.
@@ -29,7 +29,7 @@ export type ShowcaseOutcome = {
   report: ShowcaseReport | null;
   note: string | null;
   /** 화면 `설명 만드는 과정`과 문서에 남길 기록 */
-  trace: { attempted: boolean; passed: boolean; failures: string[]; source: string };
+  trace: ShowcaseTrace;
 };
 
 const CURATED_LABEL = "규칙이 조립한 안내문 · AI 생성 아님";
@@ -55,7 +55,7 @@ export async function buildShowcaseOutcome(result: AnalysisResult): Promise<Show
     return {
       report: null,
       note: curatedProbe.note,
-      trace: { attempted: false, passed: false, failures: [], source: "조건 미충족" },
+      trace: { attempted: false, passed: false, failedAt: null, failures: [], source: "조건 미충족" },
     };
   }
 
@@ -63,6 +63,7 @@ export async function buildShowcaseOutcome(result: AnalysisResult): Promise<Show
     return curatedOutcome(result, {
       attempted: false,
       passed: false,
+      failedAt: null,
       failures: [],
       source: "AI 미연결",
     });
@@ -90,6 +91,7 @@ export async function buildShowcaseOutcome(result: AnalysisResult): Promise<Show
       return curatedOutcome(result, {
         attempted: false,
         passed: false,
+        failedAt: null,
         failures: replayable?.reason ? [replayable.reason] : [],
         source: replayable?.reason ? "저장본 판정 불일치" : "저장된 AI 리포트 없음",
       });
@@ -111,6 +113,7 @@ export async function buildShowcaseOutcome(result: AnalysisResult): Promise<Show
       return curatedOutcome(result, {
         attempted: true,
         passed: false,
+        failedAt: "validation",
         failures: validation.failures,
         source: provider,
       });
@@ -125,6 +128,7 @@ export async function buildShowcaseOutcome(result: AnalysisResult): Promise<Show
       return curatedOutcome(result, {
         attempted: true,
         passed: false,
+        failedAt: "validation",
         failures: ["형식을 지키지 않아 화면 구조로 옮기지 못했습니다."],
         source: provider,
       });
@@ -133,12 +137,15 @@ export async function buildShowcaseOutcome(result: AnalysisResult): Promise<Show
     return {
       report,
       note: null,
-      trace: { attempted: true, passed: true, failures: [], source: provider },
+      trace: { attempted: true, passed: true, failedAt: null, failures: [], source: provider },
     };
   } catch (error) {
+    // 여기 오면 문장이 만들어지기 전에 끊긴 것이다. 한도 초과·네트워크 오류가 대표적이다.
+    // 검사 불통과와 뭉치면 화면이 `문장이 검사를 통과하지 못했다`고 잘못 말한다.
     return curatedOutcome(result, {
       attempted: true,
       passed: false,
+      failedAt: "call",
       failures: [error instanceof Error ? error.message : "생성 호출이 실패했습니다."],
       source: provider,
     });
