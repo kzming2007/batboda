@@ -21,32 +21,36 @@ export function ruleBasedSections(bundle: ReportBundle): ReportSection[] {
   const watch = bundle.keyFactors.filter((factor) => factor.state === "주의");
   const unknown = bundle.keyFactors.filter((factor) => factor.state === "확인 필요");
 
+  /*
+    앞 두 부분은 간결체로 쓴다. AI 문장이 검사에 걸리면 이 문장이 그 자리에 들어가므로,
+    말투가 다르면 화면이 두 목소리로 말한다. `함께 확인할 점`만 서술체로 남긴다 —
+    못 하는 것을 알리는 자리라 조각으로 쪼개면 뜻이 흐려진다. 프롬프트도 같은 경계를 쓴다.
+
+    판정을 맨 앞에 둔다. 주소와 작물은 화면 머리글이 이미 말하고 있어 되풀이하지 않는다.
+  */
   const conclusion =
-    `${bundle.parcel.address}에서 ${bundle.crop}를 재배하는 조건은 지금 자료로 ${bundle.stage}입니다. ` +
-    `가까운 ${bundle.horizonDays}일 사이 위험은 ${bundle.riskLabel} 수준입니다.`;
+    `${bundle.stage}. 가까운 ${bundle.horizonDays}일 위험 ${bundle.riskLabel}.`;
 
   const groundSentences: string[] = [];
   if (outOfRange.length > 0) {
     groundSentences.push(
-      `공식 기준을 벗어난 항목은 ${outOfRange
+      `기준 밖 ${outOfRange
         .map((factor) => `${factor.label} ${factor.value}(기준 ${factor.target})`)
-        .join(", ")}입니다.`,
+        .join(", ")}.`,
     );
   }
   if (watch.length > 0) {
     groundSentences.push(
-      `주의로 본 항목은 ${watch.map((factor) => `${factor.label} ${factor.value}`).join(", ")}입니다.`,
+      `주의 ${watch.map((factor) => `${factor.label} ${factor.value}`).join(", ")}.`,
     );
   }
   if (unknown.length > 0) {
-    groundSentences.push(
-      `${unknown.map((factor) => factor.label).join(", ")}는 자료가 없어 판단에서 낙관하지 않았습니다.`,
-    );
+    groundSentences.push(`확인 필요 ${unknown.map((factor) => factor.label).join(", ")} — 자료 없음.`);
   }
   if (groundSentences.length === 0) {
-    groundSentences.push("확인한 항목이 모두 공식 기준 안에 있었습니다.");
+    groundSentences.push("확인한 항목 모두 공식 기준 안.");
   }
-  groundSentences.push(`자료 상태는 ${bundle.dataStatus.label}이고, ${bundle.dataStatus.note}입니다.`);
+  groundSentences.push(`자료 상태 ${bundle.dataStatus.label} · ${bundle.dataStatus.note}.`);
 
   return [
     { heading: "한 줄 결론", body: conclusion },

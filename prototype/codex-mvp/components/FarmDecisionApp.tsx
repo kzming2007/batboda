@@ -1048,9 +1048,13 @@ function AnalysisView({
         : "watch";
   const stageTone = stageToneOf(result.suitabilityLabel);
   const leadSentence = result.report?.sections[0]?.body ?? result.summary;
-  // 판정 문장과 위험 문장을 한 줄에 붙이지 않고 문장마다 줄을 나눈다.
-  // `-다.` 뒤 공백만 끊으므로 pH 6.9 같은 소수점은 잘리지 않는다.
-  const leadLines = leadSentence.split(/(?<=다\.)\s+/).filter(Boolean);
+  /*
+    조각마다 줄을 나눈다. 이전에는 `다.` 뒤만 끊었는데, 이 부분은 이제 명사구로 끝나는
+    간결체라 그 조건에 걸리는 자리가 없어 한 줄로 뭉쳤다.
+
+    마침표 뒤 공백만 본다. `pH 6.9`나 `2.0 dS/m`는 마침표 뒤가 숫자라 걸리지 않는다.
+  */
+  const leadLines = leadSentence.split(/(?<=\.)\s+/).map((part) => part.trim()).filter(Boolean);
 
   const verdictPage = (
     <section className="verdict-sheet" id="analysis-result" aria-labelledby="result-title">
