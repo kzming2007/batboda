@@ -98,6 +98,7 @@
     7단 고정 척도. 이전 파일은 39종을 썼고 16px·15px·17px이 서로 구분되지 않은 채
     180곳에 흩어져 있었다. 어디를 먼저 볼지 화면이 알려주지 못한 원인이다.
   */
+  --t-hero: 58px;
   --t-verdict: 48px;
   --t-figure: 34px;
   --t-section: 27px;
@@ -224,10 +225,22 @@ input {
   font: inherit;
 }
 
-code,
-time {
+code {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
+}
+
+/*
+  `time`에 고정폭을 걸지 않는다. `매일 오전`·`정식 전`처럼 한글이 들어가는 자리가 있고,
+  IBM Plex Mono에 한글이 없어 대체 서체로 떨어져 옆 글자와 얼굴이 달라졌다.
+  숫자만 담는 자리(예보 날짜)에만 따로 건다.
+*/
+time {
+  font-variant-numeric: tabular-nums;
+}
+
+.weather-date time {
+  font-family: var(--mono);
 }
 
 /* 화면 전체에서 포커스 표시는 이 하나다. 브랜드 색으로 두어 누를 자리와 같은 언어를 쓴다. */
@@ -1677,7 +1690,13 @@ main {
 .period-options button {
   flex: 1;
   justify-content: center;
-  gap: 6px;
+  gap: var(--s2);
+  min-height: 62px;
+  font-size: var(--t-lead);
+}
+
+.period-options button strong {
+  font-size: var(--t-lead);
 }
 
 .period-block > p {
@@ -1894,7 +1913,7 @@ main {
 
 /* 판정 한 마디. 이 화면에서 가장 큰 글자이고 42px을 쓰는 유일한 자리다. */
 .sheet-verdict {
-  font-size: var(--t-verdict);
+  font-size: var(--t-hero);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.15;
@@ -2154,7 +2173,7 @@ main {
 }
 
 .report-head-verdict {
-  font-size: var(--t-verdict);
+  font-size: var(--t-hero);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.15;
@@ -2531,8 +2550,9 @@ main {
   background: var(--cy-lt);
 }
 
+/* 임계를 넘은 막대. 갈색이 흙빛으로 읽혀 브랜드 축의 진한 시안을 쓴다. */
 .gauge.over i {
-  background: var(--watch);
+  background: var(--cy-ink);
 }
 
 /* ── 확정한 필지 ─────────────────────────────────────────────────────────── */
@@ -2545,18 +2565,18 @@ main {
   가져갔다. 확정한 필지는 `이게 당신 땅이다`는 순간이라 무게가 필요하고, 최근 관측은
   참고 자료다. 강조는 중요도 순서를 따라간다.
 */
+/*
+  확정한 농지 머리도 밝은 면으로 되돌린다. 어두운 면 하나만 남겨도 밝은 화면에서
+  검은 덩어리로 튀었고, 그 안 글자 크기를 키울 여지도 좁았다.
+  `이게 당신 땅이다`는 무게는 색이 아니라 크기와 괘선으로 낸다.
+*/
 .parcel-sheet-heading {
-  color: var(--sf);
-  background: var(--deep);
-  border-bottom-color: var(--deep-line);
+  background: var(--cy-pale);
+  border-bottom-color: var(--cy);
 }
 
-.parcel-sheet-heading > div > span {
-  color: var(--cy-lt);
-}
-
-.parcel-sheet-heading p {
-  color: var(--deep-soft);
+.parcel-sheet-heading h3 {
+  font-size: var(--t-figure);
 }
 
 .parcel-status {
@@ -2618,12 +2638,16 @@ main {
 /* PNU·팜맵 ID가 셀을 넘기지 않게 한다. */
 .parcel-facts dd,
 .soil-profile-band dd {
-  font-size: var(--t-lead);
+  font-size: var(--t-section);
   font-weight: 700;
   overflow-wrap: anywhere;
 }
 
-.parcel-facts dd {
+/*
+  값에 고정폭을 걸지 않는다. `후보 356개 중 직접 확인`처럼 한글이 들어가는 칸이 있다.
+  좌표·PNU·팜맵 ID처럼 숫자만 담는 칸은 마크업에서 `<code>`로 감싼다.
+*/
+.parcel-facts dd code {
   font-family: var(--mono);
 }
 
@@ -2803,10 +2827,16 @@ main {
   font-weight: 700;
 }
 
+/* `연결됨`·`일부만`이 오른쪽 끝에 낱말만 떠 있어 무엇에 붙는 말인지 흐렸다. */
 .requirement-coverage li em {
-  color: var(--ink-soft);
+  padding: 3px var(--s3);
+  color: var(--cy-ink);
   font-size: var(--t-label);
   font-style: normal;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--cy-pale);
+  border-radius: var(--pill);
 }
 
 .requirement-coverage li p {

@@ -965,7 +965,7 @@ export default function FarmDecisionApp({ initialResult }: Props) {
                   ))}
                 </ul>
                 <small>
-                  네 기관을 각각 부르고 있습니다 · {elapsed}초 경과 · 보통 3~5초
+                  네 기관을 각각 부르고 있습니다 · {elapsed}초 경과
                 </small>
               </div>
             )}
@@ -1413,15 +1413,15 @@ function AnalysisView({
         <dl className="parcel-facts">
           <div>
             <dt>선택 좌표</dt>
-            <dd>{result.selection.lat.toFixed(5)}, {result.selection.lng.toFixed(5)}</dd>
+            <dd><code>{result.selection.lat.toFixed(5)}, {result.selection.lng.toFixed(5)}</code></dd>
           </div>
           <div>
             <dt>PNU(필지 고유번호)</dt>
-            <dd>{result.parcel.parcelId}</dd>
+            <dd><code>{result.parcel.parcelId}</code></dd>
           </div>
           <div>
             <dt>팜맵 ID(농지 도형 번호)</dt>
-            <dd>{result.parcel.farmMapId ?? "확인되지 않음"}</dd>
+            <dd>{result.parcel.farmMapId ? <code>{result.parcel.farmMapId}</code> : "확인되지 않음"}</dd>
           </div>
           <div>
             <dt>농지 확인 방법</dt>
