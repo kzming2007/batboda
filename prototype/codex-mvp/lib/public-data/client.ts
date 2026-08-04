@@ -1,9 +1,14 @@
 import "server-only";
 import { XMLParser } from "fast-xml-parser";
-import { toFarmMapCoordinates, toKmaGrid } from "@/lib/public-data/geo";
+import {
+  fromFarmMapCoordinates,
+  toFarmMapCoordinates,
+  toKmaGrid,
+} from "@/lib/public-data/geo";
 import { drainageCategoryFromProfile } from "@/lib/analysis/soilCodes";
 import type {
   AnalysisSelection,
+  ParcelBoundary,
   ParcelCandidate,
   ParcelSearch,
   RecentClimateData,
@@ -183,6 +188,76 @@ export async function fetchFarmMapCandidates(
   }
 
   throw new Error("선택 좌표 반경 1km 안에서 팜맵 필지를 찾지 못했습니다.");
+}
+
+/**
+ * 확정한 필지의 경계를 팜맵 PNU 기반 상세조회로 가져온다.
+ *
+ * 요청 파라미터 이름은 `pnuCode`이고, 응답의 `fmapBdcrd`는 EPSG:5179 좌표계의
+ * GeoJSON MultiPolygon이다. 둘 다 공식 문서의 항목표에는 없지만 실제 응답에 있다(2026-08-04 실측).
+ *
+ * 같은 요청에 인접 필지가 함께 오므로 **요청한 PNU와 문자열이 정확히 같은 항목만** 채택한다.
+ * PNU는 19자리이고 앞자리에 0이 올 수 있어 숫자로 바꾸지 않는다.
+ * 좌표계가 다르거나 형식이 어긋나면 경계를 만들지 않고 null을 돌려준다. 임의로 그리지 않기 위해서다.
+ */
+export async function fetchParcelBoundary(parcelId: string): Promise<ParcelBoundary | null> {
+  const wanted = parcelId.trim();
+  if (!wanted) return null;
+
+  const payload = await request("/B552895/getFarmmapService/getPnuBasedFarmmapInfo", {
+    pnuCode: wanted,
+  });
+  const match = apiItems(payload).find((item) => text(item.pnuLnmCd).trim() === wanted);
+  if (!match) return null;
+
+  const raw = match.fmapBdcrd;
+  let geometry: LooseObject | null = null;
+  if (isObject(raw)) geometry = raw;
+  else if (typeof raw === "string" && raw.trim()) {
+    try {
+      geometry = JSON.parse(raw) as LooseObject;
+    } catch {
+      return null;
+    }
+  }
+  if (!geometry) return null;
+
+  const crs = text(nested(geometry, ["crs", "properties", "name"]));
+  if (crs !== "EPSG:5179") return null;
+
+  const type = text(geometry.type);
+  if (type !== "MultiPolygon" && type !== "Polygon") return null;
+
+  // Polygon은 링 배열, MultiPolygon은 링 배열의 배열이라 한 겹을 맞춘다.
+  const polygons = type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+  if (!Array.isArray(polygons)) return null;
+
+  const rings: [number, number][][] = [];
+  for (const polygon of polygons) {
+    if (!Array.isArray(polygon)) continue;
+    for (const ring of polygon) {
+      if (!Array.isArray(ring)) continue;
+      const points: [number, number][] = [];
+      for (const point of ring) {
+        if (!Array.isArray(point) || point.length < 2) continue;
+        const x = Number(point[0]);
+        const y = Number(point[1]);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+        points.push(fromFarmMapCoordinates(x, y));
+      }
+      // 점이 셋 미만이면 면이 되지 않는다.
+      if (points.length >= 3) rings.push(points);
+    }
+  }
+  if (rings.length === 0) return null;
+
+  return {
+    rings,
+    parcelId: wanted,
+    farmMapId: text(match.fmapInnb) || null,
+    sourceCrs: crs,
+    observedAt: text(match.vdptYr ?? match.itpinpDe, "판독 시점 미확인"),
+  };
 }
 
 function drainageFrom(value: unknown): SoilData["drainage"] {

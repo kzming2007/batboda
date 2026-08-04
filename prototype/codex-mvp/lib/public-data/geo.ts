@@ -10,6 +10,15 @@ export function toFarmMapCoordinates(lat: number, lng: number) {
   return { x: Math.round(x), y: Math.round(y) };
 }
 
+/**
+ * 팜맵 경계 좌표(EPSG:5179)를 지도에 그릴 수 있는 위경도로 되돌린다.
+ * 반환 순서는 Leaflet이 쓰는 [위도, 경도]다. proj4는 [경도, 위도]를 돌려주므로 뒤집는다.
+ */
+export function fromFarmMapCoordinates(x: number, y: number): [number, number] {
+  const [lng, lat] = proj4("EPSG:5179", "EPSG:4326", [x, y]);
+  return [lat, lng];
+}
+
 // 기상청 단기예보 격자 변환 공식의 JavaScript 구현.
 export function toKmaGrid(lat: number, lng: number) {
   const RE = 6371.00877;

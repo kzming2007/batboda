@@ -270,6 +270,49 @@ main {
   border: 1px solid var(--line-dark);
 }
 
+/* 확정한 필지 정보 카드. 지도 위에 얹되 조작을 가리지 않게 왼쪽 아래에 둔다. */
+.map-parcel-card {
+  position: absolute;
+  left: 12px;
+  /* 좌표 칩이 왼쪽 아래에 있다. 겹치면 마지막 줄이 가려지므로 그 위로 올린다. */
+  bottom: 56px;
+  z-index: 500;
+  max-width: min(340px, calc(100% - 24px));
+  padding: 11px 13px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--line-dark);
+  border-left: 3px solid var(--muted);
+  box-shadow: 0 2px 10px rgba(23, 37, 31, 0.14);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.map-parcel-card.has-boundary { border-left-color: var(--leaf); }
+.map-parcel-card__head {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+.map-parcel-card__head strong { color: var(--soil-ink); font-size: 14px; }
+.map-parcel-card__head em {
+  flex: none;
+  color: var(--muted);
+  font: 700 11px var(--mono);
+  font-style: normal;
+}
+.map-parcel-card.has-boundary .map-parcel-card__head em { color: var(--leaf-dark); }
+.map-parcel-card dl { display: grid; gap: 3px; margin: 0; }
+.map-parcel-card dl > div { display: flex; gap: 8px; }
+.map-parcel-card dt { flex: none; width: 62px; color: var(--muted); font-size: 12px; }
+.map-parcel-card dd { margin: 0; color: var(--soil-soft); font: 12px var(--mono); word-break: break-all; }
+.map-parcel-card__note { margin: 7px 0 0; color: var(--clay); font-size: 12px; }
+
+@media (max-width: 720px) {
+  .map-parcel-card { left: 8px; right: 8px; bottom: 52px; max-width: none; font-size: 12px; }
+  .map-parcel-card dt { width: 56px; }
+}
+
 .farm-map-shell,
 .farm-map,
 .map-loading {
