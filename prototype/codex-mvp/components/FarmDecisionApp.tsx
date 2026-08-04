@@ -1171,7 +1171,15 @@ function AnalysisView({
         <article>
           <span>가까운 {result.selection.horizonDays}일 위험</span>
           <strong className={riskTone}>{result.riskLabel}</strong>
-          <StateBadge state={riskTone === "good" ? "good" : riskTone === "bad" ? "risk" : "watch"} />
+          {/*
+            위험 칸은 값 자체가 상태다. `주의`라고 크게 쓴 아래에 배지가 또 `주의`라고
+            적어 같은 말이 두 번 나왔다. 값과 배지 낱말이 같으면 배지를 붙이지 않는다.
+            토양 적성(`3급지`)이나 산도(`6.9`)처럼 값이 상태를 말하지 않는 칸에는 남는다.
+          */}
+          {factorBadge[riskTone === "good" ? "good" : riskTone === "bad" ? "risk" : "watch"].label !==
+            result.riskLabel && (
+            <StateBadge state={riskTone === "good" ? "good" : riskTone === "bad" ? "risk" : "watch"} />
+          )}
           <p>{result.weather.days
             .map((day) => `${day.label} 비 ${day.rainProbability ?? "–"}%`)
             .join(" · ")}</p>

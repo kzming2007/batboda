@@ -72,6 +72,13 @@
   --good-line: #a9cdb4;
   --watch: #8a5806;
   /*
+    큰 글자에만 쓰는 주의색. 24px 이상 또는 18.66px 굵게는 3:1이면 되므로 더 선명하게
+    쓸 수 있다. `--watch`(#8a5806)는 4.5:1을 맞춘 값이라 48px 판정 글자에서 갈금색으로
+    어둡게 읽혔다. 회색면 대비 3.5:1 — 큰 글자 기준을 넘긴다.
+    작은 글자에는 절대 쓰지 않는다.
+  */
+  --watch-strong: #b5730a;
+  /*
     주의 배경만 채도를 올렸다. `#f7ead2`는 거의 흰색에 가까워 배지가 눈에 들어오지 않았다.
     글자색(`--watch`)은 그대로 둔다 — 글자를 노랗게 하면 흰 바탕에서 대비가 무너진다.
     배경은 어두운 글자를 받으므로 채도를 올려도 대비가 유지된다(#8a5806 위에서 4.5:1 초과).
@@ -1924,7 +1931,7 @@ main {
 }
 
 .sheet-verdict.watch {
-  color: var(--watch);
+  color: var(--watch-strong);
 }
 
 .sheet-verdict.bad {
@@ -1981,7 +1988,7 @@ main {
 }
 
 .sheet-columns strong.watch {
-  color: var(--watch);
+  color: var(--watch-strong);
 }
 
 .sheet-columns strong.bad {
@@ -2180,7 +2187,7 @@ main {
 }
 
 .report-head-verdict.good { color: var(--good); }
-.report-head-verdict.watch { color: var(--watch); }
+.report-head-verdict.watch { color: var(--watch-strong); }
 .report-head-verdict.bad { color: var(--bad); }
 
 /*
