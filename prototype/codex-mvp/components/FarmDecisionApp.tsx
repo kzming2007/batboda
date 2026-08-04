@@ -131,6 +131,21 @@ const factorBadge: Record<FactorState, { tone: BadgeTone; label: string }> = {
   info: { tone: "info", label: "참고" },
 };
 
+/**
+ * 상태의 심각도 순서. 작을수록 먼저 보여야 한다.
+ *
+ * 근거를 몇 개만 골라 보여줄 때 무엇을 버릴지 정하는 기준이다. 엔진이 내보내는 순서는
+ * 항목 종류(토양 → 기상)를 따르므로, 그 순서로 자르면 기준 밖 요인이 뒤에 있다는
+ * 이유만으로 사라진다.
+ */
+function factorSeverity(state: FactorState | undefined) {
+  if (state === "risk") return 0;
+  if (state === "watch") return 1;
+  if (state === "unknown") return 2;
+  if (state === "good") return 3;
+  return 4;
+}
+
 function StateBadge({ state }: { state: FactorState | undefined }) {
   const badge = factorBadge[state ?? "unknown"];
   return (
@@ -1685,8 +1700,21 @@ function ShowcaseReportView({
   note: string | null;
   trace: ShowcaseTrace | null;
 }) {
-  // 근거는 판정에 실제로 반영된 것만 앞에 세운다. `참고 · 점수 미반영`은 아래 산문에 남는다.
-  const leadFactors = result.factors.filter((factor) => factor.state !== "info").slice(0, 3);
+  /*
+    근거는 판정에 실제로 반영된 것만 앞에 세운다. `참고 · 점수 미반영`은 아래 산문에 남는다.
+
+    **나쁜 소식부터 세운다.** 엔진 순서로 앞 3개를 자르면 하필 기준 밖 요인이 잘려 나간다.
+    실측 — 이 필지의 요인 순서가 `pH(기준 안) → 적성등급(주의) → 배수(주의) → 기온(기준 밖)`
+    이어서, `조건부 적합`으로 끌어내린 유일한 요인인 기온 22.2℃가 화면에서 사라졌다.
+
+    04는 초보자가 03 대신 읽는 화면이다. `이렇게 판단한 근거` 아래에서 나쁜 소식만 빠지면
+    이 화면만 보고 판단하는 사람은 무엇이 걸리는지 모른다. 셋으로 묶는 규칙이 정직함을
+    이기게 두지 않는다.
+  */
+  const leadFactors = [...result.factors]
+    .filter((factor) => factor.state !== "info")
+    .sort((a, b) => factorSeverity(a.state) - factorSeverity(b.state))
+    .slice(0, 3);
   const checks = fieldChecks(result);
 
   return (
@@ -1739,7 +1767,15 @@ function ShowcaseReportView({
             <div className="showcase-basis">
               {leadFactors.map((factor) => (
                 <div className="showcase-basis-row" key={factor.id}>
-                  <span className={`factor-signal ${factor.state}`} aria-hidden="true" />
+                  {/*
+                    03과 같은 배지를 쓴다. 여기에는 `.factor-signal` 색 점이 있었는데,
+                    03을 배지로 올릴 때 쓰이지 않게 된 그 클래스의 CSS가 지워졌고 04는
+                    계속 렌더하고 있었다. 규칙이 0개라 색도 부호도 낱말도 그려지지 않고
+                    `aria-hidden`이라 보조기기에도 가지 않았다 — 상태가 화면에서 사라진 채였다.
+
+                    한 화면에서 같은 값을 두 문법으로 말하지 않는다.
+                  */}
+                  <StateBadge state={factor.state} />
                   <strong>{factor.label}</strong>
                   <span className="showcase-basis-value">{factor.value}</span>
                   {factor.meter && (

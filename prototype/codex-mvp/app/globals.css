@@ -3006,13 +3006,24 @@ main {
   display: grid;
 }
 
+/*
+  03의 `.factor-row`와 같은 문법을 쓴다. 첫 열이 22px 색 점 자리였는데 그 점의 규칙이
+  지워진 뒤에도 열은 남아 이름표를 밀고 있었다. 같은 값을 두 화면이 다르게 말하지 않는다.
+*/
 .showcase-basis-row {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "name  badge value"
+    "meter meter meter"
+    "note  note  note";
   align-items: baseline;
   gap: var(--s2) var(--s3);
   padding: var(--s3) 0;
 }
+
+.showcase-basis-row > strong { grid-area: name; }
+.showcase-basis-row > .state-badge { grid-area: badge; }
 
 .showcase-basis-row + .showcase-basis-row {
   border-top: 1px solid var(--line);
@@ -3024,6 +3035,7 @@ main {
 }
 
 .showcase-basis-value {
+  grid-area: value;
   justify-self: end;
   font-size: var(--t-figure);
   font-weight: 800;
@@ -3032,10 +3044,8 @@ main {
   line-height: 1.2;
 }
 
-.showcase-basis-row .meter,
-.showcase-basis-note {
-  grid-column: 2 / -1;
-}
+.showcase-basis-row .meter { grid-area: meter; }
+.showcase-basis-note { grid-area: note; }
 
 .showcase-basis-note {
   color: var(--ink-soft);
@@ -3345,6 +3355,19 @@ main {
   }
 
   .factor-value {
+    justify-self: start;
+  }
+
+  /* 04의 근거 행도 같은 이유로 값을 내린다. 이름이 배지와 값 사이에 끼여 잘리고 있었다. */
+  .showcase-basis-row {
+    grid-template-areas:
+      "name  name  badge"
+      "value value value"
+      "meter meter meter"
+      "note  note  note";
+  }
+
+  .showcase-basis-value {
     justify-self: start;
   }
 
