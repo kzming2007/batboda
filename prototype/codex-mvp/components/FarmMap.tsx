@@ -93,7 +93,17 @@ function MapInteraction({
       원격 데스크톱이나 가려진 창에서 600ms 동안 프레임이 0개인 것을 실측했다.
       그때는 지도가 출발한 자리에 남는다. 판정과 화면 표시에는 영향이 없다.
     */
-    map.flyToBounds(bounds, { padding: [36, 36], maxZoom: 18, duration: 0.7 });
+    /*
+      아래쪽 여백을 더 준다. 확정한 필지 카드와 좌표 칩이 지도 왼쪽 아래에 얹혀 있어서,
+      대칭 여백으로 맞추면 경계가 화면 가운데 와서 그 카드에 가려진다. 경계가 이 화면의
+      정점이므로 가려지면 안 된다. 카드 높이(약 110px)와 좌표 칩을 합친 값이다.
+    */
+    map.flyToBounds(bounds, {
+      paddingTopLeft: [36, 36],
+      paddingBottomRight: [36, 132],
+      maxZoom: 18,
+      duration: 0.7,
+    });
   }, [ringKey, rings, map]);
 
   useMapEvents({

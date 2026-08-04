@@ -35,10 +35,19 @@
   --line: #dde4e6;
   --line-strong: #b9c4c7;
 
+  /*
+    브랜드 색을 더 선명하게 하려고 채도를 올려 봤으나(`#0891b2`) 되돌렸다.
+    흰 글자 대비가 3.68:1로 미달했다(2026-08-05 계산). 판정서 머리·후보 조회 버튼·
+    브랜드 마크가 모두 15px 굵은 흰 글자이고, 15px은 큰 글자 기준(3:1)을 쓸 수 없다.
+
+    채도를 올린 체감의 대부분이 명도 상승에서 오고, 그것이 곧 대비 손실이다.
+    그래서 선명함은 색조가 아니라 **밝은 시안을 쓰는 면적**으로 얻는다.
+    밝은 시안은 어두운 글자가 얹히지 않는 자리(밑줄·눈금 테두리·강조 면)에만 쓴다.
+  */
   --cy: #0e7490;
   --cy-ink: #0b5a72;
   --cy-lt: #06b6d4;
-  --cy-pale: #cbf1f8;
+  --cy-pale: #cffafe;
   /*
     밝은 시안 `--cy-lt`에 흰 글자를 얹으면 대비 2.5:1로 크게 미달한다.
     밝은 시안은 밑줄과 강조 면 바탕으로만 쓰고 그 위 글자는 이 색을 쓴다.
@@ -1035,6 +1044,21 @@ main {
   border-radius: var(--radius);
 }
 
+/*
+  경계가 그려지면 카드를 납작하게 만든다. 지도가 아래 여백을 예약해 경계를 위로 올리지만,
+  프레임이 오지 않는 환경에서는 비행이 멈춰 경계가 제자리에 남는다. 그때도 덜 가리게 한다.
+  지번과 필지번호는 남기고 나머지 항목만 접는다 — 그 둘이 `같은 필지`를 증명하는 값이다.
+*/
+.map-parcel-card.has-boundary {
+  max-width: min(260px, calc(100% - 24px));
+  padding: var(--s2) var(--s3);
+  background: rgb(255 255 255 / 0.92);
+}
+
+.map-parcel-card.has-boundary dl div:nth-child(n + 3) {
+  display: none;
+}
+
 .map-parcel-card__head {
   display: flex;
   flex-wrap: wrap;
@@ -1176,24 +1200,34 @@ main {
   gap: var(--s2);
 }
 
+/*
+  지역과 기간 버튼은 이름과 설명을 **가로로** 놓는다. 세로로 쌓으면 알약 높이가 72px까지
+  커져 화면에 빈 공간이 생기고, 누를 자리 셋이 지도 아래를 다 먹는다. 가로면 44px이다.
+*/
 .place-shortcuts button {
-  flex: 1 1 150px;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 0;
+  flex: 0 1 auto;
+  justify-content: flex-start;
+  gap: 6px;
 }
 
-.place-shortcuts button strong,
+.place-shortcuts button > span:first-child,
 .period-options button strong {
   font-size: var(--t-label);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .place-shortcuts button small,
 .period-options button small {
   color: var(--ink-soft);
   font-size: var(--t-label);
+  white-space: nowrap;
+}
+
+/* 이름과 설명 사이 가운뎃점. 가로로 붙으면 두 낱말이 한 낱말로 읽힌다. */
+.place-shortcuts button small::before,
+.period-options button small::before {
+  content: "· ";
 }
 
 .place-shortcuts button[aria-pressed="true"] small,
@@ -1546,10 +1580,8 @@ main {
 
 .period-options button {
   flex: 1;
-  flex-direction: column;
-  align-items: flex-start;
   justify-content: center;
-  gap: 0;
+  gap: 6px;
 }
 
 .period-block > p {
