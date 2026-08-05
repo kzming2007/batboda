@@ -21,3 +21,4 @@ Thumbs.db
 # 개인 작업 환경 설정과 외부에서 가져온 스킬 원본. 저장소에 넣지 않는다.
 # 디자인 판단의 근거는 PRODUCT.md와 DESIGN.md에 남기므로 스킬 파일 자체는 필요하지 않다.
 .claude/
+발표/node_modules/
