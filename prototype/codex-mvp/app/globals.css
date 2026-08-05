@@ -1623,10 +1623,34 @@ main.has-dock {
   background: var(--cy-ink);
 }
 
+/*
+  격자 칸이 내용 최소폭에 밀려 늘어나던 것을 막는다.
+
+  격자 자식의 `min-width`는 기본이 `auto`라 끊기지 않는 긴 글(19자리 PNU)이 칸을
+  content보다 넓게 벌린다. 그러면 이 블록이 부모(`.parcel-finder`, `overflow: hidden`)보다
+  넓어져 오른쪽이 잘렸다 — 375px에서 후보 줄의 숫자가 카드 밖으로 나가고 검색창
+  오른쪽 테두리가 사라진 원인이 이것이다(2026-08-05 실측).
+*/
+.parcel-candidate-workspace,
+.parcel-candidate-workspace > * {
+  min-width: 0;
+}
+
 .parcel-candidate-workspace {
   display: grid;
   gap: var(--s3);
   padding: var(--s4) var(--s5);
+}
+
+.candidate-pnu {
+  font-style: normal;
+}
+
+/* 좁은 폭에서는 PNU를 감춘다. 고를 때 쓰는 것은 지번이다. */
+@media (max-width: 560px) {
+  .candidate-pnu {
+    display: none;
+  }
 }
 
 .candidate-search-row {

@@ -1044,7 +1044,17 @@ export default function FarmDecisionApp({ initialResult }: Props) {
                             <span className="candidate-index">{selected ? "확정" : "후보"}</span>
                             <span>
                               <strong>{candidate.address}</strong>
-                              <small>{candidate.interpretation} · PNU {candidate.parcelId}</small>
+                              {/*
+                                PNU를 따로 감싼다. 19자리 숫자가 끊기지 않아 격자 칸을
+                                늘리고, 부모의 `overflow: hidden`에 잘려 좁은 화면에서
+                                검색창 테두리까지 사라졌다(2026-08-05 375px 실측).
+                                좁은 폭에서는 CSS로 감춘다 — 고를 때 쓰는 것은 지번이고,
+                                PNU는 확정한 뒤 농지 카드에 그대로 남는다.
+                              */}
+                              <small>
+                                {candidate.interpretation}
+                                <em className="candidate-pnu"> · PNU {candidate.parcelId}</em>
+                              </small>
                             </span>
                           </button>
                           <button
