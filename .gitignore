@@ -22,3 +22,6 @@ Thumbs.db
 # 디자인 판단의 근거는 PRODUCT.md와 DESIGN.md에 남기므로 스킬 파일 자체는 필요하지 않다.
 .claude/
 발표/node_modules/
+
+# Office 임시 잠금 파일. 문서를 열어 두면 생기고 닫으면 사라진다.
+~$*
