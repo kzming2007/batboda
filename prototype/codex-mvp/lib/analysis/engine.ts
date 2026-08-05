@@ -22,6 +22,7 @@ import type {
   DataMode,
   FactorMeter,
   ParcelData,
+  RiskDriver,
   RecentClimateData,
   RiskLevel,
   SoilData,
@@ -513,6 +514,60 @@ export function analyzeFarm(
   );
   const risk = riskLevel(riskScore, policy);
 
+  /*
+    위험 점수를 올린 것을 큰 것부터 적는다. 여기서 새로 판단하지 않는다 —
+    바로 위에서 계산한 네 기여도를 그대로 옮기고, 0인 것은 뺀다.
+
+    02 위험 칸이 이 목록의 첫째를 원인으로 밝힌다. 그 칸은 오랫동안 `주의`라고 쓰고
+    아래에 비 확률만 늘어놓았고, 대관령 사례에서는 비 20~30%로 기준 60%에 한참
+    못 미치는데도 비가 원인처럼 읽혔다. 실제 원인은 기온이었다.
+  */
+  const riskDrivers: RiskDriver[] = [
+    {
+      id: "rain" as const,
+      label: "비",
+      detail:
+        maxRain === null
+          ? "자료 없음"
+          : `기간 중 최고 ${maxRain}% · 기준 ${policy.rainProbabilityWatch}%`,
+      points: rainContribution,
+    },
+    {
+      id: "humidity" as const,
+      label: "습도",
+      /*
+        점수는 하루 중 최고 습도를 쓰고, 날짜별 알약과 03 예보 카드는 그날 평균을 쓴다.
+        두 값이 다르므로 어느 통계인지 낱말로 밝힌다. 밝히지 않으면 같은 카드에서
+        `습도 90%`와 `습도 100%`가 나란히 놓여 화면이 자기모순처럼 읽힌다.
+      */
+      detail:
+        maxHumidity === null
+          ? "자료 없음"
+          : `하루 중 최고 ${maxHumidity}% · 기준 ${policy.humidityWatch}%`,
+      points: humidityContribution,
+    },
+    {
+      id: "temperature" as const,
+      label: "기온",
+      detail: `${tempCheck.value} · ${profile.name} 적온 ${tempCheck.target}`,
+      points: temperatureContribution,
+    },
+    {
+      id: "drainage" as const,
+      label: "배수",
+      detail: `${
+        effectiveDrainage === "moderate"
+          ? "보통"
+          : effectiveDrainage === "poor"
+            ? "불량"
+            : "자료 없음"
+      } · 공식 기준 양호`,
+      points: drainageRiskContribution,
+    },
+  ]
+    .filter((driver) => driver.points > 0)
+    .sort((a, b) => b.points - a.points);
+
   const factors: AnalysisFactor[] = [
     {
       id: "ph",
@@ -761,6 +816,7 @@ export function analyzeFarm(
     riskScore,
     riskLevel: risk,
     riskLabel: levelLabel(risk),
+    riskDrivers,
     confidence,
     evidenceQuality,
     modelCard: {

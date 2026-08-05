@@ -333,6 +333,25 @@ export type ShowcaseReport = {
   highlights: ShowcaseHighlight[];
 };
 
+/*
+  위험 점수를 올린 것이 무엇인지 큰 것부터 적는다.
+
+  점수는 비·습도·기온·배수 넷을 합산하는데, 화면은 그 합만 받고 어느 쪽이 컸는지
+  몰랐다. 그래서 02 위험 칸이 `주의`라고 쓰고 그 아래에 비 확률만 늘어놓았고,
+  비가 기준(60%)에 한참 못 미치는 날에도 비가 원인처럼 읽혔다.
+
+  새 판단을 만드는 값이 아니다. 엔진이 이미 계산한 기여도를 그대로 내보낸다.
+*/
+export type RiskDriver = {
+  id: "rain" | "humidity" | "temperature" | "drainage";
+  /** `기온`처럼 짧은 이름. 문장에 그대로 넣는다. */
+  label: string;
+  /** `평균 22.5℃ · 상추 적온 15–20℃`처럼 실측과 기준을 함께 적는다. */
+  detail: string;
+  /** 이 항목이 위험 점수에 더한 값. 큰 것이 앞에 온다. */
+  points: number;
+};
+
 export type AnalysisResult = {
   mode: DataMode;
   modeLabel: string;
@@ -348,6 +367,7 @@ export type AnalysisResult = {
   riskScore: number;
   riskLevel: RiskLevel;
   riskLabel: string;
+  riskDrivers: RiskDriver[];
   confidence: number;
   evidenceQuality: EvidenceQuality;
   modelCard: AnalysisModelCard;

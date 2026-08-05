@@ -1239,9 +1239,47 @@ function AnalysisView({
             result.riskLabel && (
             <StateBadge state={riskTone === "good" ? "good" : riskTone === "bad" ? "risk" : "watch"} />
           )}
-          <p>{result.weather.days
-            .map((day) => `${day.label} 비 ${day.rainProbability ?? "–"}%`)
-            .join(" · ")}</p>
+          {/*
+            날짜별 알약과 원인 한 줄.
+
+            전에는 `${day.label} 비 ${rain}%`를 점으로 이어 한 줄로 적었다. 그래서
+            대관령 사례에서 `주의` 아래에 `비 20% · 비 20% · 비 30%`가 놓였고, 기준이
+            60%인데도 20%가 원인처럼 읽혔다. 실제 원인은 기온이었다.
+
+            알약은 03 예보 카드와 **같은 규칙**으로 물들인다(비 60% 이상 또는 습도
+            85% 이상). 같은 값을 두 화면이 다르게 판단하면 안 된다.
+
+            비와 습도를 **둘 다** 적는다. 비만 적었더니 대관령 사례에서 습도(평균 90%)
+            때문에 물든 알약 안에 `비 20%`만 있어, 고치려던 오해가 그대로 재현됐다.
+            물든 이유는 물든 알약 안에 있어야 한다. 기준을 넘긴 값에 표시를 준다.
+
+            그래도 기온처럼 알약에 없는 원인이 있으므로 원인 한 줄이 반드시 따라붙는다.
+          */}
+          <ul className="risk-days">
+            {result.weather.days.map((day) => {
+              const rain = day.rainProbability;
+              const humidity = day.humidityAverage ?? day.humidity;
+              const overRain = (rain ?? 0) >= baselineEnginePolicy.rainProbabilityWatch;
+              const overHumidity = (humidity ?? 0) >= baselineEnginePolicy.humidityWatch;
+              return (
+                <li key={day.date} className={overRain || overHumidity ? "watch" : ""}>
+                  <time>{day.date.slice(5).replace("-", "/")}</time>
+                  <span>
+                    <b className={overRain ? "over" : undefined}>비 {rain ?? "–"}%</b>
+                    <b className={overHumidity ? "over" : undefined}>
+                      습도 {humidity ?? "–"}%
+                    </b>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          {result.riskDrivers.length > 0 && (
+            <p className="risk-cause">
+              가장 크게 반영된 것은 <b>{result.riskDrivers[0].label}</b>입니다 ·{" "}
+              {result.riskDrivers[0].detail}
+            </p>
+          )}
         </article>
       </div>
 
