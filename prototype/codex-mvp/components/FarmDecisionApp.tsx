@@ -1939,6 +1939,27 @@ function ShowcaseReportView({
   trace: ShowcaseTrace | null;
 }) {
   /*
+    산문 접기를 인쇄에 잇는다.
+
+    04는 인쇄물로 보내기로 한 화면이고 머리에 인쇄 버튼도 있다. 그런데 이 접기가 상태에
+    묶여 있지 않아 `beforeprint`가 열 수 없었다 — 배포본에서 이벤트를 보내 봤더니 닫힌
+    채였다. 종이에 AI 산문 세 단락이 빠진다는 뜻이다. 03의 접기만 연결돼 있었다.
+
+    닫힌 `<details>`는 `display`가 아니라 브라우저 내부 규칙으로 숨겨지므로 `@media print`
+    로는 열 수 없다. 상태로 들고 인쇄 시점에 열어야 한다.
+
+    사용자가 직접 눌러 여닫는 것도 상태에 반영한다. 그러지 않으면 손으로 열어 둔 뒤
+    인쇄할 때 리액트가 닫힌 값으로 되돌린다.
+  */
+  const [proseOpen, setProseOpen] = useState(false);
+
+  useEffect(() => {
+    const openBeforePrint = () => setProseOpen(true);
+    window.addEventListener("beforeprint", openBeforePrint);
+    return () => window.removeEventListener("beforeprint", openBeforePrint);
+  }, []);
+
+  /*
     근거는 판정에 실제로 반영된 것만 앞에 세운다. `참고 · 점수 미반영`은 아래 산문에 남는다.
 
     **나쁜 소식부터 세운다.** 엔진 순서로 앞 3개를 자르면 하필 기준 밖 요인이 잘려 나간다.
@@ -2061,9 +2082,13 @@ function ShowcaseReportView({
           {/*
             AI가 쓴 산문은 버리지 않고 아래로 보낸다. 요구사항 ③의 증거이므로 화면에서
             없앨 수 없다. 다만 먼저 읽어야 하는 것이 위에 있으므로 기본은 접어 둔다.
-            `open` 속성을 쓰지 않아 발표에서는 접힌 상태로 시작하고, 필요하면 눌러서 연다.
+            발표에서는 접힌 상태로 시작하고, 필요하면 눌러서 연다. 인쇄할 때는 열린다.
           */}
-          <details className="showcase-prose">
+          <details
+            className="showcase-prose"
+            open={proseOpen}
+            onToggle={(event) => setProseOpen((event.currentTarget as HTMLDetailsElement).open)}
+          >
             <summary>
               <span>AI가 쓴 자세한 설명</span>
               <small>{report.blocks.length}단락 · 눌러서 펼치기</small>
