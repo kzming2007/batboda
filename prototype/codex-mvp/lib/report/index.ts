@@ -52,10 +52,36 @@ export function ruleBasedSections(bundle: ReportBundle): ReportSection[] {
   }
   groundSentences.push(`자료 상태 ${bundle.dataStatus.label} · ${bundle.dataStatus.note}.`);
 
+  /*
+    한계도 간결체로 적는다. `bundle.limits`는 서술체 문장이라 그대로 이어 붙이면 이 부분만
+    문단처럼 길어진다. 같은 사실을 조각으로 다시 쓴다.
+
+    조건은 빼지 않는다. `참고 판단`만 적고 `무엇을 예측하지 않는지`를 빼면 읽는 사람이
+    그 말을 예측으로 받는다. 짧게 쓰는 것과 덜 말하는 것은 다르다.
+  */
+  const cautions = [
+    "참고 판단. 수확량·성공 가능성 예측 아님.",
+    "최근 날씨는 가장 가까운 관측소 기록. 농지 실제 환경과 차이 가능.",
+  ];
+  /*
+    검정일은 근거 묶음의 `limits` 문장 안에만 있다. 날짜를 따로 들고 있지 않으므로 그 문장에서
+    뽑아 쓴다. 없으면 이 조각을 빼고, 새로 만들지 않는다 — 묶음 밖의 사실을 쓰지 않는 원칙이다.
+  */
+  const sampled = bundle.limits
+    .map((line) => line.match(/토양 값은 (\S+) 검정 기록/)?.[1])
+    .find(Boolean);
+  if (sampled) {
+    cautions.push(`토양 값 ${sampled} 검정 기록. 이후 흙에 손댔다면 지금 값과 다름.`);
+  }
+  if (bundle.limits.some((line) => line.includes("검증 자료"))) {
+    cautions.push("일부 자료는 실시간이 아니라 저장해 둔 검증 자료.");
+  }
+  cautions.push("심기 전 현장 확인, 지역 농업기술센터 확인 권장.");
+
   return [
     { heading: "한 줄 결론", body: conclusion },
     { heading: "왜 이렇게 나왔나", body: groundSentences.join(" ") },
-    { heading: "함께 확인할 점", body: bundle.limits.join(" ") },
+    { heading: "함께 확인할 점", body: cautions.join(" ") },
   ];
 }
 
