@@ -8,10 +8,10 @@
     --line: #2a4149;
     --ink: #eef5f7;
     --dim: #8fa8b2;
-    --say: #35d6f5;      /* 발표자가 말하는 것 */
-    --say-bg: #0d3a47;
-    --do: #ffb454;       /* 시연자가 누르는 것 */
-    --do-bg: #3d2c0e;
+    --read: #35d6f5;     /* 소리 내어 읽는 것 */
+    --read-bg: #0d3a47;
+    --act: #ffb454;      /* 몸으로 하는 것 */
+    --act-bg: #3d2c0e;
     --stop: #ff7a6b;     /* 하지 말 것 */
     --ok: #6ee7a0;
   }
@@ -35,23 +35,21 @@
     border-bottom: 1px solid var(--line);
   }
   h1 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
-  .slogan { margin: 4px 0 0; color: var(--say); font-size: 14px; font-weight: 700; }
+  .slogan { margin: 4px 0 0; color: var(--read); font-size: 14px; font-weight: 700; }
   .meta { margin: 6px 0 0; color: var(--dim); font-size: 13px; }
 
   /*
     스크롤하면 접히는 부분. 역할은 한 번 고르면 다시 안 만지므로 자리를 내준다.
-    맨 위로 돌아가면 다시 나온다. `display:none`이 아니라 높이로 접어야
-    다시 펼 때 자리가 튀지 않는다.
+    맨 위로 돌아가면 다시 나온다. 높이로 접어야 다시 펼 때 자리가 튀지 않는다.
   */
   header .fold {
-    max-height: 200px; opacity: 1; overflow: hidden;
+    max-height: 260px; opacity: 1; overflow: hidden;
     transition: max-height .22s ease, opacity .16s ease;
   }
   body.scrolled header .fold { max-height: 0; opacity: 0; }
   body.scrolled header { padding-bottom: 6px; }
   body.scrolled h1 { font-size: 15px; }
 
-  /* 역할 고르기 */
   .roles { display: flex; gap: 8px; margin: 12px 0 0; }
   .roles button {
     flex: 1; min-height: 48px; padding: 0 10px;
@@ -59,67 +57,80 @@
     background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
     cursor: pointer;
   }
-  .roles button[aria-pressed="true"] { color: #06222b; background: var(--say); border-color: var(--say); }
-  .roles button[data-role="do"][aria-pressed="true"] { color: #2b1c00; background: var(--do); border-color: var(--do); }
+  .roles button[aria-pressed="true"] { color: #06222b; background: var(--read); border-color: var(--read); }
+  .roles button[data-role="do"][aria-pressed="true"] { color: #2b1c00; background: var(--act); border-color: var(--act); }
   .roles button[data-role="all"][aria-pressed="true"] { color: var(--ink); background: var(--panel-2); border-color: var(--dim); }
 
-  /* 장 */
+  /* 색이 무엇을 뜻하는지 머리에 적어 둔다. 무대에서 헷갈리면 안 된다. */
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 10px 0 0; font-size: 13px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; color: var(--dim); }
+  .legend i { width: 12px; height: 12px; border-radius: 3px; }
+
   section { margin: 16px 0 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
   .head { display: flex; align-items: baseline; gap: 10px; padding: 12px 14px; background: var(--panel-2); }
-  .no { font-size: 21px; font-weight: 800; color: var(--say); font-variant-numeric: tabular-nums; }
+  .no { font-size: 21px; font-weight: 800; color: var(--read); font-variant-numeric: tabular-nums; }
   .ttl { font-size: 15px; font-weight: 700; flex: 1; }
   .sec { font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .body { padding: 4px 14px 14px; }
 
-  /* 말할 것 · 누를 것 */
-  .say, .do {
+  /* 읽는 것과 하는 것 */
+  .read, .act {
     margin: 10px 0 0; padding: 11px 13px 11px 15px;
     border-radius: 9px; border-left: 4px solid;
   }
-  .say { background: var(--say-bg); border-color: var(--say); }
-  .do  { background: var(--do-bg);  border-color: var(--do); }
-  .tag { display: block; margin: 0 0 4px; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; }
-  .say .tag { color: var(--say); }
-  .do .tag  { color: var(--do); }
-  .say p, .do p { margin: 6px 0 0; }
-  .say p:first-of-type, .do p:first-of-type { margin-top: 0; }
+  .read { background: var(--read-bg); border-color: var(--read); }
+  .act  { background: var(--act-bg);  border-color: var(--act); }
+  .tag { display: block; margin: 0 0 5px; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; }
+  .read .tag { color: var(--read); }
+  .act .tag  { color: var(--act); }
+  .read p, .act p { margin: 6px 0 0; }
+  .read p:first-of-type, .act p:first-of-type { margin-top: 0; }
   b { font-weight: 800; }
-  .pause { display: inline-block; color: var(--say); font-weight: 800; }
   .note { margin: 9px 0 0; color: var(--dim); font-size: 14px; }
   .stop { margin: 9px 0 0; color: var(--stop); font-size: 14px; font-weight: 600; }
 
-  /* 큐시트 표 */
-  .cue { margin: 10px 0 0; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
-  .cue > div { display: grid; grid-template-columns: 62px 1fr; border-top: 1px solid var(--line); }
-  .cue > div:first-child { border-top: 0; }
-  .cue .t { padding: 9px 8px; background: var(--panel-2); color: var(--do); font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .cue .c { padding: 9px 11px; font-size: 15px; }
+  /* 순서가 있는 행동. 번호를 크게 두어 손이 따라갈 수 있게 한다. */
+  .act ol { margin: 6px 0 0; padding: 0 0 0 4px; list-style: none; counter-reset: step; }
+  .act ol li { position: relative; margin: 7px 0 0; padding-left: 26px; counter-increment: step; }
+  .act ol li::before {
+    content: counter(step); position: absolute; left: 0; top: 1px;
+    width: 19px; height: 19px; border-radius: 50%;
+    background: var(--act); color: #2b1c00;
+    font-size: 12px; font-weight: 800; text-align: center; line-height: 19px;
+  }
 
-  /* 빠른 답 */
+  /* 큐시트 — 초 / 읽는다 / 한다 를 세 층으로 쌓는다 */
+  .cue { margin: 12px 0 0; }
+  .cue > li { list-style: none; margin: 0 0 10px; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .cue .when { padding: 7px 11px; background: var(--panel-2); color: var(--act); font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .cue .line { display: grid; grid-template-columns: 58px 1fr; gap: 8px; padding: 9px 11px; border-top: 1px solid var(--line); font-size: 15px; }
+  .cue .line > b { font-size: 12px; font-weight: 800; letter-spacing: 0.03em; padding-top: 3px; }
+  .cue .line.r > b { color: var(--read); }
+  .cue .line.a > b { color: var(--act); }
+  .cue .line.r { background: rgb(53 214 245 / 0.07); }
+  .cue .line.a { background: rgb(255 180 84 / 0.07); }
+
   .qa { margin: 9px 0 0; }
   .qa dt { color: var(--ok); font-size: 14px; font-weight: 700; }
   .qa dd { margin: 3px 0 10px; font-size: 15px; }
 
   footer { margin: 22px 0 0; color: var(--dim); font-size: 13px; text-align: center; }
 
-  /* 역할 필터 */
-  body[data-view="say"] .do, body[data-view="do"] .say { display: none; }
-  body[data-view="say"] .only-do, body[data-view="do"] .only-say { display: none; }
-
-  @media (max-width: 400px) {
-    body { font-size: 16px; }
-    .roles button { font-size: 14px; }
-  }
-
   /*
-    고정 스톱워치.
-
-    발표 중에는 화면을 볼 여유가 거의 없으므로, 초를 읽는 것보다 **지금 몇 장에
-    있어야 하는지**가 중요하다. 그래서 경과 시간 옆에 예정 장을 함께 띄운다.
-    예정보다 늦으면 색이 바뀐다 — 숫자를 계산하지 않아도 알 수 있어야 한다.
-
-    누르는 자리를 크게 잡는다. 무대에서 작은 단추를 정확히 누르지 못한다.
+    역할 필터.
+    발표자 화면에는 읽을 것과 내 행동만. 시연자 화면에는 내 행동과, 신호로 쓸 대사만.
+    시연자에게 대사를 완전히 감추면 언제 눌러야 하는지 알 수 없다 — 흐리게 남긴다.
   */
+  body[data-view="say"] [data-who="do"] { display: none; }
+  body[data-view="do"] [data-who="say"] { display: none; }
+  body[data-view="do"] .read { background: transparent; border-color: var(--line); }
+  body[data-view="do"] .read .tag { color: var(--dim); }
+  body[data-view="do"] .read p { color: var(--dim); font-size: 14px; }
+  body[data-view="do"] .cue .line.r { background: none; }
+  body[data-view="do"] .cue .line.r > b,
+  body[data-view="do"] .cue .line.r { color: var(--dim); }
+
+  /* 고정 스톱워치 */
   .watch {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
     display: flex; align-items: center; gap: 10px;
@@ -131,18 +142,24 @@
     letter-spacing: -0.02em; color: var(--ink); min-width: 104px;
   }
   .watch.late .watch-time { color: var(--stop); }
-  .watch.done .watch-time { color: var(--do); }
+  .watch.done .watch-time { color: var(--act); }
   .watch-now { flex: 1; line-height: 1.3; }
-  .watch-now b { display: block; font-size: 15px; color: var(--say); }
+  .watch-now b { display: block; font-size: 15px; color: var(--read); }
   .watch-now small { color: var(--dim); font-size: 12px; }
   .watch.late .watch-now b { color: var(--stop); }
   .watch button {
     min-width: 62px; min-height: 46px; padding: 0 12px;
     font: inherit; font-weight: 800; font-size: 15px;
-    color: #06222b; background: var(--say);
+    color: #06222b; background: var(--read);
     border: 0; border-radius: 10px; cursor: pointer;
   }
   .watch button.ghost { color: var(--dim); background: var(--panel-2); }
+
+  @media (max-width: 400px) {
+    body { font-size: 16px; }
+    .roles button { font-size: 14px; }
+    .cue .line { grid-template-columns: 50px 1fr; }
+  }
 </style>
 
 <div class="wrap">
@@ -156,157 +173,251 @@
         <button type="button" data-role="do" aria-pressed="false">시연자</button>
         <button type="button" data-role="all" aria-pressed="false">둘 다</button>
       </div>
+      <p class="legend">
+        <span><i style="background:#35d6f5"></i>소리 내어 읽는다</span>
+        <span><i style="background:#ffb454"></i>몸으로 한다</span>
+        <span><i style="background:#ff7a6b"></i>하지 않는다</span>
+      </p>
     </div>
   </header>
 
   <section>
     <div class="head"><span class="no">01</span><span class="ttl">같은 농지, 두 등급</span><span class="sec">0:00–0:30</span></div>
     <div class="body">
-      <div class="say"><span class="tag">말한다</span>
+      <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>화면의 농지 하나입니다. 경기 이천 유방동 870답.</p>
-        <p><span class="pause">— 한 박자 —</span></p>
         <p><b>여기에 사과를 심는 게 맞을까요, 상추를 심는 게 맞을까요?</b></p>
-        <p><span class="pause">— 2초 침묵. 답을 기다리지 않는다 —</span></p>
         <p>저희도 몰랐습니다.</p>
         <p><b>공식 토양도는 사과에 과수 4급지, 상추에 밭 3급지를 씁니다.</b></p>
         <p><b>작물을 바꾸면 판정에 쓰는 공식 등급 자체가 갈립니다.</b></p>
         <p><b>다른 작물을 고르셔도 같은 방식으로 동작합니다. 질의응답에서 바로 열어 보이겠습니다.</b></p>
         <p>팀 김남궁택, 밭보다의 남궁도현입니다.</p>
       </div>
-      <div class="do"><span class="tag">누른다</span>
-        <p>1장 띄운 채 <b>대기</b>. 아무것도 누르지 않는다.</p>
-        <p>배포본 탭을 <b>미리 01 입력 화면</b>에 두고, 지번 검색창을 비워 둔다.</p>
+      <div class="act" data-who="say"><span class="tag">발표자가 몸으로 한다</span>
+        <ol>
+          <li>지번을 말한 뒤 <b>한 박자</b> 쉰다.</li>
+          <li>질문을 던지고 <b>2초 침묵.</b> 시선은 심사위원석. <b>손으로 화면을 가리키지 않는다</b> — 가리키면 답을 요구하는 것으로 보인다.</li>
+          <li><b>과수 4급지</b>와 <b>밭 3급지</b>를 말할 때만 화면의 두 카드를 차례로 짚는다. 다른 문장보다 반 박자 느리게.</li>
+        </ol>
       </div>
-      <p class="note only-say">두 등급 숫자는 반 박자 느리게 또박또박. 이름은 등급 <b>뒤에</b> 댄다.</p>
-      <p class="stop only-say">금지 — 귀농 인구·실패율·시장 규모, 손 들게 유도, 팀 소개 길게.</p>
+      <div class="act" data-who="do"><span class="tag">시연자가 몸으로 한다</span>
+        <ol>
+          <li>1장을 띄운 채 <b>아무것도 누르지 않고 대기</b>한다.</li>
+          <li>배포본 탭을 <b>01 입력 화면</b>에 미리 띄워 둔다. 지번 검색창은 <b>비운다</b>.</li>
+          <li>노트북 알림·절전이 꺼져 있는지 마지막으로 본다.</li>
+        </ol>
+      </div>
+      <p class="stop" data-who="say">읽지 않는다 — 귀농 인구·실패율·시장 규모, 손 들어 보라는 유도, 팀 소개 길게.</p>
     </div>
   </section>
 
   <section>
     <div class="head"><span class="no">02</span><span class="ttl">단 한 칸</span><span class="sec">0:30–0:52</span></div>
     <div class="body">
-      <div class="say"><span class="tag">말한다</span>
+      <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>저희가 보는 단위는 시·군 평균이 아닙니다. <b>지금 딛고 선 단 한 칸의 필지입니다.</b> 화면 낱말로는 <b>내 농지 한 칸</b>입니다.</p>
         <p>밭보다는 <b>그 한 칸의 근거를 처음부터 끝까지 되짚습니다.</b></p>
         <p>경계를 먼저 확인하고, 같은 지번의 토양, 작물별 공식 등급, 그 좌표의 예보, 출처와 기준시각까지. <b>다섯 고리입니다.</b></p>
       </div>
-      <p class="note only-say">다섯 낱말을 끊어 말한다. 이 장이 뒤 팀들과 비교될 기준어를 남긴다.</p>
+      <div class="act" data-who="say"><span class="tag">발표자가 몸으로 한다</span>
+        <ol><li>다섯 고리를 <b>낱말마다 끊어</b> 말하며 화면의 다섯 낱말을 왼쪽부터 차례로 짚는다.</li></ol>
+      </div>
     </div>
   </section>
 
   <section>
     <div class="head"><span class="no">03</span><span class="ttl">왜 내 농지로 안 이어지나</span><span class="sec">0:52–1:15</span></div>
     <div class="body">
-      <div class="say"><span class="tag">말한다</span>
+      <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>자료가 없어서 막히는 게 아닙니다. <b>자료는 다 있습니다.</b></p>
         <p>화면 가운데가 방금 보신 그 한 칸입니다. 그 위에 네 갈래가 놓여 있습니다.</p>
         <p><b>팜맵은 2022년, 토양 검정은 2025년, 예보는 오늘 아침입니다. 같은 한 칸에 대는 자료가 4년 가까이 벌어져 있습니다.</b></p>
         <p>초보자는 이 네 곳을 각각 찾아 자기 값을 골라 작물 기준과 대조해야 합니다. <b>그 대조가 안 되는 것이 문제입니다.</b></p>
       </div>
-      <p class="note only-say">연도는 <b>셋만</b>. 넷을 다 읊으면 22초를 넘긴다. 밀리면 마지막 문장을 뺀다(−6초).</p>
+      <div class="act" data-who="say"><span class="tag">발표자가 몸으로 한다</span>
+        <ol>
+          <li>가운데 필지를 <b>한 번 짚는다.</b></li>
+          <li>연도를 말하며 네 칸을 <b>시계 방향으로</b> 훑는다. 연도는 <b>셋만</b> 말한다.</li>
+        </ol>
+      </div>
+      <p class="note" data-who="say">밀리면 마지막 문장을 뺀다(−6초).</p>
     </div>
   </section>
 
   <section>
     <div class="head"><span class="no">04</span><span class="ttl">라이브 시연</span><span class="sec">1:15–2:25</span></div>
     <div class="body">
-      <div class="do"><span class="tag">화면을 배포본으로 전환</span>
-        <p>이 70초는 <b>시연자가 운전한다.</b> 발표자는 화면을 보며 말한다.</p>
+      <div class="act"><span class="tag">먼저</span>
+        <ol><li>화면을 <b>배포본으로 전환</b>한다. 이 70초는 <b>시연자가 운전</b>하고 발표자는 화면을 보며 읽는다.</li></ol>
       </div>
-      <div class="cue">
-        <div><span class="t">0–8초</span><span class="c"><b class="only-do">누른다 —</b> 지번 <b>85-61</b> 입력 → 후보 <b>대관령면 85-61전</b> 누르기<br><span class="only-say">말 — “지금 배포된 서비스입니다.” → <b>“지번과 경계를 사람이 확인합니다.”</b></span></span></div>
-        <div><span class="t">8–15초</span><span class="c"><b class="only-do">누른다 —</b> <b>상추</b> · <b>3일</b> → <b>이 농지 분석하기</b><br><span class="only-say">말 — <b>“토양은 이 필지번호로, 예보는 이 좌표로 가져옵니다.”</b></span></span></div>
-        <div><span class="t">15–28초</span><span class="c"><b class="only-do">멈춘다 —</b> 02 판정서 상단에서 대기<br><span class="only-say">말 — <b>“판정과 함께 어떤 근거가 좋음이고 주의인지, 네 갈래가 응답했는지 같이 공개합니다.”</b> 위험 칸 알약을 짚고 <b>원인은 화면에 적힌 낱말을 읽는다</b>(오늘은 습도)</span></span></div>
-        <div><span class="t">28–42초</span><span class="c"><b class="only-do">누른다 —</b> 탭 <b>03</b> → 점 단추로 <b>4쪽</b>으로 건너뛰기<br><span class="only-say">말 — <b>“평균기온이 상추 공식 기준을 얼마나 벗어났는지 눈금으로 보입니다.”</b> 이어 <b>기관과 기준시각</b>을 짚는다</span></span></div>
-        <div><span class="t">42–62초</span><span class="c"><b class="only-do">누른다 —</b> 탭 <b>04</b> (1쪽에서 시작)<br><span class="only-say">말 — <b>“판정을 규칙이 정했다고 먼저 밝히고, AI가 쉬운 말로 옮깁니다.”</b></span></span></div>
-        <div><span class="t">62–70초</span><span class="c"><b class="only-do">누른다 —</b> 04 점 단추로 <b>2쪽 → 3쪽</b><br><span class="only-say">말 — <b>“먼저 할 일, 현장에서 봐야 하는 것까지 같이 적습니다.”</b> → <b>“질의응답에서 다른 작물로 바꿔 보이겠습니다.”</b></span></span></div>
+
+      <ol class="cue">
+        <li>
+          <div class="when">0–8초 · 01 농지 고르기</div>
+          <div class="line r"><b>읽는다</b><span>“지금 배포된 서비스입니다.” <b>“지번과 경계를 사람이 확인합니다.”</b></span></div>
+          <div class="line a" data-who="do"><b>한다</b><span>① 지번 칸에 <b>85-61</b> 타이핑 → ② 후보 목록에서 <b>「대관령면 85-61전」</b> 줄을 누른다 → ③ 지도에 경계가 그려지는 것을 확인</span></div>
+          <div class="line a" data-who="say"><b>한다</b><span>후보를 고르는 손동작을 관객이 보도록 <b>화면을 가린 채 서지 않는다.</b></span></div>
+        </li>
+        <li>
+          <div class="when">8–15초 · 작물과 기간</div>
+          <div class="line r"><b>읽는다</b><span><b>“토양은 이 필지번호로, 예보는 이 좌표로 가져옵니다.”</b></span></div>
+          <div class="line a" data-who="do"><b>한다</b><span>① 작물 <b>상추</b> 누르기 → ② 기간 <b>3일</b> 누르기 → ③ <b>「이 농지 분석하기」</b> 누르기</span></div>
+        </li>
+        <li>
+          <div class="when">15–28초 · 02 판정서</div>
+          <div class="line r"><b>읽는다</b><span><b>“판정과 함께, 어떤 근거가 좋음이고 어떤 근거가 주의인지, 네 갈래 공공데이터가 응답했는지를 같이 공개합니다.”</b> 이어 <b>“날짜마다 무엇이 기준을 넘었는지 적고, 아래에 무엇이 가장 크게 반영됐는지 밝힙니다.”</b></span></div>
+          <div class="line a" data-who="do"><b>한다</b><span>① <b>아무것도 누르지 않고</b> 02 상단에서 멈춘다 → ② 발표자가 다 읽을 때까지 기다린다</span></div>
+          <div class="line a" data-who="say"><b>한다</b><span>① 판정 낱말과 상태 배지를 <b>화면에서 읽는다</b> → ② 위험 칸의 <b>날짜별 알약을 손으로 짚는다</b> → ③ 원인 낱말은 <b>화면에 적힌 것을 읽는다</b>(오늘은 습도. 기온이라고 외워 말하지 않는다)</span></div>
+        </li>
+        <li>
+          <div class="when">28–42초 · 03 근거</div>
+          <div class="line r"><b>읽는다</b><span><b>“평균기온이 상추 공식 기준을 얼마나 벗어났는지 눈금으로 보입니다.”</b> 이어 <b>“기관과 기준시각까지 남깁니다.”</b></span></div>
+          <div class="line a" data-who="do"><b>한다</b><span>① 탭 <b>03</b> 누르기(1쪽에서 시작) → ② 탭 줄 <b>바로 위 점 단추</b>에서 <b>네 번째 점</b>을 눌러 4쪽으로 건너뛴다</span></div>
+          <div class="line a" data-who="say"><b>한다</b><span>기준 구간과 실측 위치를 <b>손으로 가리킨다.</b> 4쪽으로 넘어간 뒤 <b>기관 열과 기준시각 열</b>을 차례로 짚는다.</span></div>
+        </li>
+        <li>
+          <div class="when">42–62초 · 04 쉬운 말</div>
+          <div class="line r"><b>읽는다</b><span><b>“04에서는 판정을 규칙이 정했다고 먼저 밝히고, AI가 근거와 먼저 할 일을 쉬운 말로 옮깁니다.”</b></span></div>
+          <div class="line a" data-who="do"><b>한다</b><span>① 탭 <b>04</b> 누르기 → ② <b>1쪽 그대로</b> 둔다(탭을 바꾸면 쪽은 1로 돌아간다)</span></div>
+        </li>
+        <li>
+          <div class="when">62–70초 · 04 나머지 쪽</div>
+          <div class="line r"><b>읽는다</b><span><b>“먼저 할 일, 그리고 이 자료로는 알 수 없어 현장에서 봐야 하는 것까지 같이 적습니다.”</b> 이어 <b>“질의응답에서 다른 작물로 바꿔 보이겠습니다.”</b></span></div>
+          <div class="line a" data-who="do"><b>한다</b><span>① 점 단추 <b>두 번째 점</b> 누르기(먼저 할 일) → ② <b>세 번째 점</b> 누르기(현장 확인) → ③ 여기서 멈추고 5장 슬라이드로 전환 대기</span></div>
+        </li>
+      </ol>
+
+      <div class="act" data-who="do"><span class="tag">쪽 넘김이 어디 있나</span>
+        <ol>
+          <li>점 단추는 <b>「01 02 03 04」 줄 바로 위</b>에 있다. 점 넷 + 좌우 화살표 + <b>03-2 / 4</b> 같은 위치 표시.</li>
+          <li><b>점을 직접 눌러 건너뛴다.</b> 화살표로 한 칸씩 갈 필요가 없다.</li>
+          <li>휴대폰이면 <b>좌우로 쓸어</b> 넘긴다.</li>
+        </ol>
       </div>
-      <p class="note only-do"><b>03·04는 네 쪽이다.</b> 점 단추는 <b>01 02 03 04 줄 바로 위</b>. 점을 직접 눌러 건너뛴다. 화면을 바꾸면 쪽은 1로 돌아간다.</p>
-      <div class="do"><span class="tag">5초 규칙</span>
-        <p>누르고 <b>5초 안에</b> 다음 화면이 안 나오면 기다리지 않는다. 다시 누르지 않는다. 새로고침하지 않는다.</p>
-        <p>발표자에게 <b>고개를 한 번 끄덕여</b> 신호하고 미리 분석해 둔 탭으로 넘어간다.</p>
+
+      <div class="act"><span class="tag">5초 규칙</span>
+        <ol>
+          <li>누르고 <b>5초 안에</b> 다음 화면이 안 나오면 <b>기다리지 않는다.</b></li>
+          <li><b>다시 누르지 않는다. 새로고침하지 않는다.</b></li>
+          <li><span data-who="do">시연자는 발표자에게 <b>고개를 한 번 끄덕여</b> 신호하고 미리 분석해 둔 탭으로 넘어간다.</span><span data-who="say">발표자는 아래 전환 문장을 <b>그대로</b> 읽는다.</span></li>
+        </ol>
       </div>
-      <div class="say"><span class="tag">고정 전환 문장 — 그대로 말한다</span>
+      <div class="read"><span class="tag">막히면 이 문장을 그대로 읽는다</span>
         <p><b>“지금은 저장된 검증 장면으로 이어가며, 서비스에서는 실시간과 검증 스냅샷, 시연 자료를 구분해 표시합니다.”</b></p>
       </div>
-      <p class="stop">원인을 설명하지 않는다. 분석에 걸린 초·후보 건수를 말하지 않는다.</p>
+      <p class="stop">하지 않는다 — 원인 설명, 분석에 걸린 초·후보 건수 말하기, 사과하기.</p>
     </div>
   </section>
 
   <section>
     <div class="head"><span class="no">05</span><span class="ttl">판정은 규칙, AI는 옮겨 쓰기</span><span class="sec">2:25–3:04</span></div>
     <div class="body">
-      <div class="say"><span class="tag">말한다</span>
+      <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>결론 문장은 AI가 썼습니다. <b>판정을 정한 것은 규칙입니다.</b></p>
         <p>화면 오른쪽이 그 경로입니다. 다 읽지는 않겠습니다. <b>다섯 중에 AI가 하는 것은 세 번째, 문장을 쓰는 것 하나입니다. 나머지 넷은 규칙입니다.</b></p>
         <p><b>네 번째 단계에서, 문장이 판정을 그대로 인용했는지, 금지 표현이 없는지, 근거에 없는 숫자를 새로 만들지 않았는지를 검사합니다.</b></p>
         <p><b>걸리면 같은 근거의 규칙 문장으로 되돌립니다.</b></p>
         <p>회귀 테스트 13파일 115건을 통과했고, <b>감점 폭을 위아래로 20퍼센트 흔든 560개 시나리오에서 주 판정 단계는 바뀌지 않았습니다.</b> 다만 <b>코드 회귀와 산식 민감도 근거이고, 현장 정확도 검증은 아닙니다.</b></p>
       </div>
-      <div class="do"><span class="tag">누른다</span><p>슬라이드만. 배포본으로 돌아가지 않는다.</p></div>
-      <p class="note only-say">세 번째 줄의 <b>AI</b> 표시를 손으로 짚는다. 마지막 각주 문장을 빼지 않는다 — 빼면 앞 수치가 과장이 된다.</p>
+      <div class="act" data-who="say"><span class="tag">발표자가 몸으로 한다</span>
+        <ol>
+          <li><b>세 번째 줄의 「AI」 표시</b>를 손으로 짚으며 「다섯 중 하나」를 말한다.</li>
+          <li><b>네 번째 줄에서 한 박자 멈춘다.</b> 검사 내용이 이 장의 핵심이다.</li>
+          <li>마지막 각주 문장은 <b>속도를 줄이지 않고</b> 끝까지 읽는다. 빼면 앞 수치가 과장이 된다.</li>
+        </ol>
+      </div>
+      <div class="act" data-who="do"><span class="tag">시연자가 몸으로 한다</span>
+        <ol><li>슬라이드만 넘긴다. <b>배포본으로 돌아가지 않는다.</b></li></ol>
+      </div>
+      <p class="stop" data-who="say">읽지 않는다 — 다섯 단계 이름 낭독, 검사 항목 전수 나열, 모델 이름·버전.</p>
     </div>
   </section>
 
   <section>
     <div class="head"><span class="no">06</span><span class="ttl">안 될 때</span><span class="sec">3:04–3:34</span></div>
     <div class="body">
-      <div class="say"><span class="tag">말한다</span>
+      <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>운영에서 중요한 것은 잘 될 때가 아니라 <b>안 될 때</b>입니다.</p>
         <p>화면을 보시면 <b>소스마다 상태와 기준시각이 따로 붙어 있습니다.</b> 지금은 넷 다 실시간입니다. <b>실시간 연결, 저장해 둔 검증 스냅샷, 시연용 자료를 구분해 씁니다.</b> 실패한 소스만 대체하고 나머지는 실시간을 그대로 씁니다.</p>
         <p><b>8월 3일에 공공데이터 인증이 실제로 막혔습니다.</b> 그때 이 경로로 판정까지 이어지는 것을 확인했습니다. <b>가정이 아니라 겪은 일입니다.</b></p>
       </div>
-      <p class="note only-say">밀리면 세 상태 나열을 뺀다(−5초).</p>
-      <p class="stop only-say">금지 — 운영비 0원, 운영 인력 없음, 장애를 무대에서 재현.</p>
+      <div class="act" data-who="say"><span class="tag">발표자가 몸으로 한다</span>
+        <ol><li>왼쪽 세 상태 카드를 <b>위에서 아래로</b> 짚으며 셋을 말한다. 밀리면 나열을 빼고 「세 가지를 구분해 씁니다」로 줄인다(−5초).</li></ol>
+      </div>
+      <p class="stop" data-who="say">읽지 않는다 — 운영비 0원, 운영 인력 없음, 장애를 무대에서 재현해 보이겠다는 제안.</p>
     </div>
   </section>
 
   <section>
     <div class="head"><span class="no">07</span><span class="ttl">누가 언제 쓰는가</span><span class="sec">3:34–4:01</span></div>
     <div class="body">
-      <div class="say"><span class="tag">말한다</span>
+      <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>이 서비스는 매일 쓰는 것이 아닙니다. <b>판단이 필요한 세 순간에 옵니다.</b></p>
         <p><b>농지를 계약하기 전. 심을 작물을 바꿀 때. 파종 전.</b></p>
         <p>그래서 농지를 즐겨찾기로 담아 둡니다. 브라우저에만 저장합니다.</p>
         <p><b>지역을 넓힐 때는 행정구역별로 자료를 따로 만들어 두지 않습니다.</b> 확인한 농지 단위로 그때 조회하는 구조입니다.</p>
         <p>재방문율은 아직 측정하지 않았고 유료 고객도 없습니다. <b>다음으로 확인할 것은 현장 정확도입니다.</b> 실제 계약 전 판단이 오가는 상담 창구에서 써 보고, <b>판정이 현장과 맞았는지 확인하려 합니다.</b></p>
       </div>
-      <p class="note only-say"><b>세 순간을 또박또박 끊어 말한다.</b> 이 장의 주장은 「누가 언제 쓰는가」다. 실증 제안은 한 줄로 흘린다. 밀리면 세 순간을 둘로 줄인다(계약 전, 작물 바꿀 때).</p>
-      <p class="stop only-say">금지 — 라이선스 금액, 기관 도입 확정, 「센터가 매일 쓴다」.</p>
+      <div class="act" data-who="say"><span class="tag">발표자가 몸으로 한다</span>
+        <ol>
+          <li>세 순간을 <b>또박또박 끊어</b> 말하며 화면의 1·2·3을 차례로 짚는다. 이 장의 주장이 그것이다.</li>
+          <li>구조 문장과 검증 문장은 <b>속도를 올려 흘린다.</b> 앞으로 당기면 사업 이야기가 된다.</li>
+          <li>밀리면 세 순간을 <b>둘로 줄인다</b>(계약 전, 작물 바꿀 때). 구조 문장은 줄이지 않는다.</li>
+        </ol>
+      </div>
+      <p class="stop" data-who="say">읽지 않는다 — 라이선스 금액, 기관 도입 확정, 「센터가 매일 쓴다」, 「지역 확대 비용이 사실상 0」.</p>
     </div>
   </section>
 
   <section>
     <div class="head"><span class="no">08</span><span class="ttl">못 하는 것</span><span class="sec">4:01–4:29</span></div>
     <div class="body">
-      <div class="say"><span class="tag">말한다</span>
+      <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>못 하는 것을 화면에 적어 두었습니다. <b>세 가지만 말씀드립니다.</b></p>
         <p>토양 산도 조회는 <b>대관령 반경 1km 258필지 중 18건, 7.0%</b>였습니다. 없는 값을 다른 농지에서 채우지 않습니다.</p>
         <p><b>예보는 3일 단기예보만</b> 씁니다.</p>
         <p>가장 가까운 관측소가 <b>6.45km</b> 떨어져 있어 거리를 적고 <b>점수에 넣지 않습니다.</b></p>
         <p><b>현장 정확도는 아직 검증하지 않았습니다. 그래서 참고 판정으로 한정합니다.</b></p>
       </div>
-      <p class="note only-say">7.0%는 <b>반드시 분모와 함께</b>. 한계를 넷 이상 늘리지 않는다.</p>
+      <div class="act" data-who="say"><span class="tag">발표자가 몸으로 한다</span>
+        <ol>
+          <li><b>7.0%는 분모와 함께</b> 읽는다. 「258필지 중 18건」을 먼저, 퍼센트를 뒤에.</li>
+          <li>마지막 문장에서 <b>속도를 늦춘다.</b> 이 발표에서 가장 정직한 자리다.</li>
+        </ol>
+      </div>
+      <p class="stop" data-who="say">읽지 않는다 — 한계를 넷 이상 늘리기, 중기예보를 구현했다는 말, 과수·논 등급을 한계로 말하기.</p>
     </div>
   </section>
 
   <section>
     <div class="head"><span class="no">09</span><span class="ttl">마무리</span><span class="sec">4:29–4:43</span></div>
     <div class="body">
-      <div class="say"><span class="tag">말한다</span>
+      <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p><b>내 땅의 가능성을 필지 단위로 투명하게 들여다보는 서비스입니다.</b></p>
         <p>단순한 추천이 아니라, 판단의 근거를 수치와 출처와 기준시각까지 눈으로 확인하게 만듭니다.</p>
-        <p>지금 열어 보실 수 있습니다. 감사합니다.</p>
+        <p>QR로 지금 열어 보실 수 있습니다. <b>작물만 바꿔 보시면 근거가 갈립니다.</b></p>
+        <p>감사합니다.</p>
       </div>
-      <div class="do"><span class="tag">누른다</span><p>9장에서 멈춘다. QR을 띄운 채 질의응답으로 넘어간다.</p></div>
+      <div class="act" data-who="say"><span class="tag">발표자가 몸으로 한다</span>
+        <ol><li>첫 문장은 <b>제출한 솔루션 명과 같은 문장</b>이다. 낱말을 바꾸지 않는다. 말한 뒤 <b>멈추고</b> 질의응답을 받는다.</li></ol>
+      </div>
+      <div class="act" data-who="do"><span class="tag">시연자가 몸으로 한다</span>
+        <ol><li>9장에서 멈춘다. <b>QR을 띄운 채</b> 질의응답으로 넘어간다.</li></ol>
+      </div>
     </div>
   </section>
 
   <section>
-    <div class="head"><span class="no">Q</span><span class="ttl">질의응답 빠른 답</span><span class="sec">5분</span></div>
+    <div class="head"><span class="no">Q</span><span class="ttl">질의응답</span><span class="sec">5분</span></div>
     <div class="body">
-      <div class="do"><span class="tag">시연자 — 열 준비</span>
-        <p><b>작물 전환:</b> 탭 03 → 없으면 <b>경기 이천</b> → 지번 <b>870</b> → 유방동 870답 → <b>작물만</b> 바꿔 재분석 → 02 카드에서 두 등급.</p>
+      <div class="act" data-who="do"><span class="tag">작물 전환 — 물으면 이 순서로 연다</span>
+        <ol>
+          <li>탭 <b>03</b>(유방동 결과)로 간다. 없으면 01에서 <b>「경기 이천」</b> 누르기</li>
+          <li>지번 칸에 <b>870</b> 타이핑 → 후보 <b>「유방동 870답」</b> 누르기</li>
+          <li><b>작물만</b> 사과 ↔ 상추로 바꾼다. 기간은 건드리지 않는다</li>
+          <li><b>「이 농지 분석하기」</b> → 탭 <b>02</b> → 토양 적성 카드에서 등급 확인</li>
+          <li>여기도 <b>5초 규칙</b>을 쓴다. 안 열리면 캡처로 답한다</li>
+        </ol>
       </div>
       <dl class="qa">
         <dt>흙토람과 무엇이 다릅니까</dt>
@@ -324,9 +435,11 @@
         <dt>예보를 더 늘릴 수 있나요</dt>
         <dd>3일 단기예보만 구현했고 중기예보는 아직입니다. 고도화 1순위입니다.</dd>
         <dt>모를 때</dt>
-        <dd>그 부분까지는 생각하지 못했습니다. 고려해서 추후에 반영해 보겠습니다.</dd>
+        <dd>그 부분까지는 생각하지 못했습니다. 고려해서 다음 검증에 반영하겠습니다.</dd>
         <dt>측정 안 된 것을 물으면</dt>
         <dd>그건 아직 측정하지 않았습니다. 지금 말씀드리면 추정이 됩니다.</dd>
+        <dt>다른 팀 평가를 요구받으면</dt>
+        <dd>다른 팀의 구현은 확인하지 못했고 평가하지 않겠습니다. 저희가 증명할 수 있는 부분만 말씀드리겠습니다.</dd>
       </dl>
     </div>
   </section>
@@ -353,14 +466,32 @@
     });
   });
 
-  /* 스크롤하면 머리를 접는다. 24px은 손가락이 살짝 스친 것과 실제 스크롤을 가르는 값. */
-  const onScroll = () => body.classList.toggle("scrolled", window.scrollY > 24);
+  /*
+    스크롤하면 머리를 접는다. 접는 선과 펴는 선을 다르게 둔다.
+
+    한 선(24px)으로 판단했더니 그 근처에서 떨렸다. 머리가 접히면 sticky 높이가 줄어
+    내용이 위로 밀리고, 밀린 만큼 스크롤 값이 바뀌어 다시 판정이 뒤집힌다.
+    앱의 고정 띠에서 겪은 것과 같은 되먹임이다.
+
+    그래서 **72px을 넘으면 접고, 8px 아래로 돌아와야 편다.** 그 사이에서는 그대로 둔다.
+    프레임마다 한 번만 재서 스크롤 이벤트가 몰려도 한 번만 판단한다.
+  */
+  let folded = false, rafId = 0;
+  const measureHead = () => {
+    rafId = 0;
+    const y = window.scrollY;
+    if (!folded && y > 72) folded = true;
+    else if (folded && y < 8) folded = false;
+    else return;
+    body.classList.toggle("scrolled", folded);
+  };
+  const onScroll = () => { if (!rafId) rafId = requestAnimationFrame(measureHead); };
   addEventListener("scroll", onScroll, { passive: true });
-  onScroll();
+  measureHead();
 
   /*
     장별 누적 끝 시각(초). 대본 1절의 실측 예상값이다.
-    이 값이 바뀌면 대본과 함께 고쳐야 한다.
+    리허설로 실제 시간이 나오면 이 배열을 고친다.
   */
   const PLAN = [
     [30, "1장 같은 농지, 두 등급"],
