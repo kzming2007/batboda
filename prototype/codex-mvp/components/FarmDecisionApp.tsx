@@ -767,6 +767,27 @@ export default function FarmDecisionApp({ initialResult }: Props) {
   */
   const swipeFrom = useRef<{ x: number; y: number } | null>(null);
 
+  /*
+    가로로 스크롤되는 칸 안에서 시작한 손짓은 잡지 않는다.
+
+    03 4쪽의 「사용한 자료」 표가 좁은 화면에서 가로로 스크롤된다. 표를 옆으로 밀려는
+    손짓과 쪽을 넘기는 손짓이 같은 방향이라, 표를 보려 할 때마다 쪽이 넘어갔다
+    (2026-08-05 발표 직전 확인). 지도만 이름으로 제외해 두었던 것이 원인이다.
+
+    이름으로 하나씩 빼면 새로 생기는 칸을 또 놓친다. 그래서 **넘칠 수 있고 실제로 넘친
+    칸**을 성질로 찾는다. 손짓이 시작된 자리에서 위로 올라가며 본다.
+  */
+  function startsInsideHorizontalScroller(target: HTMLElement | null) {
+    let node: HTMLElement | null = target;
+    while (node && node !== document.body) {
+      const overflowX = getComputedStyle(node).overflowX;
+      const scrollable = overflowX === "auto" || overflowX === "scroll";
+      if (scrollable && node.scrollWidth > node.clientWidth + 1) return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
   function handleSheetTouchStart(event: TouchEvent<HTMLElement>) {
     swipeFrom.current = null;
     if (!pagerLabels) return;
@@ -774,6 +795,7 @@ export default function FarmDecisionApp({ initialResult }: Props) {
     if (!touch) return;
     const target = event.target as HTMLElement | null;
     if (target?.closest?.(".farm-map, .leaflet-container")) return;
+    if (startsInsideHorizontalScroller(target)) return;
     swipeFrom.current = { x: touch.clientX, y: touch.clientY };
   }
 
