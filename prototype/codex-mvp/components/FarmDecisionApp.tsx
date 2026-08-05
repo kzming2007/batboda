@@ -462,6 +462,38 @@ export default function FarmDecisionApp({ initialResult }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>("input");
   const [analyzed, setAnalyzed] = useState(false);
+
+  /*
+    조건 칸 안의 분석 단추가 온전히 보이면 화면 아래 고정 띠를 감춘다.
+
+    같은 문구의 단추가 둘 떠 있으면 어느 것을 눌러야 하는지 한 번 생각하게 된다. 띠는 단추가
+    화면 밖에 있을 때 손에 닿게 하려고 둔 것이므로, 단추가 이미 보이면 띠가 할 일이 없다.
+
+    띠 높이(`--dock`)만큼 아래를 잘라낸 영역을 기준으로 본다. 띠가 덮는 자리에 걸쳐 있는 단추는
+    아직 보이는 것이 아니기 때문이다. 기준을 띠의 유무와 무관한 고정값으로 두어야 감췄다
+    나타났다 하는 되먹임이 생기지 않는다. 같은 이유로 `main.has-dock`의 아래 여백은
+    띠가 사라져도 그대로 둔다 — 여백이 함께 움직이면 문서 높이가 변해 판정이 흔들린다.
+  */
+  const inlineAnalyzeRef = useRef<HTMLButtonElement | null>(null);
+  const [inlineAnalyzeShown, setInlineAnalyzeShown] = useState(false);
+
+  useEffect(() => {
+    const target = inlineAnalyzeRef.current;
+    if (view !== "input" || !target) {
+      setInlineAnalyzeShown(false);
+      return;
+    }
+    const dockHeight =
+      Number.parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue("--dock"),
+      ) || 90;
+    const observer = new IntersectionObserver(
+      ([entry]) => setInlineAnalyzeShown(entry.isIntersecting),
+      { rootMargin: `0px 0px -${dockHeight}px 0px`, threshold: 1 },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [view]);
   /*
     03·04 안에서 지금 몇 번째 페이지를 보는지. 0부터 센다.
     화면(`view`)과 따로 들고 화면이 바뀔 때 0으로 되돌린다 — `goToView`가 그 일을 한다.
@@ -1185,6 +1217,7 @@ export default function FarmDecisionApp({ initialResult }: Props) {
             </div>
 
             <button
+              ref={inlineAnalyzeRef}
               className="analyze-button"
               type="button"
               onClick={analyze}
@@ -1244,9 +1277,12 @@ export default function FarmDecisionApp({ initialResult }: Props) {
         보이는 쪽이 생긴다. 그래서 01은 끊지 않고 단추만 손에 닿게 두는 쪽을 택했다.
 
         01에서만 나온다. 02·03·04에는 넘길 자리가 이미 화면 안에 있다.
+
+        조건 칸 안의 같은 단추가 온전히 보이는 동안에는 아래로 접힌다. 지우지 않고 자리에 두는
+        것은 미끄러져 내려가는 것을 보여주기 위해서다. 지웠다 다시 만들면 사라지는 장면이 없다.
       */}
       {view === "input" && (
-        <div className="analyze-dock">
+        <div className={inlineAnalyzeShown ? "analyze-dock is-tucked" : "analyze-dock"}>
           <button
             className="analyze-button"
             type="button"
