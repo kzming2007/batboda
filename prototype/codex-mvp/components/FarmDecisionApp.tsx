@@ -1,7 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type TouchEvent,
+} from "react";
 import { cropList, cropProfiles } from "@/lib/analysis/cropProfiles";
 import { baselineEnginePolicy } from "@/lib/analysis/modelPolicy";
 import {
@@ -61,6 +68,88 @@ const viewSteps: { id: View; step: string; label: string }[] = [
   { id: "evidence", step: "03", label: "자세한 근거" },
   { id: "report", step: "04", label: "쉬운 말 보고서" },
 ];
+
+/*
+  화면 안에서도 한 번에 한 페이지만 보이게 한다.
+
+  2차 멘토링 지적 — "스크롤을 쭉 내려서 보는 것보다 페이지로 넘겨서 빨리 보게 하는 게
+  낫지 않을까. 이거를 스크롤 다 내려서 다 보진 않을 거 아니에요." 대상이 초보 귀농인과
+  고령층이라 긴 스크롤은 특히 불리하다. 절이 많은 03·04만 끊고, 페이지 이름은 그 페이지가
+  실제로 답하는 것만 짧게 적는다. 01은 단계가 서로 묶여 있어(농지를 확정해야 분석이 열린다)
+  끊지 않는다.
+*/
+const sheetPages: Partial<Record<View, string[]>> = {
+  evidence: ["판정 근거", "농지 확인", "계산 방식", "사용한 자료"],
+  report: ["결론과 근거", "먼저 할 일", "현장 확인", "AI 설명"],
+};
+
+/**
+ * 원형 점 단추로 화면 안 페이지를 넘긴다.
+ *
+ * 점 자체는 작아도 되지만 누르는 자리는 손가락에 맞춰야 하므로, 점을 감싼 단추가 터치
+ * 규격을 갖고 점은 그 안에 그린다. 좌우 화살표를 함께 두는 이유는 점이 무엇인지 모르는
+ * 사람도 다음으로 넘길 수 있어야 하기 때문이다.
+ *
+ * 자리는 `01 02 03 04` 탭 줄 바로 위다. 화면을 고르는 줄과 그 화면 안을 넘기는 줄이
+ * 붙어 있어야 둘이 같은 종류의 조작이라는 것이 읽힌다.
+ */
+function SheetPager({
+  step,
+  labels,
+  page,
+  onChange,
+}: {
+  step: string;
+  labels: string[];
+  page: number;
+  onChange: (next: number) => void;
+}) {
+  const total = labels.length;
+  return (
+    <nav className="sheet-pager" aria-label="화면 안 페이지">
+      <button
+        type="button"
+        className="sheet-pager-arrow"
+        onClick={() => onChange(page - 1)}
+        disabled={page <= 0}
+        aria-label="이전 쪽"
+      >
+        <span aria-hidden="true">‹</span>
+      </button>
+      {/*
+        지금 어디인지 읽어서 알 수 있게 한다. 사용자가 요청한 형식이 `03-2`다 —
+        화면 번호와 쪽 번호를 함께 적어야 03의 둘째 쪽이라는 것이 한눈에 잡힌다.
+      */}
+      <span className="sheet-pager-status" aria-hidden="true">
+        {step}-{page + 1} / {total}
+      </span>
+      <ol className="sheet-pager-dots">
+        {labels.map((label, index) => (
+          <li key={label}>
+            <button
+              type="button"
+              aria-current={index === page ? "page" : undefined}
+              aria-label={`${step}-${index + 1} · ${total}쪽 중 ${index + 1}쪽 · ${label}`}
+              onClick={() => onChange(index)}
+            >
+              <span className="sheet-pager-dot" aria-hidden="true" />
+              <span className="sheet-pager-name">{label}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+      <button
+        type="button"
+        className="sheet-pager-arrow"
+        onClick={() => onChange(page + 1)}
+        disabled={page >= total - 1}
+        aria-label="다음 쪽"
+      >
+        <span aria-hidden="true">›</span>
+      </button>
+    </nav>
+  );
+}
 
 const places = [
   { name: "평창 대관령", note: "고랭지 밭", lat: 37.675, lng: 128.718 },
@@ -299,6 +388,22 @@ function FactorMeterView({
   );
 }
 
+/*
+  계산 근거 문구를 상수로 둔다.
+
+  항목마다 `이 가중치를 어떻게 정했는지`를 그 자리에서 열어 보게 하려는데, 문장을 새로
+  쓰지는 않는다. 아래 둘은 03 `계산 근거` 범례와 `.calculation-audit`에 이미 있던 문장을
+  그대로 옮긴 것이다. 규칙이 정한 농업 기준이나 숫자를 화면이 새로 만들지 않는다.
+
+  `operational` 문장이 결측·이상치까지 함께 말하므로, 공식 범위에서 온 항목만 `official`을
+  쓰고 나머지(자체 가중치·결측·이상치)는 이 한 문장을 쓴다.
+*/
+const calculationNotes = {
+  official: "판정 단계는 공식 기준으로 정하고, 아래 숫자는 비교를 돕는 보조 값입니다.",
+  operational:
+    "자체 가중치는 임의로 고른 숫자가 아니라 공식 범위에서 벗어난 거리, 작물별 민감도, 결측·이상치를 반영하도록 설계한 산식입니다. 감점 폭을 ±20% 흔든 합성 시나리오 560개에서도 판정 단계는 바뀌지 않았습니다. 다만 현장 수확 자료로 보정한 계수는 아니므로 숫자 자체를 확정된 농업 기준으로 쓰지는 않습니다.",
+};
+
 function basisLabel(basis: ScoreExplanation["terms"][number]["basis"]) {
   if (basis === "official") return "공식 범위";
   if (basis === "mixed") return "공식 기준 + 자체 가중치";
@@ -357,6 +462,17 @@ export default function FarmDecisionApp({ initialResult }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>("input");
   const [analyzed, setAnalyzed] = useState(false);
+  /*
+    03·04 안에서 지금 몇 번째 페이지를 보는지. 0부터 센다.
+    화면(`view`)과 따로 들고 화면이 바뀔 때 0으로 되돌린다 — `goToView`가 그 일을 한다.
+  */
+  const [page, setPage] = useState(0);
+  /*
+    이 화면에 페이지 넘김이 있는지. 04는 예시 문안을 만들지 못한 농지에서는 안내문 한 줄만
+    남으므로 나눌 것이 없다. 그때 점 넷을 띄우면 빈 페이지 셋을 누르게 된다.
+  */
+  const pagerLabels =
+    view === "report" && !result.showcaseReport ? undefined : sheetPages[view];
   // 즐겨찾기는 리액트 바깥(localStorage)에 산다. 서버 렌더에서는 빈 목록이다.
   const favorites = useSyncExternalStore(
     subscribeFavorites,
@@ -542,8 +658,63 @@ export default function FarmDecisionApp({ initialResult }: Props) {
 
   function goToView(next: View) {
     setView(next);
+    // 화면이 바뀌면 그 화면의 첫 페이지에서 시작한다. 03을 4페이지까지 보고 04로 넘어갔을 때
+    // 04가 4페이지부터 열리면 결론을 건너뛴 채로 읽게 된다.
+    setPage(0);
     // 페이지가 바뀌면 이전 화면의 스크롤 위치를 물려받지 않게 맨 위로 올린다.
     window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
+  }
+
+  /**
+   * 화면 안 페이지를 넘긴다.
+   *
+   * 맨 위로 올린다. 넘긴 페이지의 첫 줄부터 읽어야 하고, 점 단추가 화면 위에 있어야
+   * 다음 페이지로 이어서 넘길 수 있다. 요소를 `scrollIntoView`하면 점 단추가 위로 밀려난다.
+   */
+  function goToSheetPage(next: number) {
+    const total = pagerLabels?.length ?? 1;
+    const clamped = Math.min(Math.max(next, 0), total - 1);
+    // 첫 쪽에서 앞으로, 마지막 쪽에서 뒤로 가려 하면 아무 일도 하지 않는다. 순환시키지 않는다 —
+    // 넘기다 처음으로 돌아가 버리면 어디까지 봤는지 잃는다.
+    if (clamped === page) return;
+    setPage(clamped);
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
+  }
+
+  /*
+    손가락으로 좌우로 쓸어 쪽을 넘긴다.
+
+    주 사용 맥락이 휴대폰이고, 작은 점을 정확히 누르는 것은 고령층에게 특히 어렵다.
+    라이브러리를 넣지 않고 `touchstart`·`touchend`의 이동량만 본다.
+
+    조건 둘이 반드시 필요하다.
+      1. 가로 이동이 세로 이동보다 커야 한다. 그러지 않으면 위아래로 스크롤하려던 손짓이
+         쪽을 넘겨 화면을 쓸 수 없게 된다.
+      2. 최소 50px 이상 움직여야 한다. 살짝 스친 것에 반응하면 안 된다.
+    지도(Leaflet)는 끌기를 자기가 쓰므로 그 안에서 시작한 손짓은 잡지 않는다.
+  */
+  const swipeFrom = useRef<{ x: number; y: number } | null>(null);
+
+  function handleSheetTouchStart(event: TouchEvent<HTMLElement>) {
+    swipeFrom.current = null;
+    if (!pagerLabels) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest?.(".farm-map, .leaflet-container")) return;
+    swipeFrom.current = { x: touch.clientX, y: touch.clientY };
+  }
+
+  function handleSheetTouchEnd(event: TouchEvent<HTMLElement>) {
+    const from = swipeFrom.current;
+    swipeFrom.current = null;
+    if (!from || !pagerLabels) return;
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    const dx = touch.clientX - from.x;
+    const dy = touch.clientY - from.y;
+    if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy)) return;
+    goToSheetPage(dx < 0 ? page + 1 : page - 1);
   }
 
   async function analyze() {
@@ -591,6 +762,21 @@ export default function FarmDecisionApp({ initialResult }: Props) {
     }
   }
 
+  /*
+    분석 단추의 상태와 문구를 한 곳에서 정한다.
+
+    같은 단추가 두 자리에 있다 — 조건 칸 안과 화면 아래 고정 띠. 두 곳에 조건을 각각 적으면
+    한쪽만 고쳐질 수 있고, 그러면 눌리지 않는 이유가 한쪽에서 사라진다.
+    못 누르는 상태의 문구(`먼저 내 농지를 확인하세요`)는 그대로 둔다. 그 문구가 왜 못 누르는지를
+    말하므로, 단추를 손에 닿게 만드는 이 변경의 핵심이다.
+  */
+  const analyzeDisabled = loading || (dataMode === "live" && !selection.parcelId);
+  const analyzeLabel = loading
+    ? "근거를 모으는 중…"
+    : dataMode === "live" && !selection.parcelId
+      ? "먼저 내 농지를 확인하세요"
+      : "이 농지 분석하기";
+
   return (
     <div className="app-shell">
       <header className="site-header">
@@ -605,7 +791,12 @@ export default function FarmDecisionApp({ initialResult }: Props) {
         </div>
       </header>
 
-      <main id="top">
+      <main
+        id="top"
+        className={view === "input" ? "has-dock" : undefined}
+        onTouchStart={handleSheetTouchStart}
+        onTouchEnd={handleSheetTouchEnd}
+      >
         {view === "input" && (
           <section className="intro-section" aria-labelledby="intro-title">
             <div>
@@ -618,6 +809,19 @@ export default function FarmDecisionApp({ initialResult }: Props) {
               <li><span>3</span><strong>가까운 위험 대비</strong><small>예보에서 먼저 할 일 확인</small></li>
             </ol>
           </section>
+        )}
+
+        {/*
+          점 단추는 `01 02 03 04` 줄 바로 위에 둔다. 사용자가 지정한 자리다 —
+          "2번 4번 넘어가는 창의 조금 위에 원으로".
+        */}
+        {pagerLabels && (
+          <SheetPager
+            step={viewSteps.find((item) => item.id === view)?.step ?? ""}
+            labels={pagerLabels}
+            page={page}
+            onChange={goToSheetPage}
+          />
         )}
 
         <nav className="phase-nav" aria-label="화면 단계">
@@ -974,15 +1178,9 @@ export default function FarmDecisionApp({ initialResult }: Props) {
               className="analyze-button"
               type="button"
               onClick={analyze}
-              disabled={loading || (dataMode === "live" && !selection.parcelId)}
+              disabled={analyzeDisabled}
             >
-              <span>
-                {loading
-                  ? "근거를 모으는 중…"
-                  : dataMode === "live" && !selection.parcelId
-                    ? "먼저 내 농지를 확인하세요"
-                    : "이 농지 분석하기"}
-              </span>
+              <span>{analyzeLabel}</span>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 12h14M14 7l5 5-5 5" />
               </svg>
@@ -1024,14 +1222,40 @@ export default function FarmDecisionApp({ initialResult }: Props) {
         )}
 
         {view !== "input" && (
-          <AnalysisView result={result} view={view} onNavigate={goToView} />
+          <AnalysisView result={result} view={view} page={page} onNavigate={goToView} />
         )}
       </main>
+
+      {/*
+        01의 분석 단추를 화면 아래에 붙여 둔다.
+
+        2차 멘토링에서 스크롤이 길다는 지적을 받았다. 01을 쪽으로 끊는 안은 단계가 서로 묶여
+        있어(농지를 확정해야 단추가 살아난다) 지금 시간에 하면 아무것도 고르지 않은 채 단추만
+        보이는 쪽이 생긴다. 그래서 01은 끊지 않고 단추만 손에 닿게 두는 쪽을 택했다.
+
+        01에서만 나온다. 02·03·04에는 넘길 자리가 이미 화면 안에 있다.
+      */}
+      {view === "input" && (
+        <div className="analyze-dock">
+          <button
+            className="analyze-button"
+            type="button"
+            onClick={analyze}
+            disabled={analyzeDisabled}
+          >
+            <span>{analyzeLabel}</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14M14 7l5 5-5 5" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {scrolled && (
         <button
           type="button"
-          className="to-top"
+          // 01에서는 고정 띠가 아래를 차지하므로 그 위로 올린다. 두 단추가 겹치면 둘 다 못 누른다.
+          className={view === "input" ? "to-top above-dock" : "to-top"}
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         >
           맨 위로
@@ -1049,33 +1273,22 @@ export default function FarmDecisionApp({ initialResult }: Props) {
 function AnalysisView({
   result,
   view,
+  page,
   onNavigate,
 }: {
   result: AnalysisResult;
   view: View;
+  page: number;
   onNavigate: (next: View) => void;
 }) {
   /*
-    03 아래층을 접어 두었는지. 기본은 접힘이다.
-    시연에서 한 번에 펼칠 수 있게 상태로 들고, `전부 펼치기` 버튼과 `<details>` 양쪽을
-    같은 값에 묶는다. 사용자가 `<details>`를 직접 눌러 열어도 상태가 따라온다.
+    03의 `판정 방식과 계산 근거` 접기(`.evidence-more`)를 걷어냈다.
+
+    그 접기는 한 화면에 열네 절이 쌓이는 것을 줄이려고 넣은 장치였다. 이제 페이지 넘김이
+    같은 일을 더 잘 한다 — 접힌 것을 찾아 누르는 대신 점을 눌러 그 절만 보게 된다.
+    장치를 둘 다 두면 페이지를 넘긴 자리에서 또 접힌 것을 만나므로 하나만 남긴다.
+    내용은 하나도 지우지 않고 2·3페이지로 옮겼다.
   */
-  const [detailsOpen, setDetailsOpen] = useState(false);
-
-  /*
-    인쇄 전에 접힌 것을 펼친다.
-
-    CSS로는 되지 않는다. 닫힌 `<details>`의 내용은 `display`가 아니라 브라우저 내부
-    규칙으로 숨겨져 있어서 `@media print`에서 `display: block`을 줘도 열리지 않는다.
-    종이에는 누를 수가 없으므로 인쇄 시점에 상태를 열어 둔다. 되돌리지는 않는다 —
-    인쇄한 사람은 그 내용을 보려던 것이다.
-  */
-  useEffect(() => {
-    const openBeforePrint = () => setDetailsOpen(true);
-    window.addEventListener("beforeprint", openBeforePrint);
-    return () => window.removeEventListener("beforeprint", openBeforePrint);
-  }, []);
-
   const parcelStatusLabel =
     result.parcel.selectionStatus === "matched"
       ? "농지 확인 완료"
@@ -1378,16 +1591,16 @@ function AnalysisView({
           name="판정"
           value={result.suitabilityLabel}
         />
-        <button
-          type="button"
-          className="evidence-expand"
-          aria-expanded={detailsOpen}
-          onClick={() => setDetailsOpen((open) => !open)}
-        >
-          {detailsOpen ? "아래층 접기" : "전부 펼치기"}
-        </button>
       </div>
         <div className="sheet-detail-body">
+      {/*
+        한 번에 한 페이지만 보인다.
+
+        보이지 않는 페이지를 렌더에서 빼지 않고 CSS로 감춘다. 인쇄가 그 이유다 — 종이에는
+        네 페이지가 이어서 나와야 하므로 DOM에 늘 있어야 한다. `hidden` 속성은 쓰지 않는다.
+        `.sheet-page`에 `display: grid`가 있어서 브라우저 기본 `[hidden]`을 이겨 버린다.
+      */}
+      <div className="sheet-page" data-active={page === 0}>
       <div className="evidence-grid">
         <section className="factor-section" aria-labelledby="factor-title">
           <div className="subsection-heading">
@@ -1395,7 +1608,13 @@ function AnalysisView({
               <span>공식 기준 대조</span>
               <h3 id="factor-title">토양·기온 근거</h3>
             </div>
-            <p>토양 {result.soil.sampledAt} · {result.soil.sampleType}</p>
+            {/* 확인표의 `토양 시료`와 같은 이유로 두 값이 같으면 한 번만 적는다. */}
+            <p>
+              토양{" "}
+              {result.soil.sampledAt === result.soil.sampleType
+                ? result.soil.sampleType
+                : `${result.soil.sampledAt} · ${result.soil.sampleType}`}
+            </p>
           </div>
           <div className="factor-table">
             {/*
@@ -1562,7 +1781,9 @@ function AnalysisView({
           </div>
         </section>
       </div>
+      </div>
 
+      <div className="sheet-page" data-active={page === 1}>
       <section className="parcel-sheet" aria-labelledby="parcel-title">
         <div className="parcel-sheet-heading">
           <div>
@@ -1601,7 +1822,20 @@ function AnalysisView({
           </div>
           <div>
             <dt>토양 시료</dt>
-            <dd>{result.soil.sampledAt} · {result.soil.sampleType}</dd>
+            {/*
+              `화학성 시료 없음`이 한 줄에 두 번 나오던 자리다.
+
+              토양검정 기록이 없는 필지에서는 규칙 엔진이 채취일(`sampledAt`)과
+              시료 유형(`sampleType`)에 **같은 문구**를 넣는다(lib/public-data/client.ts).
+              그것을 `채취일 · 유형`으로 이어 적었으므로 `화학성 시료 없음 · 화학성 시료 없음`이
+              됐다. 값을 지우지 않고, 두 값이 같을 때만 한 번 적는다.
+              남긴 쪽은 시료 유형이다 — 없는 채취일을 적는 것보다 무엇이 없는지를 말한다.
+            */}
+            <dd>
+              {result.soil.sampledAt === result.soil.sampleType
+                ? result.soil.sampleType
+                : `${result.soil.sampledAt} · ${result.soil.sampleType}`}
+            </dd>
           </div>
         </dl>
         {result.soil.physicalProfile && (
@@ -1632,28 +1866,12 @@ function AnalysisView({
       </section>
 
       {/*
-        03을 두 층으로 나눈다.
+        최근 관측 기록은 농지 확인표와 같은 페이지에 둔다.
 
-        1층은 사용자가 판단하는 데 필요한 것 — 근거 대조, 선택 기간 예보, 확정한 농지,
-        사용한 자료 표. 2층은 우리가 어떻게 만들었는지를 변호하는 것이다.
-        측정하면 03이 4,726자였고 그중 계산 근거 하나가 1,470자(31%)였다. 화면 제목이
-        약속한 `토양·기온 근거`는 360자(8%)뿐이었다. 심사 피드백의 `텍스트 과다`가
-        이것이다.
-
-        지우지 않고 접는다. 접혀 있어도 화면에 있고, 한 번 누르면 5분 안에 펼쳐진다.
-        `전부 펼치기`를 위에 두어 시연에서 한 번에 열 수 있게 한다.
-        인쇄에서는 강제로 펼친다 — 종이에는 접기가 없다.
+        둘 다 `이 농지가 어디이고 어떤 환경인가`에 답하는 자료다. 관측소 카드
+        (`.station-docket`)가 농지와의 거리를 적으므로 확인표의 좌표·필지 번호와 이어서
+        읽힌다. 계산 방식은 다음 페이지로 넘긴다.
       */}
-      <details
-        className="evidence-more"
-        open={detailsOpen}
-        onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
-      >
-        <summary>
-          <span>판정 방식과 계산 근거</span>
-          <small>최근 관측 · 판정 방식 · 설명 생성 과정 · 계산 근거 네 가지</small>
-        </summary>
-
       <section className="recent-climate-band" aria-labelledby="recent-climate-title">
         <div className="station-docket">
           <span>최근 관측 기록</span>
@@ -1682,7 +1900,9 @@ function AnalysisView({
         </div>
         <p className="climate-caveat">가장 가까운 관측소라는 사실만으로 농지와 같은 미기후라고 단정하지 않으며, 현재 적합·위험 점수에는 가산하지 않습니다.</p>
       </section>
+      </div>
 
+      <div className="sheet-page" data-active={page === 2}>
       <section className="requirement-coverage" aria-labelledby="coverage-title">
         <div className="coverage-model">
           <span>현재 판정 방식</span>
@@ -1709,44 +1929,38 @@ function AnalysisView({
         </ul>
       </section>
 
-      {result.report && (
-        <section className="report-pipeline-block" aria-labelledby="report-pipeline-title">
-          <h3 id="report-pipeline-title">설명 문장을 만드는 과정</h3>
-          <p>
-            규칙 엔진이 확정한 근거만 넘기고, 생성된 문장이 판정·수치를 바꾸지 않았는지 검증한 뒤 화면에
-            전달합니다. 검증에 실패하면 같은 근거의 규칙 문장으로 되돌립니다.
-          </p>
-          <ol>
-            {result.report.pipeline.map((step) => (
-              <li key={step.id} className={step.state}>
-                <strong>{step.label}</strong>
-                {/* 강조 목록은 규칙이 고른다. 화면이 스스로 중요한 말을 정하지 않는다. */}
-                <span>
-                  <Emphasized text={step.detail} highlights={highlightsFor(step.detail, result)} />
-                </span>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+      {/*
+        「설명 문장을 만드는 과정」 5단계 블록을 뺐다(2026-08-05 2차 멘토링).
 
+        멘토 지적 — "이 만드는 과정 자체를 사용자가 이 서비스를 쓸 때 이걸 보진 않잖아요.
+        추가 설명을 서비스 설명 같은 데에다가 따로 해도 되든지... 발표 자료에 넣고."
+
+        같은 멘토가 남겨도 된다고 한 것은 신뢰를 주는 짧은 문장이다. 그것은 이미 04에
+        있다 — 「판정 …은 공식 기준으로 규칙이 확정했습니다. AI는 그 결과를 옮겨 쓰기만
+        합니다」와 모델·검사 통과 배지. 그래서 여기에 새 문장을 대신 넣지 않는다.
+        같은 말을 두 화면에서 두 번 하는 것이 원래 문제였다.
+
+        빠진 5단계는 발표자료에서 우리 검증 과정으로 세운다. `result.report.pipeline`은
+        그대로 두어 04의 원천 표시와 검사 결과가 계속 쓰이게 한다.
+      */}
       <section className="calculation-section" aria-labelledby="calculation-title">
         <div className="calculation-heading">
           <div>
             <span>계산 근거</span>
             <h3 id="calculation-title">판정 근거와 보조 점수</h3>
           </div>
+          {/*
+            여기 있던 `.calculation-audit` 한 단락을 항목별 근거 팝업으로 옮겼다.
+            어느 항목의 가중치를 어떻게 정했는지 묻는 사람은 그 항목 옆에서 답을 찾는데,
+            그 답이 화면 맨 위 범례에 한 번만 적혀 있어 항목과 이어지지 않았다.
+            문장은 그대로다(`calculationNotes.operational`).
+          */}
           <div className="calculation-legend">
             <p>
-              판정 단계는 공식 기준으로 정하고, 아래 숫자는 비교를 돕는 보조 값입니다.
+              {calculationNotes.official}{" "}
               각 항목이 <em className="basis-tag official">공식 기준</em>에서 온 값인지{" "}
-              <em className="basis-tag operational">자체 설계 가중치</em>로 계산한 값인지 항목마다 표시했습니다.
-            </p>
-            <p className="calculation-audit">
-              자체 가중치는 임의로 고른 숫자가 아니라 공식 범위에서 벗어난 거리, 작물별 민감도, 결측·이상치를
-              반영하도록 설계한 산식입니다. 감점 폭을 ±20% 흔든 합성 시나리오 560개에서도 판정 단계는 바뀌지
-              않았습니다. 다만 현장 수확 자료로 보정한 계수는 아니므로 숫자 자체를 확정된
-              농업 기준으로 쓰지는 않습니다.
+              <em className="basis-tag operational">자체 설계 가중치</em>로 계산한 값인지 항목마다 표시했고,
+              그 이름표를 누르면 어떻게 정한 값인지 나옵니다.
             </p>
           </div>
         </div>
@@ -1767,9 +1981,9 @@ function AnalysisView({
           <small>{officialLinks.cropGuide.note}</small>
         </p>
       </section>
+      </div>
 
-      </details>
-
+      <div className="sheet-page" data-active={page === 3}>
       <section className="source-table-section" aria-labelledby="source-table-title">
         <div className="source-table-heading">
           <span>사용한 자료</span>
@@ -1820,6 +2034,7 @@ function AnalysisView({
           사용자가 확인한 필지 단위로 조회합니다.
         </p>
       </section>
+      </div>
         </div>
       <div className="sheet-rule strong" />
       <nav className="page-jump" aria-label="다음으로 볼 화면">
@@ -1885,6 +2100,7 @@ function AnalysisView({
           report={result.showcaseReport}
           note={result.showcaseNote}
           trace={result.showcaseTrace}
+          page={page}
         />
       </div>
       <div className="sheet-rule strong" />
@@ -1970,11 +2186,13 @@ function ShowcaseReportView({
   report,
   note,
   trace,
+  page,
 }: {
   result: AnalysisResult;
   report: ShowcaseReport | null;
   note: string | null;
   trace: ShowcaseTrace | null;
+  page: number;
 }) {
   /*
     산문 접기를 인쇄에 잇는다.
@@ -2016,15 +2234,23 @@ function ShowcaseReportView({
 
   return (
     <section className="showcase-section" aria-labelledby="showcase-title">
-      <div className="showcase-heading">
-        <div>
-          <span>쉬운 말 보고서</span>
-          <h3 id="showcase-title">초보 귀농인을 위한 설명</h3>
+      {/*
+        04도 네 페이지로 나눈다. 판정 한 줄(`.report-head-row`)은 이 컴포넌트 바깥에 있어
+        페이지를 넘겨도 계속 보인다 — 넘기다가 판정을 잃으면 이 화면의 목적이 사라진다.
+
+        `aria-labelledby`가 가리키는 제목은 1페이지에만 있지만, 접근성 이름은 참조한 요소가
+        보이지 않아도 글자를 그대로 읽으므로 다른 페이지에서도 화면 이름이 유지된다.
+      */}
+      <div className="sheet-page" data-active={page === 0}>
+        <div className="showcase-heading">
+          <div>
+            <span>쉬운 말 보고서</span>
+            <h3 id="showcase-title">초보 귀농인을 위한 설명</h3>
+          </div>
+          <strong className="showcase-origin">
+            {report?.originLabel ?? "규칙이 조립한 안내문 · AI 생성 아님"}
+          </strong>
         </div>
-        <strong className="showcase-origin">
-          {report?.originLabel ?? "규칙이 조립한 안내문 · AI 생성 아님"}
-        </strong>
-      </div>
 
       {/*
         02 판정서는 생성 5단계를 화면에 보여주는데 04에는 그게 없어서, 왜 `AI 생성 아님`이
@@ -2033,6 +2259,7 @@ function ShowcaseReportView({
         `report.curated`는 손으로 쓴 도입부를 썼는지를 뜻하는 별개 값이라 여기 쓰지 않는다.
       */}
       {trace && !(trace.attempted && trace.passed) && <ShowcaseTraceNote trace={trace} />}
+      </div>
 
       {!report ? (
         <p className="showcase-empty">{note ?? "이 보고서를 만들 수 있는 조건이 아닙니다."}</p>
@@ -2043,6 +2270,7 @@ function ShowcaseReportView({
             규칙이라고 적는다. 문장만 두면 `AI가 결론까지 낸다`로 읽히고, 규칙 문장으로
             바꾸면 이 화면에서 AI가 한 일이 보이지 않는다. 둘을 병기해 둘 다 지킨다.
           */}
+          <div className="sheet-page" data-active={page === 0}>
           <div className="showcase-headline">
             {splitSentences(report.headline).map((sentence) => (
               <p key={sentence}>
@@ -2089,7 +2317,9 @@ function ShowcaseReportView({
               ))}
             </div>
           </div>
+          </div>
 
+          <div className="sheet-page" data-active={page === 1}>
           <div className="showcase-block">
             <h4>먼저 할 일</h4>
             <ol className="showcase-checklist">
@@ -2102,7 +2332,9 @@ function ShowcaseReportView({
               ))}
             </ol>
           </div>
+          </div>
 
+          <div className="sheet-page" data-active={page === 2}>
           {checks.length > 0 && (
             <div className="showcase-block">
               <h4>이 자료로는 알 수 없어 현장에서 봐야 하는 것</h4>
@@ -2116,6 +2348,9 @@ function ShowcaseReportView({
               </ol>
             </div>
           )}
+          </div>
+
+          <div className="sheet-page" data-active={page === 3}>
 
           {/*
             AI가 쓴 산문은 버리지 않고 아래로 보낸다. 요구사항 ③의 증거이므로 화면에서
@@ -2177,6 +2412,7 @@ function ShowcaseReportView({
                 <li key={value}>{value}</li>
               ))}
             </ul>
+          </div>
           </div>
         </>
       )}
@@ -2363,13 +2599,32 @@ function ScoreLedger({
           </span>
         ))}
       </code>
+      {/*
+        항목별 가중치 근거를 그 자리에서 열어 본다.
+
+        `:hover`만으로 만들지 않는다 — 손가락과 키보드에서는 얹을 수가 없고, 대상 사용자가
+        휴대폰으로 본다. `<details>`는 눌러서 열리고 탭으로 옮겨 엔터로도 열린다.
+        문구는 새로 쓰지 않고 범례에 있던 문장과 이름표 낱말을 그대로 옮겼다.
+      */}
       <ul>
         {explanation.terms.map((term) => (
           <li key={term.id}>
             <span>{term.label}</span>
-            <em className={`basis-tag ${term.basis}`}>
-              {basisLabel(term.basis)}
-            </em>
+            <details className="basis-why">
+              <summary aria-label={`${term.label} 가중치를 정한 근거`}>
+                <em className={`basis-tag ${term.basis}`}>
+                  {basisLabel(term.basis)}
+                </em>
+              </summary>
+              <div className="basis-why-pop" role="note">
+                <strong>{basisLabel(term.basis)}</strong>
+                <p className="calculation-audit">
+                  {term.basis === "official"
+                    ? calculationNotes.official
+                    : calculationNotes.operational}
+                </p>
+              </div>
+            </details>
             <strong>{term.display}</strong>
           </li>
         ))}

@@ -404,10 +404,21 @@ function darkSlide() {
 
     제목을 20pt로 키워 뒤에서도 읽히게 한다. 4단계에서 무엇을 검사하는지는 대본이 말한다.
   */
-  const steps = ["판정 결과 정리", "설명 규칙 적용", "설명 생성", "문장 검사", "화면 전달"];
+  /*
+    단계마다 오른쪽에 누가 하는지 붙인다. 빈 자리를 장식으로 채우는 것이 아니다 —
+    이 장의 주장이 「판정은 규칙이 확정하고 AI는 옮겨 쓴다」인데, 다섯 중 AI가 하는 것은
+    3번 하나뿐이다. 넷은 규칙이다. 그 비율이 눈에 보이는 것이 이 장의 논거다.
+  */
+  const steps = [
+    ["판정 결과 정리", "규칙"],
+    ["설명 규칙 적용", "규칙"],
+    ["설명 생성", "AI"],
+    ["문장 검사", "규칙"],
+    ["화면 전달", "규칙"],
+  ];
   const stepH = 0.82;
   let sy = 2.56;
-  steps.forEach((title, i) => {
+  steps.forEach(([title, who], i) => {
     s.addShape("roundRect", {
       x: 5.84, y: sy, w: 6.88, h: stepH, rectRadius: 0.06,
       fill: { color: P.sf }, line: { color: P.line, width: 1 },
@@ -417,8 +428,20 @@ function darkSlide() {
       fontFace: F, fontSize: 17, bold: true, valign: "middle", margin: 0, color: P.cyVivid,
     });
     s.addText(title, {
-      x: 6.7, y: sy, w: 5.8, h: stepH,
+      x: 6.7, y: sy, w: 4.1, h: stepH,
       fontFace: F, fontSize: 20, bold: true, valign: "middle", margin: 0, color: P.ink,
+    });
+    // AI가 하는 자리만 색을 뒤집는다. 하나뿐이라는 것이 한눈에 들어와야 한다.
+    const ai = who === "AI";
+    s.addShape("roundRect", {
+      x: 11.02, y: sy + (stepH - 0.42) / 2, w: 1.34, h: 0.42, rectRadius: 0.21,
+      fill: { color: ai ? P.cyVivid : P.sunk },
+      line: { color: ai ? P.cyVivid : P.lineStrong, width: 1 },
+    });
+    s.addText(who, {
+      x: 11.02, y: sy + (stepH - 0.42) / 2, w: 1.34, h: 0.42,
+      fontFace: F, fontSize: 14, bold: true, align: "center", valign: "middle", margin: 0,
+      color: ai ? P.sf : P.inkSoft,
     });
     sy += stepH + 0.13;
   });
