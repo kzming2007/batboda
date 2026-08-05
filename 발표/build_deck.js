@@ -45,8 +45,22 @@ const M = 0.62; // 좌우 여백
 
 /* ── 공통 조각 ───────────────────────────────────────────────────────────── */
 
-/** 캡처가 들어갈 자리. 잘라낼 범위를 안에 적어 둔다. 실제 이미지를 얹으면 지운다. */
-function captureFrame(s, { x, y, w, h, tag, spec, dark = false }) {
+/*
+  근거 자리.
+
+  `shot`으로 캡처 파일 이름을 주면 그 이미지를 넣는다. `contain`으로 넣어 원본 비율을
+  지킨다 — 제품 화면을 늘리면 그 자체가 거짓이 된다.
+  파일이 없으면 잘라낼 범위를 적은 점선 틀을 남긴다. 남아 있으면 아직 안 잡은 것이다.
+*/
+const SHOTS = "D:/Projects/batboda/발표/캡처/";
+const fsx = require("fs");
+
+function captureFrame(s, { x, y, w, h, tag, spec, dark = false, shot }) {
+  const file = shot ? SHOTS + shot + ".png" : null;
+  if (file && fsx.existsSync(file)) {
+    s.addImage({ path: file, x, y, w, h, sizing: { type: "contain", w, h } });
+    return;
+  }
   s.addShape("roundRect", {
     x, y, w, h, rectRadius: 0.04,
     fill: { color: dark ? "17323C" : P.sunk },
@@ -132,7 +146,7 @@ function darkSlide() {
     fontFace: F, fontSize: 13, margin: 0, color: P.deepSoft,
   });
   captureFrame(s, {
-    x: 7.86, y: 1.28, w: 4.85, h: 4.64, dark: true, tag: "C1 · 01-B 실제 농지 확인",
+    x: 7.86, y: 1.28, w: 4.85, h: 4.64, dark: true, shot: "20260805_C01_대관령85-61전_경계", tag: "C1 · 01-B 실제 농지 확인",
     spec: "대관령면 85-61전 선택 직후.\n농지 경계 폴리곤 + 지번 + PNU.\n경계가 조각 폭의 절반 이상 차지하게 자른다.\n주소창 포함.",
   });
   slideNo(s, 1, true);
@@ -150,7 +164,7 @@ function darkSlide() {
   evidenceTag(s, "화면 근거 · 03 사용한 자료");
   claim(s, "자료가 없는 것이 아니라, 서로 다른 기관·단위에 있어\n내 농지로 이어지지 않습니다", { y: 0.9 });
   captureFrame(s, {
-    x: M, y: 2.52, w: 8.35, h: 4.1, tag: "C4 · 03 어떤 API의 어떤 값을 썼는지",
+    x: M, y: 2.52, w: 8.35, h: 4.1, shot: "20260805_C04_사용한자료_표", tag: "C4 · 03 어떤 API의 어떤 값을 썼는지",
     spec: "표 전체. 제공기관 열과 상태·기준시각 열이 잘리지 않게.\n가로 스크롤이 있으면 끝까지 나오게 자른다.\n조합: 대관령면 85-61전 · 상추 · 3일.",
   });
   const rows = [
@@ -196,15 +210,15 @@ function darkSlide() {
     fontFace: F, fontSize: 30, bold: true, margin: 0, color: P.sf,
   });
   const links = [
-    ["경계 확인", "C1 · 01-B", "농지 경계 폴리곤 조각"],
-    ["같은 필지번호 토양", "C2 · 02", "토양 적성 카드 조각"],
-    ["작물별 공식 등급", "C6 · 02", "밭 3급지 표기 조각"],
-    ["좌표 예보", "C3 · 03", "기온 줄 눈금 조각"],
-    ["근거 추적", "C4 · 03", "상태·기준시각 열 조각"],
+    ["경계 확인", "C1 · 01-B", "농지 경계 폴리곤 조각", "20260805_C01_대관령85-61전_경계"],
+    ["같은 필지번호 토양", "C2 · 02", "토양 적성 카드 조각", "20260805_C02_판정서_상단"],
+    ["작물별 공식 등급", "C6 · 02", "밭 3급지 표기 조각", "20260805_C06_유방동870답_상추_밭등급"],
+    ["좌표 예보", "C3 · 03", "기온 줄 눈금 조각", "20260805_C03_산도_기온_눈금"],
+    ["근거 추적", "C4 · 03", "상태·기준시각 열 조각", "20260805_C04b_상태_기준시각"],
   ];
   const gap = 0.4; // 화살표가 들어갈 자리. 좁으면 낱말에 붙어 읽힌다.
   const cw = (W - M * 2 - gap * 4) / 5;
-  links.forEach(([name, tag, spec], i) => {
+  links.forEach(([name, tag, spec, shotName], i) => {
     const x = M + i * (cw + gap);
     s.addText(String(i + 1), {
       x, y: 1.72, w: 0.4, h: 0.34,
@@ -254,43 +268,32 @@ function darkSlide() {
     x: M, y: 3.4, w: 6.1, h: 0.32,
     fontFace: F, fontSize: 15, bold: true, margin: 0, color: P.ink,
   });
-  s.addText(
-    "이 장은 슬라이드를 읽는 장이 아니다. 화면을 배포본으로 전환해 01 → 02 → 03 → 04를 " +
-    "직접 넘긴다. 5초 안에 다음 화면이 나오지 않으면 고정 전환 문장을 말하고 아래 백업으로 넘어간다.", {
-    x: M, y: 3.86, w: 6.1, h: 1.1,
-    fontFace: F, fontSize: 12.5, margin: 0, valign: "top", color: P.inkSoft, lineSpacingMultiple: 1.3,
-  });
-  s.addText("백업 캡처 — 이 순서로 넘긴다", {
+  /*
+    진행 지시문은 관객 면에서 뺐다. 「5초 안에 안 나오면」과 「고정 전환 문장」을 화면에
+    인쇄해 두면 심사위원이 우리가 실패를 예상한다는 것을 먼저 읽는다. 발표자 노트로 옮겼다.
+
+    남은 다섯 조각은 실패 대비가 아니라 **지금부터 보실 순서**다. 라이브가 되면 안내가 되고,
+    안 되면 그대로 백업이 된다. 어느 쪽이든 관객에게는 같은 뜻이라 이름만 바꿨다.
+  */
+  s.addText("지금부터 보실 순서", {
     x: 7.06, y: 2.28, w: 5.66, h: 0.3,
-    fontFace: F, fontSize: 13, bold: true, margin: 0, color: P.cyInk,
+    fontFace: F, fontSize: 14, bold: true, margin: 0, color: P.cyInk,
   });
   const backups = [
-    ["C1", "01 경계"], ["C2", "02 판정"], ["C3", "03 눈금"], ["C4", "03 출처"], ["C7", "04 결론"],
+    ["01", "농지 경계", "20260805_C01_대관령85-61전_경계"],
+    ["02", "판정과 상태", "20260805_C02_판정서_상단"],
+    ["03", "기준 대조", "20260805_C03_산도_기온_눈금"],
+    ["04", "출처 추적", "20260805_C04_사용한자료_표"],
+    ["05", "쉬운 말", "20260805_C07_04_상단_결론과근거"],
   ];
   const bw = (5.66 - 0.14 * 4) / 5;
-  backups.forEach(([tag, label], i) => {
+  backups.forEach(([tag, label, shotName], i) => {
     const x = 7.06 + i * (bw + 0.14);
-    s.addShape("roundRect", {
-      x, y: 2.66, w: bw, h: 2.3, rectRadius: 0.05,
-      fill: { color: P.sunk }, line: { color: P.lineStrong, width: 1, dashType: "dash" },
-    });
-    s.addText(tag, {
-      x, y: 3.5, w: bw, h: 0.28,
-      fontFace: F, fontSize: 13, bold: true, align: "center", margin: 0, color: P.cy,
-    });
+    captureFrame(s, { x, y: 2.68, w: bw, h: 2.5, tag, spec: label, shot: shotName });
     s.addText(label, {
-      x, y: 3.8, w: bw, h: 0.28,
-      fontFace: F, fontSize: 10.5, align: "center", margin: 0, color: P.inkSoft,
+      x, y: 5.26, w: bw, h: 0.28,
+      fontFace: F, fontSize: 11, bold: true, align: "center", margin: 0, color: P.cyInk,
     });
-  });
-  s.addShape("roundRect", {
-    x: M, y: 5.34, w: W - M * 2, h: 0.78, rectRadius: 0.06,
-    fill: { color: P.watchBg }, line: { color: "E0C592", width: 1 },
-  });
-  s.addText(
-    "고정 전환 문장 — “지금은 저장된 검증 장면으로 이어가며, 서비스에서는 실시간·검증 스냅샷·시연 자료를 구분해 표시합니다.”", {
-    x: M + 0.2, y: 5.34, w: W - M * 2 - 0.4, h: 0.78,
-    fontFace: F, fontSize: 13.5, bold: true, valign: "middle", margin: 0, color: P.watch,
   });
   slideNo(s, 4);
   s.addNotes(
@@ -302,7 +305,11 @@ function darkSlide() {
     "42~62초  04에서는 판정은 규칙이 정했다고 밝히고, AI가 근거와 먼저 할 일을 쉬운 말로 옮깁니다.\n\n" +
     "금지 — 분석 소요 시간 수치, 후보 건수, 「어느 농지나 5초 안에」, 위험 라벨을 대사에 고정, " +
     "등급과 저해요인을 한 원인처럼 합쳐 말하기, 실패 원인 설명(전환 문장으로 바로 넘어간다).\n" +
-    "수치는 화면에 보이는 값을 읽는다. 외운 값을 말하지 않는다."
+    "수치는 화면에 보이는 값을 읽는다. 외운 값을 말하지 않는다.\n\n" +
+    "■ 5초 규칙 — 한 동작을 누르고 5초 안에 다음 화면이 안 나오면 기다리지 않는다.\n" +
+    "■ 고정 전환 문장(그대로 말한다) — “지금은 저장된 검증 장면으로 이어가며, " +
+    "서비스에서는 실시간과 검증 스냅샷, 시연 자료를 구분해 표시합니다.”\n" +
+    "■ 실패 원인을 설명하지 않는다. 위 문장을 말하고 이 장의 다섯 조각을 순서대로 넘긴다."
   );
 }
 
@@ -320,11 +327,11 @@ function darkSlide() {
     fontFace: F, fontSize: 16, bold: true, valign: "middle", margin: 0, color: P.ink,
   });
   const cases = [
-    ["사과", "과수 4급지", "C5 · 02 토양 적성 카드", "이천 유방동 870답 · 사과.\n카드 + 위에 농지 주소 한 줄.\n과수 4급지 표기 포함."],
-    ["상추", "밭 3급지", "C6 · 02 토양 적성 카드", "같은 세션에서 작물만 바꿔 연속으로.\nC5와 같은 배율·같은 잘라내기.\n밭 3급지 표기 포함."],
+    ["사과", "과수 4급지", "C5 · 02 토양 적성 카드", "20260805_C05_유방동870답_사과_과수등급", "이천 유방동 870답 · 사과.\n카드 + 위에 농지 주소 한 줄.\n과수 4급지 표기 포함."],
+    ["상추", "밭 3급지", "C6 · 02 토양 적성 카드", "20260805_C06_유방동870답_상추_밭등급", "같은 세션에서 작물만 바꿔 연속으로.\nC5와 같은 배율·같은 잘라내기.\n밭 3급지 표기 포함."],
   ];
   const half = (W - M * 2 - 0.34) / 2;
-  cases.forEach(([crop, grade, tag, spec], i) => {
+  cases.forEach(([crop, grade, tag, shotName, spec], i) => {
     const x = M + i * (half + 0.34);
     s.addText(crop, {
       x, y: 3.08, w: 1.3, h: 0.4,
@@ -338,7 +345,7 @@ function darkSlide() {
       x: x + 1.4, y: 3.1, w: 1.9, h: 0.4,
       fontFace: F, fontSize: 14, bold: true, align: "center", valign: "middle", margin: 0, color: "08333D",
     });
-    captureFrame(s, { x, y: 3.66, w: half, h: 2.5, tag, spec });
+    captureFrame(s, { x, y: 3.66, w: half, h: 2.5, tag, spec, shot: shotName });
   });
   s.addText("사과·배는 과수 등급, 상추·오이·감자는 밭 등급을 쓴다", {
     x: M, y: 6.36, w: W - M * 2, h: 0.3,
@@ -364,11 +371,11 @@ function darkSlide() {
     fontFace: F, fontSize: 16, margin: 0, color: P.inkSoft,
   });
   captureFrame(s, {
-    x: M, y: 2.44, w: 7.55, h: 3.34, tag: "C7 · 04 쉬운 말 보고서 상단",
+    x: M, y: 2.44, w: 7.55, h: 3.34, shot: "20260805_C07_04_상단_결론과근거", tag: "C7 · 04 쉬운 말 보고서 상단",
     spec: "결론 한 줄 + 「판정 …은 공식 기준으로 규칙이 확정했습니다」 병기 문장\n+ 「이렇게 판단한 근거」 3줄까지. AI 상세 설명은 접힌 상태로.",
   });
   captureFrame(s, {
-    x: 8.42, y: 2.44, w: 4.3, h: 3.34, tag: "C8 · 03 설명 문장을 만드는 과정",
+    x: 8.42, y: 2.44, w: 4.3, h: 3.34, shot: "20260805_C08_설명생성_5단계", tag: "C8 · 03 설명 문장을 만드는 과정",
     spec: "5단계 블록 전체.\n아코디언을 펼친 상태.",
   });
   s.addShape("roundRect", {
@@ -420,7 +427,7 @@ function darkSlide() {
     });
   });
   captureFrame(s, {
-    x: 5.44, y: 2.46, w: 7.28, h: 2.78, tag: "C4-b · 03 「상태 · 기준시각」 열 확대",
+    x: 5.44, y: 2.46, w: 7.28, h: 2.78, shot: "20260805_C04b_상태_기준시각", tag: "C4-b · 03 「상태 · 기준시각」 열 확대",
     spec: "소스마다 상태가 따로 붙는다는 것이 보이게 확대해 자른다.\n조합: 대관령면 85-61전 · 상추 · 3일.",
   });
   s.addShape("roundRect", {
@@ -468,7 +475,7 @@ function darkSlide() {
     fontFace: F, fontSize: 12.5, margin: 0, valign: "top", color: P.inkSoft, lineSpacingMultiple: 1.3,
   });
   captureFrame(s, {
-    x: 5.66, y: 2.42, w: 7.06, h: 2.6, tag: "C9 · 01 내 농지(즐겨찾기) 목록",
+    x: 5.66, y: 2.42, w: 7.06, h: 2.6, shot: "20260805_C09_내농지_즐겨찾기", tag: "C9 · 01 내 농지(즐겨찾기) 목록",
     spec: "농지 2건 이상 담긴 상태. 주소가 읽히게.",
   });
   s.addShape("roundRect", {
@@ -533,11 +540,11 @@ function darkSlide() {
     fontFace: F, fontSize: 14.5, bold: true, margin: 0, color: P.bad,
   });
   captureFrame(s, {
-    x: 8.16, y: 2.36, w: 4.56, h: 1.72, tag: "C10 · 03 최근 관측 기록",
+    x: 8.16, y: 2.36, w: 4.56, h: 1.72, shot: "20260805_C10_최근관측_관측소거리", tag: "C10 · 03 최근 관측 기록",
     spec: "관측소 이름·거리 +\n「점수에 가산하지 않습니다」 문구까지",
   });
   captureFrame(s, {
-    x: 8.16, y: 4.22, w: 4.56, h: 1.98, tag: "C11 · 03 현재 판정 방식",
+    x: 8.16, y: 4.22, w: 4.56, h: 1.98, shot: "20260805_C11_현재판정방식", tag: "C11 · 03 현재 판정 방식",
     spec: "판정 방식 라벨 + 요구 상태 목록.\n「초보자 설명 = 연결됨」이 보이는 상태여야 한다.\n「일부만」이면 이 자리를 비우고 C10만 쓴다.",
   });
   slideNo(s, 9);
@@ -579,7 +586,7 @@ function darkSlide() {
     spec: "batboda.vercel.app\nQR. 여백 포함.",
   });
   captureFrame(s, {
-    x: 10.42, y: 1.62, w: 2.3, h: 2.3, dark: true, tag: "C1 · 경계",
+    x: 10.42, y: 1.62, w: 2.3, h: 2.3, dark: true, shot: "20260805_C01_대관령85-61전_경계", tag: "C1 · 경계",
     spec: "S1과 같은 조각.",
   });
   slideNo(s, 10, true);
