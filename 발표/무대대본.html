@@ -39,16 +39,28 @@
   .meta { margin: 6px 0 0; color: var(--dim); font-size: 13px; }
 
   /*
-    스크롤하면 접히는 부분. 역할은 한 번 고르면 다시 안 만지므로 자리를 내준다.
-    맨 위로 돌아가면 다시 나온다. 높이로 접어야 다시 펼 때 자리가 튀지 않는다.
+    접기는 스크롤이 아니라 **단추**로 한다.
+
+    스크롤 위치로 접으면 접히는 순간 sticky 높이가 줄어 내용이 밀리고, 밀린 만큼
+    스크롤 값이 바뀌어 다시 판정이 뒤집힌다. 죽은 구간을 넉넉히 줘도 접히는 순간의
+    밀림 자체는 남는다. 무대에서 글자가 튀는 것은 그것만으로 방해다.
+    사람이 한 번 누르면 그 뒤로는 아무 일도 일어나지 않는다.
   */
   header .fold {
     max-height: 260px; opacity: 1; overflow: hidden;
     transition: max-height .22s ease, opacity .16s ease;
   }
-  body.scrolled header .fold { max-height: 0; opacity: 0; }
-  body.scrolled header { padding-bottom: 6px; }
-  body.scrolled h1 { font-size: 15px; }
+  body.folded header .fold { max-height: 0; opacity: 0; }
+  body.folded header { padding-bottom: 6px; }
+
+  .headline { display: flex; align-items: center; gap: 10px; }
+  .headline h1 { flex: 1; }
+  .fold-btn {
+    min-width: 44px; min-height: 44px; padding: 0 10px;
+    color: var(--dim); font: inherit; font-size: 13px; font-weight: 700;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    cursor: pointer;
+  }
 
   .roles { display: flex; gap: 8px; margin: 12px 0 0; }
   .roles button {
@@ -154,6 +166,24 @@
     border: 0; border-radius: 10px; cursor: pointer;
   }
   .watch button.ghost { color: var(--dim); background: var(--panel-2); }
+  .watch button.demo { color: #2b1c00; background: var(--act); }
+  .watch button:disabled { opacity: .45; }
+
+  /*
+    시연이 끝난 시각을 기준으로 남은 장의 목표 시각을 다시 나눈다.
+    무대에서 계산할 것을 없앤다 — 줄일지 말지, 무엇을 줄일지를 화면이 말한다.
+  */
+  .rebudget {
+    margin: 14px 0 0; padding: 12px 14px;
+    background: var(--panel); border: 1px solid var(--act); border-radius: 10px;
+  }
+  .rebudget h2 { margin: 0; font-size: 15px; font-weight: 800; color: var(--act); }
+  .rebudget p { margin: 7px 0 0; font-size: 15px; }
+  .rebudget ul { margin: 8px 0 0; padding-left: 18px; }
+  .rebudget li { margin: 4px 0 0; font-size: 15px; }
+  .rebudget.tight { border-color: var(--stop); }
+  .rebudget.tight h2 { color: var(--stop); }
+  .sec.moved { color: var(--act); font-weight: 700; }
 
   @media (max-width: 400px) {
     body { font-size: 16px; }
@@ -164,7 +194,10 @@
 
 <div class="wrap">
   <header>
-    <h1>밭보다 · 무대 대본</h1>
+    <div class="headline">
+      <h1>밭보다 · 무대 대본</h1>
+      <button type="button" class="fold-btn" id="foldBtn" aria-expanded="true">접기</button>
+    </div>
     <div class="fold">
       <p class="slogan">내 땅의 가능성을 필지 단위로 투명하게 들여다보는 서비스</p>
       <p class="meta">2026-08-05 14:10 · 순서 1번 · 발표 5분 + 질의응답 5분 · 슬라이드 9장</p>
@@ -182,7 +215,7 @@
   </header>
 
   <section>
-    <div class="head"><span class="no">01</span><span class="ttl">같은 농지, 두 등급</span><span class="sec">0:00–0:30</span></div>
+    <div class="head" data-no="01" data-dur="30"><span class="no">01</span><span class="ttl">같은 농지, 두 등급</span><span class="sec">0:00–0:30</span></div>
     <div class="body">
       <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>화면의 농지 하나입니다. 경기 이천 유방동 870답.</p>
@@ -212,7 +245,7 @@
   </section>
 
   <section>
-    <div class="head"><span class="no">02</span><span class="ttl">단 한 칸</span><span class="sec">0:30–0:52</span></div>
+    <div class="head" data-no="02" data-dur="22"><span class="no">02</span><span class="ttl">단 한 칸</span><span class="sec">0:30–0:52</span></div>
     <div class="body">
       <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>저희가 보는 단위는 시·군 평균이 아닙니다. <b>지금 딛고 선 단 한 칸의 필지입니다.</b> 화면 낱말로는 <b>내 농지 한 칸</b>입니다.</p>
@@ -226,7 +259,7 @@
   </section>
 
   <section>
-    <div class="head"><span class="no">03</span><span class="ttl">왜 내 농지로 안 이어지나</span><span class="sec">0:52–1:15</span></div>
+    <div class="head" data-no="03" data-dur="23"><span class="no">03</span><span class="ttl">왜 내 농지로 안 이어지나</span><span class="sec">0:52–1:15</span></div>
     <div class="body">
       <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>자료가 없어서 막히는 게 아닙니다. <b>자료는 다 있습니다.</b></p>
@@ -245,7 +278,7 @@
   </section>
 
   <section>
-    <div class="head"><span class="no">04</span><span class="ttl">라이브 시연</span><span class="sec">1:15–2:25</span></div>
+    <div class="head" data-no="04" data-dur="70"><span class="no">04</span><span class="ttl">라이브 시연</span><span class="sec">1:15–2:25</span></div>
     <div class="body">
       <div class="act"><span class="tag">먼저</span>
         <ol><li>화면을 <b>배포본으로 전환</b>한다. 이 70초는 <b>시연자가 운전</b>하고 발표자는 화면을 보며 읽는다.</li></ol>
@@ -310,7 +343,7 @@
   </section>
 
   <section>
-    <div class="head"><span class="no">05</span><span class="ttl">판정은 규칙, AI는 옮겨 쓰기</span><span class="sec">2:25–3:04</span></div>
+    <div class="head" data-no="05" data-dur="39"><span class="no">05</span><span class="ttl">판정은 규칙, AI는 옮겨 쓰기</span><span class="sec">2:25–3:04</span></div>
     <div class="body">
       <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>결론 문장은 AI가 썼습니다. <b>판정을 정한 것은 규칙입니다.</b></p>
@@ -334,7 +367,7 @@
   </section>
 
   <section>
-    <div class="head"><span class="no">06</span><span class="ttl">안 될 때</span><span class="sec">3:04–3:34</span></div>
+    <div class="head" data-no="06" data-dur="30"><span class="no">06</span><span class="ttl">안 될 때</span><span class="sec">3:04–3:34</span></div>
     <div class="body">
       <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>운영에서 중요한 것은 잘 될 때가 아니라 <b>안 될 때</b>입니다.</p>
@@ -349,7 +382,7 @@
   </section>
 
   <section>
-    <div class="head"><span class="no">07</span><span class="ttl">누가 언제 쓰는가</span><span class="sec">3:34–4:01</span></div>
+    <div class="head" data-no="07" data-dur="27"><span class="no">07</span><span class="ttl">누가 언제 쓰는가</span><span class="sec">3:34–4:01</span></div>
     <div class="body">
       <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>이 서비스는 매일 쓰는 것이 아닙니다. <b>판단이 필요한 세 순간에 옵니다.</b></p>
@@ -370,7 +403,7 @@
   </section>
 
   <section>
-    <div class="head"><span class="no">08</span><span class="ttl">못 하는 것</span><span class="sec">4:01–4:29</span></div>
+    <div class="head" data-no="08" data-dur="28"><span class="no">08</span><span class="ttl">못 하는 것</span><span class="sec">4:01–4:29</span></div>
     <div class="body">
       <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p>못 하는 것을 화면에 적어 두었습니다. <b>세 가지만 말씀드립니다.</b></p>
@@ -390,7 +423,7 @@
   </section>
 
   <section>
-    <div class="head"><span class="no">09</span><span class="ttl">마무리</span><span class="sec">4:29–4:43</span></div>
+    <div class="head" data-no="09" data-dur="14"><span class="no">09</span><span class="ttl">마무리</span><span class="sec">4:29–4:43</span></div>
     <div class="body">
       <div class="read" data-who="say"><span class="tag">읽는다</span>
         <p><b>내 땅의 가능성을 필지 단위로 투명하게 들여다보는 서비스입니다.</b></p>
@@ -451,6 +484,7 @@
   <span class="watch-time" id="wt">0:00</span>
   <span class="watch-now"><b id="wnow">시작 전</b><small id="wtip">누르면 시작합니다</small></span>
   <button type="button" id="wgo">시작</button>
+  <button type="button" id="wdemo" class="demo">시연 끝</button>
   <button type="button" id="wrs" class="ghost">0으로</button>
 </div>
 
@@ -466,28 +500,13 @@
     });
   });
 
-  /*
-    스크롤하면 머리를 접는다. 접는 선과 펴는 선을 다르게 둔다.
-
-    한 선(24px)으로 판단했더니 그 근처에서 떨렸다. 머리가 접히면 sticky 높이가 줄어
-    내용이 위로 밀리고, 밀린 만큼 스크롤 값이 바뀌어 다시 판정이 뒤집힌다.
-    앱의 고정 띠에서 겪은 것과 같은 되먹임이다.
-
-    그래서 **72px을 넘으면 접고, 8px 아래로 돌아와야 편다.** 그 사이에서는 그대로 둔다.
-    프레임마다 한 번만 재서 스크롤 이벤트가 몰려도 한 번만 판단한다.
-  */
-  let folded = false, rafId = 0;
-  const measureHead = () => {
-    rafId = 0;
-    const y = window.scrollY;
-    if (!folded && y > 72) folded = true;
-    else if (folded && y < 8) folded = false;
-    else return;
-    body.classList.toggle("scrolled", folded);
-  };
-  const onScroll = () => { if (!rafId) rafId = requestAnimationFrame(measureHead); };
-  addEventListener("scroll", onScroll, { passive: true });
-  measureHead();
+  /* 접기는 사람이 누를 때만. 스크롤을 보지 않으므로 글자가 밀릴 일이 없다. */
+  const foldBtn = document.getElementById("foldBtn");
+  foldBtn.addEventListener("click", () => {
+    const nowFolded = body.classList.toggle("folded");
+    foldBtn.textContent = nowFolded ? "펼치기" : "접기";
+    foldBtn.setAttribute("aria-expanded", String(!nowFolded));
+  });
 
   /*
     장별 누적 끝 시각(초). 대본 1절의 실측 예상값이다.
@@ -510,6 +529,7 @@
   const wnow = document.getElementById("wnow");
   const wtip = document.getElementById("wtip");
   const wgo = document.getElementById("wgo");
+  const wdemo = document.getElementById("wdemo");
   const wrs = document.getElementById("wrs");
   const watch = document.getElementById("watch");
 
@@ -542,9 +562,96 @@
     else clearInterval(timer);
     paint();
   });
+  /*
+    시연 끝 — 남은 예산을 뒤 장에 다시 나눈다.
+
+    시연은 70초로 잡았지만 실제로는 늘어난다. 그때 무대에서 「지금 몇 초 밀렸으니
+    어디를 얼마나 줄일까」를 계산할 수 없다. 그래서 누르면 화면이 대신 계산한다.
+
+    4분 50초(290초)를 넘기지 않는 것을 목표로 잡는다. 5분이 아니라 4분 50초인 것은
+    마무리에서 말이 늘어질 여유를 남기기 위해서다.
+  */
+  const TARGET = 290;
+  const heads = [...document.querySelectorAll(".head[data-dur]")];
+  const CUTS = [
+    ["07", "세 순간을 둘로 줄인다 (계약 전, 작물 바꿀 때)", 3],
+    ["06", "세 상태 나열을 빼고 「세 가지를 구분해 씁니다」로", 5],
+    ["05", "회귀 수치 한 문장을 뺀다 (각주는 남긴다)", 4],
+  ];
+
+  function rebudget(atSec) {
+    // 시연(04)까지는 지난 것으로 본다. 뒤 장만 다시 나눈다.
+    const after = heads.filter((h) => Number(h.dataset.no) > 4);
+    const planned = after.reduce((sum, h) => sum + Number(h.dataset.dur), 0);
+    const left = TARGET - atSec;
+    const over = planned - left;
+
+    let cursor = atSec;
+    after.forEach((h) => {
+      const dur = Number(h.dataset.dur);
+      const scaled = over > 0 ? Math.max(8, Math.round(dur * (left / planned))) : dur;
+      cursor += scaled;
+      const sec = h.querySelector(".sec");
+      sec.textContent = "→ " + mmss(cursor) + " (" + scaled + "초)";
+      sec.classList.add("moved");
+    });
+
+    // PLAN도 갈아 끼워 스톱워치가 새 일정으로 말하게 한다.
+    let c = atSec;
+    const fresh = after.map((h) => {
+      const dur = Number(h.dataset.dur);
+      c += over > 0 ? Math.max(8, Math.round(dur * (left / planned))) : dur;
+      return [c, h.querySelector(".ttl").textContent];
+    });
+    PLAN.length = 0;
+    fresh.forEach((row) => PLAN.push(row));
+
+    const box = document.createElement("div");
+    box.className = "rebudget" + (over > 0 ? " tight" : "");
+    const lines = [];
+    lines.push("<h2>" + (over > 0 ? "남은 시간이 " + over + "초 모자랍니다" : "여유 " + (left - planned) + "초") + "</h2>");
+    lines.push("<p>시연이 <b>" + mmss(atSec) + "</b>에 끝났습니다. 4분 50초까지 <b>" + left + "초</b> 남았고, 5장부터 9장까지 계획은 <b>" + planned + "초</b>입니다.</p>");
+    if (over > 0) {
+      lines.push("<p>위 장 제목의 시각을 새로 맞췄습니다. 그래도 빠듯하면 <b>이 순서로</b> 뺍니다.</p><ul>");
+      let need = over;
+      for (const [no, what, save] of CUTS) {
+        lines.push("<li><b>" + no + "장</b> — " + what + " <b>−" + save + "초</b></li>");
+        need -= save;
+        if (need <= 0) break;
+      }
+      lines.push("</ul>");
+    } else {
+      lines.push("<p>계획대로 가도 됩니다. <b>속도를 올리지 마세요.</b> 남은 시간은 마무리에서 천천히 쓰는 편이 낫습니다.</p>");
+    }
+    box.innerHTML = lines.join("");
+    const demoSection = heads.find((h) => h.dataset.no === "04").closest("section");
+    demoSection.after(box);
+    box.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
+  wdemo.addEventListener("click", () => {
+    if (base === 0) return;
+    wdemo.disabled = true;
+    rebudget(base);
+    paint();
+  });
+
   wrs.addEventListener("click", () => {
     clearInterval(timer); running = false; base = 0;
-    wgo.textContent = "시작"; paint();
+    wgo.textContent = "시작";
+    wdemo.disabled = false;
+    document.querySelectorAll(".rebudget").forEach((n) => n.remove());
+    document.querySelectorAll(".sec.moved").forEach((n) => {
+      n.classList.remove("moved");
+      n.textContent = n.dataset.orig || n.textContent;
+    });
+    PLAN.length = 0;
+    BASE_PLAN.forEach((row) => PLAN.push(row));
+    paint();
   });
+
+  // 되돌릴 수 있게 처음 값을 적어 둔다.
+  document.querySelectorAll(".head[data-dur] .sec").forEach((n) => { n.dataset.orig = n.textContent; });
+  const BASE_PLAN = PLAN.map((row) => [row[0], row[1]]);
   paint();
 </script>
