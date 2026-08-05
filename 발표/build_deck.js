@@ -55,10 +55,30 @@ const M = 0.62; // 좌우 여백
 const SHOTS = "D:/Projects/batboda/발표/캡처/";
 const fsx = require("fs");
 
+/*
+  PNG 머리에서 원본 크기를 읽는다. IHDR은 항상 16바이트째부터 폭·높이 4바이트씩이다.
+  pptxgenjs의 `sizing: { type: "contain" }`을 믿고 넘겼더니 듣지 않았다 — 산출물의
+  `<a:ext>`가 틀 크기와 같고 `srcRect`가 0이어서 원본이 틀에 그대로 늘어났다.
+  C06은 비율 1.37인데 2.35로 놓여 가로로 1.72배 벌어졌다(2026-08-05 XML 실측).
+  그래서 비율을 여기서 직접 계산한다.
+*/
+function pngSize(file) {
+  const b = Buffer.alloc(24);
+  const fd = fsx.openSync(file, "r");
+  fsx.readSync(fd, b, 0, 24, 0);
+  fsx.closeSync(fd);
+  return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+}
+
 function captureFrame(s, { x, y, w, h, tag, spec, dark = false, shot }) {
   const file = shot ? SHOTS + shot + ".png" : null;
   if (file && fsx.existsSync(file)) {
-    s.addImage({ path: file, x, y, w, h, sizing: { type: "contain", w, h } });
+    // 틀 안에 다 들어가는 배율을 골라 가운데 놓는다. 제품 화면을 늘리면 그 자체가 거짓이 된다.
+    const px = pngSize(file);
+    const k = Math.min(w / px.w, h / px.h);
+    const iw = px.w * k;
+    const ih = px.h * k;
+    s.addImage({ path: file, x: x + (w - iw) / 2, y: y + (h - ih) / 2, w: iw, h: ih });
     return;
   }
   s.addShape("roundRect", {
@@ -164,34 +184,20 @@ function darkSlide() {
   evidenceTag(s, "화면 근거 · 03 사용한 자료");
   claim(s, "자료가 없는 것이 아니라, 서로 다른 기관·단위에 있어\n내 농지로 이어지지 않습니다", { y: 0.9 });
   captureFrame(s, {
-    x: M, y: 2.52, w: 8.35, h: 4.1, shot: "20260805_C04_사용한자료_표", tag: "C4 · 03 어떤 API의 어떤 값을 썼는지",
+    x: M, y: 2.6, w: W - M * 2, h: 4.34, shot: "20260805_C04_사용한자료_표", tag: "C4 · 03 어떤 API의 어떤 값을 썼는지",
     spec: "표 전체. 제공기관 열과 상태·기준시각 열이 잘리지 않게.\n가로 스크롤이 있으면 끝까지 나오게 자른다.\n조합: 대관령면 85-61전 · 상추 · 3일.",
   });
-  const rows = [
-    ["농지 경계", "농림축산식품부 팜맵"],
-    ["토양 특성·화학성", "농촌진흥청 흙토람"],
-    ["단기예보", "기상청"],
-    ["최근 7일 관측", "농촌진흥청 농업기상"],
-  ];
-  s.addText("네 갈래 · 기관도 단위도\n기준시각도 다릅니다", {
-    x: 9.22, y: 2.52, w: 3.5, h: 0.62,
-    fontFace: F, fontSize: 14, bold: true, margin: 0, valign: "top",
-    color: P.cyInk, lineSpacingMultiple: 1.2,
-  });
-  rows.forEach(([k, v], i) => {
-    const top = 3.28 + i * 0.82;
-    s.addShape("roundRect", {
-      x: 9.22, y: top, w: 3.5, h: 0.68, rectRadius: 0.06,
-      fill: { color: P.sf }, line: { color: P.line, width: 1 },
-    });
-    s.addText(k, {
-      x: 9.38, y: top + 0.07, w: 3.2, h: 0.27,
-      fontFace: F, fontSize: 13, bold: true, margin: 0, color: P.ink,
-    });
-    s.addText(v, {
-      x: 9.38, y: top + 0.34, w: 3.2, h: 0.27,
-      fontFace: F, fontSize: 11.5, margin: 0, color: P.inkSoft,
-    });
+  /*
+    제공기관 카드 넷을 지웠다. 두 가지 이유다.
+    1) 바로 옆 C04 표의 제공기관 열과 같은 내용이다. 같은 것을 두 번 보인다.
+    2) 내용설계 v1의 금지 목록에 `3~4칸 카드 배열`이 있고, 카드 안에 슬라이드에
+       쓰지 않기로 한 기관명(흙토람)이 들어가 있었다. 표는 제품 화면이라 괜찮지만
+       우리가 옮겨 적으면 우리 주장이 된다.
+    빈 자리는 표를 넓히는 데 썼다. 심사위원이 읽어야 하는 것은 표다.
+  */
+  s.addText("네 갈래 · 기관도 단위도 기준시각도 다릅니다", {
+    x: M, y: 2.18, w: W - M * 2, h: 0.32,
+    fontFace: F, fontSize: 15, bold: true, margin: 0, color: P.cyInk,
   });
   slideNo(s, 2);
   s.addNotes(
@@ -346,10 +352,10 @@ function darkSlide() {
       x: x + 1.4, y: 3.1, w: 1.9, h: 0.4,
       fontFace: F, fontSize: 14, bold: true, align: "center", valign: "middle", margin: 0, color: "08333D",
     });
-    captureFrame(s, { x, y: 3.66, w: half, h: 2.5, tag, spec, shot: shotName });
+    captureFrame(s, { x, y: 3.58, w: half, h: 2.88, tag, spec, shot: shotName });
   });
   s.addText("사과·배는 과수 등급, 상추·오이·감자는 밭 등급을 쓴다", {
-    x: M, y: 6.36, w: W - M * 2, h: 0.3,
+    x: M, y: 6.62, w: W - M * 2, h: 0.3,
     fontFace: F, fontSize: 12.5, margin: 0, color: P.inkSoft,
   });
   slideNo(s, 5);
@@ -406,14 +412,24 @@ function darkSlide() {
 {
   const s = lightSlide();
   evidenceTag(s, "화면 근거 · 03 상태·기준시각");
-  claim(s, "외부 API가 죽어도 판단은 이어지고,\n세 가지 상태를 화면에서 구분합니다", { y: 0.9, size: 28 });
+  /*
+    제목을 캡처가 증명하는 것으로 낮췄다. 오늘 화면은 네 소스가 모두 `실시간`이라
+    「세 가지를 구분한다」를 그림으로 보일 수 없다. 장애를 꾸며 캡처하는 것은 금지다.
+    소스마다 상태와 기준시각이 따로 붙는다는 것은 캡처가 그대로 보인다.
+    세 가지 표시는 우리 표시 규칙으로 따로 이름 붙여 두고, 말로 설명한다.
+  */
+  claim(s, "외부 API가 죽어도 판단은 이어지고,\n소스마다 상태와 기준시각을 따로 남깁니다", { y: 0.9, size: 28 });
+  s.addText("화면에 쓰는 세 가지 표시", {
+    x: M, y: 2.12, w: 4.5, h: 0.28,
+    fontFace: F, fontSize: 13, bold: true, margin: 0, color: P.cyInk,
+  });
   const states = [
     ["실시간 연결", "지금 호출해 받은 값", P.good, P.goodBg],
     ["검증 스냅샷", "저장해 둔 실호출 응답", P.cyInk, P.cyPale],
     ["시연용 자료", "실데이터가 아님을 표시", P.watch, P.watchBg],
   ];
   states.forEach(([name, desc, fg, bg], i) => {
-    const y = 2.46 + i * 0.96;
+    const y = 2.5 + i * 0.96;
     s.addShape("roundRect", {
       x: M, y, w: 4.5, h: 0.78, rectRadius: 0.06,
       fill: { color: bg }, line: { color: fg, width: 1 },
@@ -427,23 +443,35 @@ function darkSlide() {
       fontFace: F, fontSize: 12, margin: 0, color: fg,
     });
   });
+  /*
+    세로로 긴 캡처(579×794)를 넓고 낮은 틀에 넣으면 높이가 배율을 정해 2인치로 줄고
+    글자가 뭉개진다. 틀을 원본 비율에 맞춰 세로로 세운다.
+  */
   captureFrame(s, {
-    x: 5.44, y: 2.46, w: 7.28, h: 2.78, shot: "20260805_C04b_상태_기준시각", tag: "C4-b · 03 「상태 · 기준시각」 열 확대",
+    x: 5.36, y: 2.12, w: 3.3, h: 4.56, shot: "20260805_C04b_상태_기준시각",
+    tag: "C4-b · 03 「상태 · 기준시각」 열 확대",
     spec: "소스마다 상태가 따로 붙는다는 것이 보이게 확대해 자른다.\n조합: 대관령면 85-61전 · 상추 · 3일.",
   });
   s.addShape("roundRect", {
-    x: 5.44, y: 5.42, w: 7.28, h: 1.4, rectRadius: 0.06,
+    x: 8.86, y: 2.12, w: 3.86, h: 2.06, rectRadius: 0.06,
     fill: { color: P.sf }, line: { color: P.line, width: 1 },
   });
-  s.addText("2026-08-03 · 공공데이터 인증이 실제로 막혔습니다 (HTTP 401)", {
-    x: 5.66, y: 5.56, w: 6.84, h: 0.3,
-    fontFace: F, fontSize: 14, bold: true, margin: 0, color: P.ink,
+  s.addText("2026-08-03\n공공데이터 인증이 실제로 막혔습니다 (HTTP 401)", {
+    x: 9.06, y: 2.26, w: 3.46, h: 0.7,
+    fontFace: F, fontSize: 14, bold: true, margin: 0, valign: "top",
+    color: P.ink, lineSpacingMultiple: 1.2,
   });
   s.addText(
     "실패한 소스만 대체하고 이유를 남기는 경로로 판정까지 이어지는 것을 그때 확인했습니다. " +
     "가정이 아니라 겪은 일입니다.", {
-    x: 5.66, y: 5.9, w: 6.84, h: 0.76,
+    x: 9.06, y: 3.04, w: 3.46, h: 1.0,
     fontFace: F, fontSize: 12.5, margin: 0, valign: "top", color: P.inkSoft, lineSpacingMultiple: 1.25,
+  });
+  /* 실패한 소스만 갈아 끼운다는 것을 낱말로 한 번 더 적는다. 캡처가 못 보이는 부분이다. */
+  s.addText("실패한 소스만 대체하고, 나머지는 실시간을 그대로 씁니다.", {
+    x: 8.86, y: 4.4, w: 3.86, h: 0.6,
+    fontFace: F, fontSize: 13.5, bold: true, margin: 0, valign: "top",
+    color: P.cyInk, lineSpacingMultiple: 1.25,
   });
   slideNo(s, 7);
   s.addNotes(
@@ -583,7 +611,7 @@ function darkSlide() {
     fontFace: F, fontSize: 15, margin: 0, color: P.deepSoft,
   });
   captureFrame(s, {
-    x: 7.86, y: 1.62, w: 2.3, h: 2.3, dark: true, tag: "C12 · QR",
+    x: 7.86, y: 1.62, w: 2.3, h: 2.3, dark: true, shot: "20260805_C12_QR", tag: "C12 · QR",
     spec: "batboda.vercel.app\nQR. 여백 포함.",
   });
   captureFrame(s, {
