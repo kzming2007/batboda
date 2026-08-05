@@ -230,7 +230,8 @@ function darkSlide() {
       color: P.sf, lineSpacingMultiple: 1.15,
     });
     captureFrame(s, {
-      x, y: 2.94, w: cw, h: 3.2, dark: true, tag, spec: spec + "\n\n축소 배치.\n도형·아이콘으로\n대체하지 않는다.",
+      x, y: 2.94, w: cw, h: 3.2, dark: true, tag, shot: shotName,
+      spec: spec + "\n\n축소 배치.\n도형·아이콘으로\n대체하지 않는다.",
     });
     // 다섯 고리는 병렬이 아니라 순서다. 사이의 화살표가 그 사실을 나타낸다.
     if (i < links.length - 1) {
