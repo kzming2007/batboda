@@ -3965,8 +3965,17 @@ main {
     border: 1px solid #c8d0d3;
   }
 
-  /* 2쪽 — 사용한 자료. */
-  .source-table-section {
+  /*
+    쪽 나눔은 앞에 내용이 있을 때만 건다.
+
+    이 규칙들은 세 화면이 한 문서에 다 있다고 보고 썼는데, 이 앱은 한 번에 한 화면만 DOM에
+    둔다. 그래서 04에서 인쇄하면 `.showcase-section`이 문서의 첫 요소인데 그 앞에서 쪽을
+    끊어 **1쪽에 제목만 남고 내용이 2쪽부터 시작했다.** 실제로 그렇게 나왔다.
+
+    `:not(:first-child)`를 붙이면 앞에 형제가 있을 때만 끊는다. 셋이 함께 있는 문서에서는
+    지금처럼 쪽이 갈리고, 한 화면만 인쇄할 때는 첫 쪽부터 채운다.
+  */
+  .source-table-section:not(:first-child) {
     break-before: page;
   }
 
@@ -3978,8 +3987,8 @@ main {
     min-width: 0;
   }
 
-  /* 3쪽 — 쉬운 말 보고서. */
-  .showcase-section {
+  /* 3쪽 — 쉬운 말 보고서. 위와 같은 이유로 앞에 형제가 있을 때만 끊는다. */
+  .showcase-section:not(:first-child) {
     break-before: page;
   }
 
