@@ -477,6 +477,23 @@ export default function FarmDecisionApp({ initialResult }: Props) {
   const inlineAnalyzeRef = useRef<HTMLButtonElement | null>(null);
   const [inlineAnalyzeShown, setInlineAnalyzeShown] = useState(false);
 
+  /*
+    켜는 선과 끄는 선을 다르게 둔다.
+
+    경계 하나로 판단하면 단추가 그 선에 걸쳐 있을 때 스크롤이 1px만 흔들려도 판정이
+    뒤집히고, 그때마다 300ms 전환이 다시 시작돼 띠가 떨린다(2026-08-05 실측).
+    `IntersectionObserver`의 `threshold: 1`이 정확히 그 한 선이었다.
+
+    그래서 사이에 죽은 구간을 둔다. **온전히 보일 때만 감추고, 그 아래로 한참 벗어났을
+    때만 다시 띄운다.** 그 사이에서는 지금 상태를 유지한다.
+
+    폭은 스크롤 한 번보다 넉넉히 크게 잡는다. 이 브라우저의 휠 한 칸이 100px이었고
+    (2026-08-05 실측) 32px로 두었더니 한 칸에 죽은 구간을 통과해 그대로 떨렸다.
+    120px이면 한 칸으로는 못 넘고, 두 칸을 내리면 띠가 정상적으로 돌아온다 —
+    그건 떨림이 아니라 사용자가 실제로 단추를 화면 밖으로 보낸 것이다.
+  */
+  const DOCK_HYSTERESIS = 120;
+
   useEffect(() => {
     const target = inlineAnalyzeRef.current;
     if (view !== "input" || !target) {
@@ -487,12 +504,35 @@ export default function FarmDecisionApp({ initialResult }: Props) {
       Number.parseFloat(
         getComputedStyle(document.documentElement).getPropertyValue("--dock"),
       ) || 90;
-    const observer = new IntersectionObserver(
-      ([entry]) => setInlineAnalyzeShown(entry.isIntersecting),
-      { rootMargin: `0px 0px -${dockHeight}px 0px`, threshold: 1 },
-    );
-    observer.observe(target);
-    return () => observer.disconnect();
+
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const box = target.getBoundingClientRect();
+      // 띠가 덮는 자리는 보이는 것으로 세지 않는다.
+      const floor = window.innerHeight - dockHeight;
+      const fullyVisible = box.top >= 0 && box.bottom <= floor;
+      const clearlyGone =
+        box.bottom > floor + DOCK_HYSTERESIS || box.top < -DOCK_HYSTERESIS;
+      setInlineAnalyzeShown((shown) => {
+        if (!shown && fullyVisible) return true;
+        if (shown && clearlyGone) return false;
+        return shown; // 죽은 구간 — 건드리지 않는다
+      });
+    };
+    // 스크롤마다 재는 것이 아니라 프레임마다 한 번만 잰다.
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
+
+    measure();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
   }, [view]);
   /*
     03·04 안에서 지금 몇 번째 페이지를 보는지. 0부터 센다.
